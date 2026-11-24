@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Centered } from "@/components/ui";
 import { useMyOrders } from "@/lib/my-orders";
-import { space, useTheme } from "@/lib/theme";
+import { cardShadow, radius, space, useTheme } from "@/lib/theme";
 
 const dateFormat = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
 
@@ -15,10 +15,7 @@ export default function MyOrdersScreen() {
   const { orders } = useMyOrders();
 
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: t.background }]}>
-      <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12}>
-        <Text style={{ color: t.text, fontSize: 16 }}>‹ Volver</Text>
-      </Pressable>
+    <SafeAreaView edges={["top"]} style={[styles.screen, { backgroundColor: t.background }]}>
       <Text style={[styles.title, { color: t.text }]}>Mis pedidos</Text>
       <FlatList
         data={orders}
@@ -33,7 +30,7 @@ export default function MyOrdersScreen() {
           <Pressable
             accessibilityRole="button"
             onPress={() => router.push({ pathname: "/order/[id]", params: { id: item.id } })}
-            style={({ pressed }) => [styles.card, { backgroundColor: t.surface, opacity: pressed ? 0.7 : 1 }]}
+            style={({ pressed }) => [styles.card, cardShadow(t), { backgroundColor: t.card, opacity: pressed ? 0.7 : 1 }]}
           >
             <View style={{ flex: 1 }}>
               <Text style={{ color: t.text, fontWeight: "700", fontSize: 16 }}>{item.merchantName}</Text>
@@ -52,5 +49,5 @@ export default function MyOrdersScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, padding: space.lg, gap: space.md },
   title: { fontSize: 26, fontWeight: "800" },
-  card: { borderRadius: 14, padding: space.lg, flexDirection: "row", alignItems: "center" },
+  card: { borderRadius: radius.md, padding: space.lg, flexDirection: "row", alignItems: "center" },
 });

@@ -2,15 +2,16 @@ import { ApiError, fieldErrors, unwrap } from "@pedilo/api-client";
 import { formatARS } from "@pedilo/domain";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { Button, Centered, Chip, Loading } from "@/components/ui";
-import { api, useMerchantMenu } from "@/lib/api";
-import { useCart } from "@/lib/cart";
+import { categoryIcon, Icon, type IconName } from "@/components/icon";
+import { Button, Centered, Loading } from "@/components/ui";
+import { api, useMerchantCategories, useMerchantMenu } from "@/lib/api";
+import { type CartLine, useCart } from "@/lib/cart";
 import { useMyOrders } from "@/lib/my-orders";
-import { space, useTheme } from "@/lib/theme";
+import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 const newIdempotencyKey = () => `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 
@@ -27,9 +28,10 @@ const REASON_MESSAGES: Record<string, string> = {
 export default function CartScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { cart, subtotalMinor, setQuantity, remove, clear } = useCart();
+  const { cart, itemCount, subtotalMinor, setQuantity, remove, clear } = useCart();
   const { contact, setContact, save } = useMyOrders();
   const menu = useMerchantMenu(cart?.merchantSlug ?? "");
+  const categories = useMerchantCategories();
 
   const branch = menu.data?.merchant.branches.find((b) => b.id === cart?.branchId);
   const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY" | null>(null);
@@ -97,18 +99,28 @@ export default function CartScreen() {
     },
   });
 
+  const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
+
   if (!cart) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }}>
+        <TopBar title="Tu pedido" onBack={back} />
         <Centered>
-          <Text style={{ color: t.muted }}>Tu pedido está vacío.</Text>
-          <Button label="Ver comercios" variant="outline" onPress={() => router.replace("/")} />
+          <View style={[styles.emptyIcon, { backgroundColor: t.primarySoft }]}>
+            <Icon name="cart" size={40} color={t.primary} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: t.text }]}>Tu pedido está vacío</Text>
+          <Text style={{ color: t.muted, textAlign: "center" }}>Elegí un comercio y agregá productos.</Text>
+          <Button label="Ver comercios" onPress={back} />
         </Centered>
       </SafeAreaView>
     );
   }
   if (menu.isPending) return <Loading />;
 
+  const icon = categoryIcon(categories.data?.find((c) => c.id === menu.data?.merchant.categoryId)?.slug);
+  const minFee = branch && branch.zones.length > 0 ? Math.min(...branch.zones.map((z) => z.feeMinor)) : null;
+  const total = subtotalMinor + deliveryFee;
   const missing =
     !name.trim() || phone.replace(/\D/g, "").length < 8 || (mode === "DELIVERY" && addressLine.trim().length < 3) || !mode;
   const canSubmit = !missing && !belowMinimum && Boolean(branch?.openNow) && !submit.isPending;
@@ -116,107 +128,300 @@ export default function CartScreen() {
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <TopBar title="Tu pedido" onBack={back} />
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Pressable accessibilityRole="button" onPress={() => router.back()} hitSlop={12}>
-            <Text style={{ color: t.text, fontSize: 16 }}>‹ Seguir pidiendo</Text>
-          </Pressable>
-          <Text style={[styles.title, { color: t.text }]}>Tu pedido</Text>
-          <Text style={{ color: t.muted }}>{cart.merchantName}</Text>
-
-          {cart.lines.map((l) => (
-            <View key={l.key} style={[styles.line, { borderColor: t.border }]}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: t.text, fontWeight: "600", fontSize: 16 }}>
-                  {l.productName}
-                  {l.variantName ? ` (${l.variantName})` : ""}
-                </Text>
-                {l.modifiers.length > 0 && (
-                  <Text style={{ color: t.muted }}>
-                    {l.modifiers.map((m) => `${m.quantity > 1 ? `${m.quantity}× ` : ""}${m.name}`).join(", ")}
-                  </Text>
-                )}
-                {l.notes && <Text style={{ color: t.muted, fontStyle: "italic" }}>«{l.notes}»</Text>}
-                <Text style={{ color: t.text }}>{formatARS(l.unitPriceMinor * l.quantity)}</Text>
-              </View>
-              <View style={styles.qty}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={l.quantity === 1 ? `Quitar ${l.productName}` : `Uno menos de ${l.productName}`}
-                  onPress={() => (l.quantity === 1 ? remove(l.key) : setQuantity(l.key, l.quantity - 1))}
-                  style={[styles.qtyBtn, { borderColor: t.border }]}
-                  hitSlop={6}
-                >
-                  <Text style={{ color: t.text, fontSize: 18 }}>{l.quantity === 1 ? "×" : "−"}</Text>
-                </Pressable>
-                <Text style={{ color: t.text, minWidth: 18, textAlign: "center" }}>{l.quantity}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Uno más de ${l.productName}`}
-                  onPress={() => setQuantity(l.key, Math.min(50, l.quantity + 1))}
-                  style={[styles.qtyBtn, { borderColor: t.border }]}
-                  hitSlop={6}
-                >
-                  <Text style={{ color: t.text, fontSize: 18 }}>+</Text>
-                </Pressable>
-              </View>
+          {/* Comercio */}
+          <View style={styles.merchant}>
+            <View style={[styles.merchantIcon, { backgroundColor: t.primarySoft }]}>
+              <Icon name={icon} size={22} color={t.primary} />
             </View>
-          ))}
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.merchantName, { color: t.text }]} numberOfLines={1}>
+                {cart.merchantName}
+              </Text>
+              <Text style={[styles.meta, { color: t.muted }]}>
+                {itemCount === 1 ? "1 producto" : `${itemCount} productos`}
+              </Text>
+            </View>
+            <Pressable accessibilityRole="button" onPress={back} hitSlop={8}>
+              <Text style={[styles.link, { color: t.primary }]}>+ Agregar más</Text>
+            </Pressable>
+          </View>
 
+          {/* Productos */}
+          <Card t={t}>
+            {cart.lines.map((l, i) => (
+              <LineRow
+                key={l.key}
+                line={l}
+                icon={icon}
+                last={i === cart.lines.length - 1}
+                onDecrease={() => (l.quantity === 1 ? remove(l.key) : setQuantity(l.key, l.quantity - 1))}
+                onIncrease={() => setQuantity(l.key, Math.min(50, l.quantity + 1))}
+              />
+            ))}
+          </Card>
+
+          {/* Entrega */}
           {branch && (
             <>
-              <Text style={[styles.section, { color: t.text }]}>¿Cómo lo recibís?</Text>
-              <View style={styles.row}>
-                {branch.acceptsPickup && <Chip label="Retiro en el local" selected={mode === "PICKUP"} onPress={() => setFulfillment("PICKUP")} />}
+              <SectionTitle t={t}>¿Cómo lo recibís?</SectionTitle>
+              <View style={styles.modes}>
+                {branch.acceptsPickup && (
+                  <ModeOption
+                    icon="pickup"
+                    label="Retiro"
+                    detail="Sin costo"
+                    selected={mode === "PICKUP"}
+                    onPress={() => setFulfillment("PICKUP")}
+                  />
+                )}
                 {branch.acceptsDelivery && branch.zones.length > 0 && (
-                  <Chip label="Envío a domicilio" selected={mode === "DELIVERY"} onPress={() => setFulfillment("DELIVERY")} />
+                  <ModeOption
+                    icon="delivery"
+                    label="Envío"
+                    detail={minFee === 0 ? "Gratis" : `desde ${formatARS(minFee ?? 0)}`}
+                    selected={mode === "DELIVERY"}
+                    onPress={() => setFulfillment("DELIVERY")}
+                  />
                 )}
               </View>
-              {mode === "PICKUP" && <Text style={{ color: t.muted }}>Retirás en {branch.addressLine}.</Text>}
+
+              {mode === "PICKUP" && (
+                <Card t={t}>
+                  <View style={styles.infoRow}>
+                    <Icon name="location" size={20} color={t.primary} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.meta, { color: t.muted }]}>Retirás en</Text>
+                      <Text style={[styles.infoText, { color: t.text }]}>
+                        {branch.addressLine}
+                        {branch.addressNotes ? ` · ${branch.addressNotes}` : ""}
+                      </Text>
+                    </View>
+                  </View>
+                </Card>
+              )}
+
               {mode === "DELIVERY" && (
                 <>
-                  <Text style={{ color: t.muted }}>Zona de entrega</Text>
-                  <View style={styles.wrapRow}>
-                    {branch.zones.map((z) => (
-                      <Chip key={z.id} label={`${z.name} · ${formatARS(z.feeMinor)}`} selected={zone?.id === z.id} onPress={() => setZoneId(z.id)} />
-                    ))}
-                  </View>
-                  {zone?.description && <Text style={{ color: t.muted }}>{zone.description}</Text>}
-                  <Field label="Dirección" value={addressLine} onChange={setAddressLine} placeholder="Calle y número" autoComplete="street-address" />
-                  <Field label="Indicaciones (opcional)" value={addressNotes} onChange={setAddressNotes} placeholder="Piso, timbre, referencia" />
+                  {branch.zones.length > 1 && (
+                    <Card t={t}>
+                      {branch.zones.map((z, i) => {
+                        const selected = zone?.id === z.id;
+                        return (
+                          <Pressable
+                            key={z.id}
+                            accessibilityRole="radio"
+                            accessibilityState={{ checked: selected }}
+                            onPress={() => setZoneId(z.id)}
+                            style={[styles.zone, i < branch.zones.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}
+                          >
+                            <View style={[styles.radio, { borderColor: selected ? t.primary : t.border }]}>
+                              {selected && <View style={[styles.radioDot, { backgroundColor: t.primary }]} />}
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={[styles.infoText, { color: t.text, fontWeight: selected ? "700" : "500" }]}>{z.name}</Text>
+                              {z.description && <Text style={[styles.meta, { color: t.muted }]}>{z.description}</Text>}
+                            </View>
+                            <Text style={[styles.infoText, { color: t.text }]}>{z.feeMinor === 0 ? "Gratis" : formatARS(z.feeMinor)}</Text>
+                          </Pressable>
+                        );
+                      })}
+                    </Card>
+                  )}
+                  {branch.zones.length === 1 && zone?.description && <Text style={[styles.meta, { color: t.muted }]}>{zone.description}</Text>}
+                  <Card t={t} padded>
+                    <Field label="Dirección" value={addressLine} onChange={setAddressLine} placeholder="Calle y número" autoComplete="street-address" />
+                    <Field label="Indicaciones (opcional)" value={addressNotes} onChange={setAddressNotes} placeholder="Piso, timbre, referencia" />
+                  </Card>
                 </>
               )}
             </>
           )}
 
-          <Text style={[styles.section, { color: t.text }]}>Tus datos</Text>
-          <Field label="Nombre" value={name} onChange={setName} placeholder="Para que el comercio sepa quién pidió" autoComplete="name" />
-          <Field label="Teléfono" value={phone} onChange={setPhone} placeholder="3491 123456" keyboardType="phone-pad" autoComplete="tel" />
-          <Field label="Nota para el comercio (opcional)" value={notes} onChange={setNotes} placeholder="Por ejemplo: traer cambio de $10.000" />
+          {/* Datos */}
+          <SectionTitle t={t}>Tus datos</SectionTitle>
+          <Card t={t} padded>
+            <Field label="Nombre" value={name} onChange={setName} placeholder="Para que el comercio sepa quién pidió" autoComplete="name" />
+            <Field label="Teléfono" value={phone} onChange={setPhone} placeholder="3491 123456" keyboardType="phone-pad" autoComplete="tel" />
+            <Field label="Nota para el comercio (opcional)" value={notes} onChange={setNotes} placeholder="Por ejemplo: traer cambio de $10.000" />
+          </Card>
 
-          <View style={[styles.summary, { borderColor: t.border }]}>
+          {/* Resumen */}
+          <SectionTitle t={t}>Resumen</SectionTitle>
+          <Card t={t} padded>
             <SummaryRow label="Productos" value={formatARS(subtotalMinor)} />
-            {mode === "DELIVERY" && <SummaryRow label="Envío" value={formatARS(deliveryFee)} />}
-            <SummaryRow label="Total (pagás en efectivo)" value={formatARS(subtotalMinor + deliveryFee)} strong />
-          </View>
-          {belowMinimum && zone && (
-            <Text style={{ color: t.danger }}>El pedido mínimo para {zone.name} es {formatARS(zone.minOrderMinor)}.</Text>
-          )}
-          {branch && !branch.openNow && <Text style={{ color: t.danger }}>El comercio está cerrado ahora.</Text>}
-          {error && <Text style={{ color: t.danger }} accessibilityLiveRegion="polite">{error}</Text>}
+            {mode === "DELIVERY" && <SummaryRow label="Envío" value={deliveryFee === 0 ? "Gratis" : formatARS(deliveryFee)} />}
+            <View style={[styles.divider, { backgroundColor: t.border }]} />
+            <SummaryRow label="Total" value={formatARS(total)} strong />
+            <View style={[styles.payment, { backgroundColor: t.surface }]}>
+              <Icon name="cash" size={18} color={t.success} />
+              <Text style={[styles.meta, { color: t.text }]}>Pagás en efectivo al recibir o retirar</Text>
+            </View>
+          </Card>
+
+          {belowMinimum && zone && <Notice t={t}>El pedido mínimo para {zone.name} es {formatARS(zone.minOrderMinor)}.</Notice>}
+          {branch && !branch.openNow && <Notice t={t}>El comercio está cerrado ahora.</Notice>}
+          {error && <Notice t={t}>{error}</Notice>}
         </ScrollView>
 
-        <View style={[styles.footer, { borderColor: t.border }]}>
-          <Button
-            label={submit.isPending ? "Enviando…" : `Confirmar pedido · ${formatARS(subtotalMinor + deliveryFee)}`}
-            disabled={!canSubmit}
+        <View style={[styles.footer, cardShadow(t), { backgroundColor: t.card, borderColor: t.border }]}>
+          <Pressable
             onPress={() => {
               setError(null);
               submit.mutate();
             }}
-          />
+            disabled={!canSubmit}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canSubmit }}
+            style={({ pressed }) => [styles.confirm, { backgroundColor: t.primary, opacity: !canSubmit ? 0.4 : pressed ? 0.85 : 1 }]}
+          >
+            <Text style={[styles.confirmText, { color: t.primaryText }]}>{submit.isPending ? "Enviando…" : "Confirmar pedido"}</Text>
+            <Text style={[styles.confirmText, { color: t.primaryText }]}>{formatARS(total)}</Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Piezas
+// ---------------------------------------------------------------------------
+
+function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
+  const t = useTheme();
+  return (
+    <View style={styles.topBar}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Volver"
+        onPress={onBack}
+        hitSlop={8}
+        style={[styles.backButton, cardShadow(t), { backgroundColor: t.card }]}
+      >
+        <Icon name="back" size={20} color={t.text} />
+      </Pressable>
+      <Text style={[styles.topTitle, { color: t.text }]}>{title}</Text>
+      <View style={styles.backButton} />
+    </View>
+  );
+}
+
+function SectionTitle({ t, children }: { t: Theme; children: ReactNode }) {
+  return <Text style={[styles.section, { color: t.text }]}>{children}</Text>;
+}
+
+function Card({ t, padded, children }: { t: Theme; padded?: boolean; children: ReactNode }) {
+  return <View style={[styles.card, padded && styles.cardPadded, cardShadow(t), { backgroundColor: t.card }]}>{children}</View>;
+}
+
+function Notice({ t, children }: { t: Theme; children: ReactNode }) {
+  return (
+    <View style={[styles.notice, { backgroundColor: t.dangerBg }]} accessibilityLiveRegion="polite">
+      <Icon name="warning" size={18} color={t.danger} />
+      <Text style={[styles.noticeText, { color: t.danger }]}>{children}</Text>
+    </View>
+  );
+}
+
+function LineRow({
+  line: l,
+  icon,
+  last,
+  onDecrease,
+  onIncrease,
+}: {
+  line: CartLine;
+  icon: IconName;
+  last: boolean;
+  onDecrease: () => void;
+  onIncrease: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <View style={[styles.line, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
+      <View style={[styles.thumb, { backgroundColor: t.primarySoft }]}>
+        <Icon name={icon} size={24} color={t.primary} />
+      </View>
+      <View style={styles.lineBody}>
+        <Text style={[styles.lineName, { color: t.text }]}>
+          {l.productName}
+          {l.variantName ? ` (${l.variantName})` : ""}
+        </Text>
+        {l.modifiers.length > 0 && (
+          <Text style={[styles.meta, { color: t.muted }]}>
+            {l.modifiers.map((m) => `${m.quantity > 1 ? `${m.quantity}× ` : ""}${m.name}`).join(", ")}
+          </Text>
+        )}
+        {l.notes && <Text style={[styles.meta, { color: t.muted, fontStyle: "italic" }]}>«{l.notes}»</Text>}
+        <View style={styles.lineFooter}>
+          <Text style={[styles.linePrice, { color: t.primary }]}>{formatARS(l.unitPriceMinor * l.quantity)}</Text>
+          <View style={[styles.qty, { backgroundColor: t.surface }]}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={l.quantity === 1 ? `Quitar ${l.productName}` : `Uno menos de ${l.productName}`}
+              onPress={onDecrease}
+              style={[styles.qtyBtn, { backgroundColor: t.card }]}
+              hitSlop={6}
+            >
+              <Icon name={l.quantity === 1 ? "trash" : "remove"} size={16} color={l.quantity === 1 ? t.danger : t.text} />
+            </Pressable>
+            <Text style={[styles.qtyValue, { color: t.text }]}>{l.quantity}</Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Uno más de ${l.productName}`}
+              onPress={onIncrease}
+              style={[styles.qtyBtn, { backgroundColor: t.primary }]}
+              hitSlop={6}
+            >
+              <Icon name="add" size={16} color={t.primaryText} />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function ModeOption({
+  icon,
+  label,
+  detail,
+  selected,
+  onPress,
+}: {
+  icon: IconName;
+  label: string;
+  detail: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  const t = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={`${label}, ${detail}`}
+      style={({ pressed }) => [
+        styles.mode,
+        !selected && cardShadow(t),
+        {
+          backgroundColor: selected ? t.primarySoft : t.card,
+          borderColor: selected ? t.primary : "transparent",
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
+    >
+      <View style={[styles.modeIcon, { backgroundColor: selected ? t.primary : t.surface }]}>
+        <Icon name={icon} size={22} color={selected ? t.primaryText : t.muted} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.modeLabel, { color: t.text }]}>{label}</Text>
+        <Text style={[styles.meta, { color: selected ? t.primary : t.muted }]}>{detail}</Text>
+      </View>
+    </Pressable>
   );
 }
 
@@ -237,8 +442,8 @@ function Field({
 }) {
   const t = useTheme();
   return (
-    <View style={{ gap: 4 }}>
-      <Text style={{ color: t.muted, fontSize: 13 }}>{label}</Text>
+    <View style={{ gap: 6 }}>
+      <Text style={[styles.fieldLabel, { color: t.muted }]}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChange}
@@ -255,10 +460,10 @@ function Field({
 
 function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   const t = useTheme();
-  const style = { color: t.text, fontSize: strong ? 17 : 15, fontWeight: strong ? ("700" as const) : ("400" as const) };
+  const style = { color: t.text, fontSize: strong ? 18 : 15, fontWeight: strong ? ("800" as const) : ("400" as const) };
   return (
     <View style={styles.summaryRow}>
-      <Text style={style}>{label}</Text>
+      <Text style={[style, !strong && { color: t.muted }]}>{label}</Text>
       <Text style={style}>{value}</Text>
     </View>
   );
@@ -266,16 +471,64 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: space.lg, gap: space.md, paddingBottom: space.xl },
-  title: { fontSize: 26, fontWeight: "800" },
-  line: { flexDirection: "row", gap: space.md, paddingVertical: space.md, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: "center" },
-  qty: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  qtyBtn: { width: 34, height: 34, borderRadius: 17, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  section: { fontSize: 18, fontWeight: "700", marginTop: space.md },
-  row: { flexDirection: "row", gap: space.sm },
-  wrapRow: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  input: { borderRadius: 12, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
-  summary: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md, gap: space.sm, marginTop: space.md },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between" },
-  footer: { borderTopWidth: StyleSheet.hairlineWidth, padding: space.lg },
+  content: { padding: space.lg, paddingTop: space.sm, gap: space.md, paddingBottom: space.xl },
+
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space.lg, paddingVertical: space.sm },
+  backButton: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  topTitle: { fontSize: 18, fontWeight: "800" },
+
+  emptyIcon: { width: 88, height: 88, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  emptyTitle: { fontSize: 20, fontWeight: "800" },
+
+  merchant: { flexDirection: "row", alignItems: "center", gap: space.md },
+  merchantIcon: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  merchantName: { fontSize: 17, fontWeight: "800" },
+  link: { fontSize: 14, fontWeight: "700" },
+  meta: { fontSize: 13 },
+
+  card: { borderRadius: radius.lg, paddingHorizontal: space.md },
+  cardPadded: { paddingVertical: space.md, gap: space.md },
+
+  line: { flexDirection: "row", gap: space.md, paddingVertical: space.md },
+  thumb: { width: 56, height: 56, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  lineBody: { flex: 1, gap: 2 },
+  lineName: { fontSize: 15, fontWeight: "700" },
+  lineFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.xs },
+  linePrice: { fontSize: 15, fontWeight: "800" },
+  qty: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.pill, padding: 4 },
+  qtyBtn: { width: 28, height: 28, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  qtyValue: { fontSize: 15, fontWeight: "700", minWidth: 18, textAlign: "center" },
+
+  section: { fontSize: 18, fontWeight: "800", marginTop: space.sm },
+  modes: { flexDirection: "row", gap: space.md },
+  mode: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.lg, borderWidth: 2, padding: space.md },
+  modeIcon: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  modeLabel: { fontSize: 15, fontWeight: "800" },
+
+  infoRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
+  infoText: { fontSize: 15 },
+  zone: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
+  radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  radioDot: { width: 10, height: 10, borderRadius: radius.pill },
+
+  fieldLabel: { fontSize: 13, fontWeight: "600" },
+  input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
+
+  summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  divider: { height: StyleSheet.hairlineWidth },
+  payment: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.md },
+
+  notice: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.md },
+  noticeText: { fontSize: 14, fontWeight: "600", flex: 1 },
+
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm },
+  confirm: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: radius.pill,
+    paddingHorizontal: space.xl,
+    height: 54,
+  },
+  confirmText: { fontSize: 16, fontWeight: "800" },
 });

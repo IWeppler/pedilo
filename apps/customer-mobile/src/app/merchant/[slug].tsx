@@ -1,24 +1,56 @@
 import type { PublicProduct } from "@pedilo/api-client";
 import { formatARS } from "@pedilo/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, SectionList, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { StatusBar } from "expo-status-bar";
+import { useCallback, useMemo, useRef, useState } from "react";
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CartBar } from "@/components/cart-bar";
+import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Centered, ErrorState, Loading } from "@/components/ui";
-import { useMerchantMenu } from "@/lib/api";
-import { space, useTheme } from "@/lib/theme";
+import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
+import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
 
-/** Menú de un comercio: datos de la sucursal y productos por sección, con búsqueda. */
+interface MenuSectionData {
+  key: string;
+  title: string;
+  data: PublicProduct[];
+}
+
+const BAR_HEIGHT = 52;
+const TABS_HEIGHT = 48;
+
+/**
+ * Menú de un comercio: portada, datos de la sucursal y productos por sección, con búsqueda.
+ * Al pasar la portada aparece una barra fija con el nombre y las secciones para saltar entre ellas.
+ */
 export default function MerchantScreen() {
   const t = useTheme();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const menu = useMerchantMenu(slug);
+  const categories = useMerchantCategories();
   const [query, setQuery] = useState("");
+  const [headerHeight, setHeaderHeight] = useState(0);
+  const [compact, setCompact] = useState(false);
+  const [activeKey, setActiveKey] = useState<string | null>(null);
+  const listRef = useRef<SectionList<PublicProduct, MenuSectionData>>(null);
+  // Mientras se salta a una sección tocando su pestaña, no se pisa la pestaña activa al scrollear.
+  const jumpingTo = useRef<string | null>(null);
 
-  const sections = useMemo(() => {
+  const sections = useMemo<MenuSectionData[]>(() => {
     const q = normalize(query);
     return (menu.data?.sections ?? [])
       .map((s) => ({
@@ -28,6 +60,17 @@ export default function MerchantScreen() {
       }))
       .filter((s) => s.data.length > 0);
   }, [menu.data, query]);
+
+  // Estable: SectionList no admite cambiar onViewableItemsChanged después de montarse.
+  const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { section?: unknown }[] }) => {
+    const first = viewableItems.find((v) => v.section);
+    const key = (first?.section as MenuSectionData | undefined)?.key ?? null;
+    if (jumpingTo.current) {
+      if (key === jumpingTo.current) jumpingTo.current = null;
+      return;
+    }
+    if (key) setActiveKey(key);
+  }, []);
 
   if (menu.isPending) return <Loading />;
   if (menu.isError) {
@@ -39,76 +82,218 @@ export default function MerchantScreen() {
   }
 
   const { merchant } = menu.data;
+  const category = categories.data?.find((c) => c.id === merchant.categoryId);
+  const icon = categoryIcon(category?.slug);
   // MVP: se muestra la primera sucursal activa (la mayoría de los comercios del piloto tiene una).
   const branch = merchant.branches[0];
   const fees = branch?.zones.map((z) => z.feeMinor) ?? [];
+  const minOrders = branch?.zones.map((z) => z.minOrderMinor).filter((v) => v > 0) ?? [];
+  const minFee = fees.length > 0 ? Math.min(...fees) : null;
+  const currentKey = activeKey ?? sections[0]?.key ?? null;
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    const next = headerHeight > 0 && y > headerHeight - BAR_HEIGHT - insets.top;
+    if (next !== compact) setCompact(next);
+  };
+
+  const jumpTo = (key: string) => {
+    const sectionIndex = sections.findIndex((s) => s.key === key);
+    if (sectionIndex < 0) return;
+    jumpingTo.current = key;
+    setActiveKey(key);
+    listRef.current?.scrollToLocation({
+      sectionIndex,
+      itemIndex: 0,
+      viewOffset: insets.top + BAR_HEIGHT + TABS_HEIGHT,
+      animated: true,
+    });
+  };
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   return (
-    <SafeAreaView edges={["top"]} style={[styles.screen, { backgroundColor: t.background }]}>
+    <View style={[styles.screen, { backgroundColor: t.background }]}>
+      {/* Íconos claros sobre la portada naranja; normales con la barra compacta. */}
+      <StatusBar style={compact ? "auto" : "light"} />
       <SectionList
+        ref={listRef}
         sections={sections}
         keyExtractor={(p) => p.id}
-        stickySectionHeadersEnabled
+        stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={{ itemVisiblePercentThreshold: 60 }}
+        // Los menús del piloto son chicos: renderizar todo hace que saltar a una sección sea exacto.
+        initialNumToRender={500}
+        onScrollToIndexFailed={() => {}}
         ListHeaderComponent={
-          <View style={styles.header}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={() => router.back()} hitSlop={12}>
-              <Text style={[styles.back, { color: t.text }]}>‹ Volver</Text>
-            </Pressable>
-            <Text style={[styles.title, { color: t.text }]}>{merchant.displayName}</Text>
-            {branch && (
-              <>
-                <View style={styles.row}>
-                  <Badge label={branch.openNow ? "Abierto ahora" : "Cerrado ahora"} tone={branch.openNow ? "success" : "neutral"} />
-                </View>
-                <Text style={{ color: t.muted }}>
-                  {branch.addressLine}
-                  {branch.addressNotes ? ` · ${branch.addressNotes}` : ""}
-                </Text>
-                <Text style={{ color: t.muted }}>
-                  {[
-                    branch.acceptsPickup && "Retiro en el local",
-                    branch.acceptsDelivery && fees.length > 0 && `Envío desde ${formatARS(Math.min(...fees))}`,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </Text>
-              </>
+          <View onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
+            {/* Portada (sin fotos todavía: ícono del rubro sobre el naranja de marca) */}
+            <View style={[styles.cover, { backgroundColor: t.primary, paddingTop: insets.top }]}>
+              <View style={styles.coverArt}>
+                <Icon name={icon} size={72} color="#ffffff" />
+              </View>
+            </View>
+
+            {/* Datos del comercio */}
+            <View style={[styles.info, cardShadow(t), { backgroundColor: t.card }]}>
+              <Text style={[styles.title, { color: t.text }]}>{merchant.displayName}</Text>
+              <View style={styles.badges}>
+                {branch && <Badge label={branch.openNow ? "Abierto ahora" : "Cerrado ahora"} tone={branch.openNow ? "success" : "neutral"} />}
+                {category && <Text style={[styles.meta, { color: t.muted }]}>{category.name}</Text>}
+              </View>
+              {branch && (
+                <>
+                  <View style={styles.address}>
+                    <Icon name="location" size={16} color={t.muted} />
+                    <Text style={[styles.meta, { color: t.muted, flex: 1 }]}>
+                      {branch.addressLine}
+                      {branch.addressNotes ? ` · ${branch.addressNotes}` : ""}
+                    </Text>
+                  </View>
+                  <View style={[styles.facts, { borderTopColor: t.border }]}>
+                    {branch.acceptsPickup && <Fact icon="pickup" label="Retiro" value="Sin costo" t={t} />}
+                    {branch.acceptsDelivery && minFee !== null && (
+                      <Fact icon="delivery" label="Envío" value={minFee === 0 ? "Gratis" : `desde ${formatARS(minFee)}`} t={t} />
+                    )}
+                    {minOrders.length > 0 && <Fact icon="cart" label="Mínimo" value={formatARS(Math.min(...minOrders))} t={t} />}
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Búsqueda */}
+            <View style={[styles.search, cardShadow(t), { backgroundColor: t.card }]}>
+              <Icon name="search" size={20} color={t.muted} />
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                placeholder="Buscar en el menú"
+                placeholderTextColor={t.muted}
+                accessibilityLabel="Buscar en el menú"
+                style={[styles.searchInput, { color: t.text }]}
+                clearButtonMode="while-editing"
+              />
+            </View>
+
+            {sections.length > 1 && (
+              <SectionTabs sections={sections} activeKey={currentKey} onPress={jumpTo} style={{ marginTop: space.md }} />
             )}
-            <TextInput
-              value={query}
-              onChangeText={setQuery}
-              placeholder="Buscar en el menú"
-              placeholderTextColor={t.muted}
-              accessibilityLabel="Buscar en el menú"
-              style={[styles.search, { backgroundColor: t.surface, color: t.text }]}
-              clearButtonMode="while-editing"
-            />
           </View>
         }
         ListEmptyComponent={
           <Centered>
+            <Icon name="store" size={40} color={t.muted} />
             <Text style={{ color: t.muted, textAlign: "center" }}>
-              {query ? `Nada coincide con «${query}».` : "Este comercio todavía no cargó su menú."}
+              {query ? `Nada coincide con «${query.trim()}».` : "Este comercio todavía no cargó su menú."}
             </Text>
           </Centered>
         }
         renderSectionHeader={({ section }) => (
-          <Text style={[styles.sectionTitle, { color: t.text, backgroundColor: t.background }]}>{section.title}</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: t.text }]}>{section.title}</Text>
+            <Text style={[styles.meta, { color: t.muted }]}>{section.data.length}</Text>
+          </View>
         )}
         renderItem={({ item }) => (
-          <ProductRow
+          <ProductCard
             product={item}
+            icon={icon}
             onPress={() => router.push({ pathname: "/product/[slug]/[productId]", params: { slug, productId: item.id } })}
           />
         )}
       />
+
+      {/* Botón volver flotante sobre la portada */}
+      {!compact && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
+          onPress={back}
+          hitSlop={8}
+          style={[styles.floatingBack, cardShadow(t), { top: insets.top + space.sm, backgroundColor: t.card }]}
+        >
+          <Icon name="back" size={22} color={t.text} />
+        </Pressable>
+      )}
+
+      {/* Barra compacta al pasar la portada */}
+      {compact && (
+        <View style={[styles.compact, cardShadow(t), { paddingTop: insets.top, backgroundColor: t.card }]}>
+          <View style={styles.compactBar}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={back} hitSlop={12} style={styles.compactBack}>
+              <Icon name="back" size={22} color={t.text} />
+            </Pressable>
+            <Text style={[styles.compactTitle, { color: t.text }]} numberOfLines={1}>
+              {merchant.displayName}
+            </Text>
+          </View>
+          {sections.length > 1 && <SectionTabs sections={sections} activeKey={currentKey} onPress={jumpTo} />}
+        </View>
+      )}
+
       <CartBar onlyFor={slug} />
-    </SafeAreaView>
+    </View>
   );
 }
 
-function ProductRow({ product: p, onPress }: { product: PublicProduct; onPress: () => void }) {
+function SectionTabs({
+  sections,
+  activeKey,
+  onPress,
+  style,
+}: {
+  sections: MenuSectionData[];
+  activeKey: string | null;
+  onPress: (key: string) => void;
+  style?: object;
+}) {
+  const t = useTheme();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={[{ height: TABS_HEIGHT, flexGrow: 0 }, style]}
+      contentContainerStyle={styles.tabs}
+    >
+      {sections.map((s) => {
+        const active = s.key === activeKey;
+        return (
+          <Pressable
+            key={s.key}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            onPress={() => onPress(s.key)}
+            style={[styles.tab, { backgroundColor: active ? t.primary : t.surface }]}
+          >
+            <Text style={[styles.tabText, { color: active ? t.primaryText : t.text }]}>{s.title}</Text>
+          </Pressable>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+function Fact({ icon, label, value, t }: { icon: IconName; label: string; value: string; t: Theme }) {
+  return (
+    <View style={styles.fact}>
+      <View style={[styles.factIcon, { backgroundColor: t.primarySoft }]}>
+        <Icon name={icon} size={16} color={t.primary} />
+      </View>
+      <View>
+        <Text style={[styles.factLabel, { color: t.muted }]}>{label}</Text>
+        <Text style={[styles.factValue, { color: t.text }]}>{value}</Text>
+      </View>
+    </View>
+  );
+}
+
+/** Tarjeta de producto. Sin fotos todavía: miniatura con el ícono del rubro. */
+function ProductCard({ product: p, icon, onPress }: { product: PublicProduct; icon: IconName; onPress: () => void }) {
   const t = useTheme();
   const price = p.variants.length > 0 ? `desde ${formatARS(p.fromPriceMinor)}` : formatARS(p.priceMinor);
   return (
@@ -116,18 +301,34 @@ function ProductRow({ product: p, onPress }: { product: PublicProduct; onPress: 
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${p.name}, ${price}${p.available ? "" : ", sin stock"}`}
-      style={({ pressed }) => [styles.product, { borderColor: t.border, opacity: pressed ? 0.6 : p.available ? 1 : 0.5 }]}
+      style={({ pressed }) => [
+        styles.product,
+        cardShadow(t),
+        { backgroundColor: t.card, opacity: pressed ? 0.75 : p.available ? 1 : 0.55 },
+      ]}
     >
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[styles.productName, { color: t.text }]}>{p.name}</Text>
+      <View style={styles.productBody}>
+        <Text style={[styles.productName, { color: t.text }]} numberOfLines={2}>
+          {p.name}
+        </Text>
         {p.description && (
-          <Text style={{ color: t.muted }} numberOfLines={2}>
+          <Text style={[styles.meta, { color: t.muted }]} numberOfLines={2}>
             {p.description}
           </Text>
         )}
-        <Text style={[styles.price, { color: t.text }]}>{price}</Text>
+        <View style={styles.productFooter}>
+          <Text style={[styles.price, { color: t.primary }]}>{price}</Text>
+          {!p.available && <Badge label="Sin stock" tone="danger" />}
+        </View>
       </View>
-      {!p.available && <Badge label="Sin stock" tone="danger" />}
+      <View style={[styles.thumb, { backgroundColor: t.primarySoft }]}>
+        <Icon name={icon} size={34} color={t.primary} />
+        {p.available && (
+          <View style={[styles.addButton, { backgroundColor: t.primary, borderColor: t.card }]}>
+            <Icon name="add" size={18} color={t.primaryText} />
+          </View>
+        )}
+      </View>
     </Pressable>
   );
 }
@@ -141,21 +342,60 @@ const normalize = (s: string) =>
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { paddingBottom: space.xl, flexGrow: 1 },
-  header: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, gap: space.sm },
-  back: { fontSize: 16, fontWeight: "500" },
-  title: { fontSize: 26, fontWeight: "800" },
-  row: { flexDirection: "row", gap: space.sm },
-  search: { borderRadius: 12, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 16, marginTop: space.sm },
-  sectionTitle: { fontSize: 18, fontWeight: "700", paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.sm },
-  product: {
-    marginHorizontal: space.lg,
-    paddingVertical: space.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    flexDirection: "row",
+  content: { paddingBottom: space.xl * 2, flexGrow: 1 },
+
+  cover: { height: 190, alignItems: "center", justifyContent: "center" },
+  coverArt: {
+    width: 120,
+    height: 120,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(255,255,255,0.18)",
     alignItems: "center",
-    gap: space.md,
+    justifyContent: "center",
   },
-  productName: { fontSize: 16, fontWeight: "600" },
-  price: { fontSize: 15, fontWeight: "600", marginTop: 2 },
+  floatingBack: { position: "absolute", left: space.lg, width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+
+  info: { marginHorizontal: space.lg, marginTop: -48, borderRadius: radius.lg, padding: space.lg, gap: space.sm },
+  title: { fontSize: 24, fontWeight: "800" },
+  badges: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  address: { flexDirection: "row", gap: 6, alignItems: "flex-start" },
+  meta: { fontSize: 13 },
+  facts: { flexDirection: "row", flexWrap: "wrap", gap: space.lg, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md, marginTop: space.xs },
+  fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  factIcon: { width: 32, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  factLabel: { fontSize: 11 },
+  factValue: { fontSize: 14, fontWeight: "700" },
+
+  search: { flexDirection: "row", alignItems: "center", gap: space.sm, marginHorizontal: space.lg, marginTop: space.lg, borderRadius: radius.pill, paddingHorizontal: space.lg, height: 48 },
+  searchInput: { flex: 1, fontSize: 16, height: "100%" },
+
+  tabs: { gap: space.sm, paddingHorizontal: space.lg, alignItems: "center" },
+  tab: { borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: 8 },
+  tabText: { fontSize: 14, fontWeight: "600" },
+
+  compact: { position: "absolute", top: 0, left: 0, right: 0, paddingBottom: space.xs },
+  compactBar: { height: BAR_HEIGHT, flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg },
+  compactBack: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  compactTitle: { fontSize: 17, fontWeight: "700", flex: 1 },
+
+  sectionHeader: { flexDirection: "row", alignItems: "baseline", gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.md },
+  sectionTitle: { fontSize: 19, fontWeight: "800" },
+
+  product: { flexDirection: "row", gap: space.md, marginHorizontal: space.lg, marginBottom: space.md, borderRadius: radius.lg, padding: space.md },
+  productBody: { flex: 1, gap: 4 },
+  productName: { fontSize: 16, fontWeight: "700" },
+  productFooter: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: "auto", paddingTop: space.xs },
+  price: { fontSize: 16, fontWeight: "800" },
+  thumb: { width: 92, height: 92, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  addButton: {
+    position: "absolute",
+    right: -6,
+    bottom: -6,
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    borderWidth: 3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

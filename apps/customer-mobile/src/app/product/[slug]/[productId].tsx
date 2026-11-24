@@ -1,14 +1,15 @@
 import type { PublicProduct } from "@pedilo/api-client";
 import { formatARS, priceSelection, SelectionError } from "@pedilo/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { type ReactNode, useMemo, useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Badge, Button, ErrorState, Loading } from "@/components/ui";
-import { useMerchantMenu } from "@/lib/api";
+import { categoryIcon, Icon, type IconName } from "@/components/icon";
+import { Badge, ErrorState, Loading } from "@/components/ui";
+import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
 import { useCart } from "@/lib/cart";
-import { space, useTheme } from "@/lib/theme";
+import { cardShadow, radius, space, useTheme } from "@/lib/theme";
 
 /**
  * Detalle de producto: variante, opciones y cantidad. El precio y las validaciones salen de
@@ -19,6 +20,7 @@ export default function ProductScreen() {
   const router = useRouter();
   const { slug, productId } = useLocalSearchParams<{ slug: string; productId: string }>();
   const menu = useMerchantMenu(slug);
+  const categories = useMerchantCategories();
   const product = useMemo(
     () => menu.data?.sections.flatMap((s) => s.products).find((p) => p.id === productId),
     [menu.data, productId],
@@ -34,11 +36,13 @@ export default function ProductScreen() {
   }
   const merchant = menu.data!.merchant;
   const branch = merchant.branches[0];
+  const categorySlug = categories.data?.find((c) => c.id === merchant.categoryId)?.slug;
   return (
     <ProductDetail
       product={product}
       merchant={{ merchantSlug: merchant.slug, merchantName: merchant.displayName, branchId: branch?.id ?? "" }}
       branchOpen={branch?.openNow ?? false}
+      icon={categoryIcon(categorySlug)}
       onClose={() => router.back()}
     />
   );
@@ -48,14 +52,17 @@ function ProductDetail({
   product,
   merchant,
   branchOpen,
+  icon,
   onClose,
 }: {
   product: PublicProduct;
   merchant: { merchantSlug: string; merchantName: string; branchId: string };
   branchOpen: boolean;
+  icon: IconName;
   onClose: () => void;
 }) {
   const t = useTheme();
+  const insets = useSafeAreaInsets();
   const { cart, add } = useCart();
   const [notes, setNotes] = useState("");
   const [variantId, setVariantId] = useState<string | null>(
@@ -92,6 +99,7 @@ function ProductDetail({
   const total = result.ok ? result.unitPriceMinor * quantity : null;
   const otherMerchant = cart && cart.merchantSlug !== merchant.merchantSlug ? cart.merchantName : null;
   const canAdd = result.ok && branchOpen && merchant.branchId !== "";
+  const basePrice = product.variants.length > 0 ? `desde ${formatARS(product.fromPriceMinor)}` : formatARS(product.priceMinor);
 
   const addToCart = () => {
     if (!result.ok) return;
@@ -114,109 +122,146 @@ function ProductDetail({
     onClose();
   };
 
+  // En iOS la pantalla es una hoja (sheet) y no necesita margen superior; en Android ocupa todo.
+  const topGap = Platform.OS === "ios" ? space.md : insets.top + space.sm;
+
   return (
-    <SafeAreaView edges={["bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <Pressable accessibilityRole="button" accessibilityLabel="Cerrar" onPress={onClose} hitSlop={12} style={styles.close}>
-          <Text style={{ color: t.muted, fontSize: 16 }}>Cerrar</Text>
-        </Pressable>
-        <Text style={[styles.title, { color: t.text }]}>{product.name}</Text>
-        {product.description && <Text style={{ color: t.muted, fontSize: 15 }}>{product.description}</Text>}
-        {!product.available && <Badge label="Sin stock por ahora" tone="danger" />}
+    <View style={[styles.screen, { backgroundColor: t.background }]}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {/* Imagen (sin fotos todavía: ícono del rubro) */}
+          <View style={[styles.hero, { backgroundColor: t.primarySoft, paddingTop: topGap }]}>
+            <View style={[styles.heroArt, { backgroundColor: t.card }]}>
+              <Icon name={icon} size={64} color={t.primary} />
+            </View>
+          </View>
 
-        {product.variants.length > 0 && (
-          <Group title="Elegí una opción" subtitle="Obligatorio">
-            {product.variants.map((v) => (
-              <OptionRow
-                key={v.id}
-                label={v.name}
-                price={formatARS(v.priceMinor)}
-                selected={variantId === v.id}
-                disabled={!v.available}
-                kind="radio"
-                onPress={() => setVariantId(v.id)}
-              />
-            ))}
-          </Group>
-        )}
+          <View style={[styles.sheet, { backgroundColor: t.background }]}>
+            <Text style={[styles.title, { color: t.text }]}>{product.name}</Text>
+            <Text style={[styles.basePrice, { color: t.primary }]}>{basePrice}</Text>
+            {product.description && <Text style={[styles.description, { color: t.muted }]}>{product.description}</Text>}
+            {!product.available && <Badge label="Sin stock por ahora" tone="danger" />}
 
-        {product.modifierGroups.map((g) => {
-          const count = groupCount(g.id);
-          const full = count >= g.maxSelect;
-          return (
-            <Group key={g.id} title={g.name} subtitle={groupRule(g.minSelect, g.maxSelect)}>
-              {g.modifiers.map((m) => {
-                const q = picks[m.id] ?? 0;
-                const price = m.priceDeltaMinor > 0 ? `+ ${formatARS(m.priceDeltaMinor)}` : "";
-                if (m.maxQuantity > 1 && g.maxSelect > 1) {
-                  return (
-                    <StepperRow
-                      key={m.id}
-                      label={m.name}
-                      price={price}
-                      value={q}
-                      disabled={!m.available}
-                      canAdd={!full && q < m.maxQuantity}
-                      onChange={(next) => setPick(g.id, m.id, next)}
-                    />
-                  );
-                }
-                return (
+            {product.variants.length > 0 && (
+              <Group title="Elegí una opción" required done={variantId !== null} rule="Obligatorio">
+                {product.variants.map((v, i) => (
                   <OptionRow
-                    key={m.id}
-                    label={m.name}
-                    price={price}
-                    selected={q > 0}
-                    disabled={!m.available || (g.maxSelect > 1 && full && q === 0)}
-                    kind={g.maxSelect === 1 ? "radio" : "check"}
-                    onPress={() => setPick(g.id, m.id, g.maxSelect === 1 ? 1 : q > 0 ? 0 : 1)}
+                    key={v.id}
+                    label={v.name}
+                    price={formatARS(v.priceMinor)}
+                    selected={variantId === v.id}
+                    disabled={!v.available}
+                    kind="radio"
+                    last={i === product.variants.length - 1}
+                    onPress={() => setVariantId(v.id)}
                   />
-                );
-              })}
-            </Group>
-          );
-        })}
+                ))}
+              </Group>
+            )}
 
-        <Text style={{ color: t.text, fontSize: 16, fontWeight: "600", marginTop: space.md }}>Aclaraciones</Text>
-        <TextInput
-          value={notes}
-          onChangeText={setNotes}
-          placeholder="Por ejemplo: sin cebolla"
-          placeholderTextColor={t.muted}
-          maxLength={200}
-          accessibilityLabel="Aclaraciones para el comercio"
-          style={[styles.notes, { backgroundColor: t.surface, color: t.text }]}
-        />
+            {product.modifierGroups.map((g) => {
+              const count = groupCount(g.id);
+              const full = count >= g.maxSelect;
+              return (
+                <Group key={g.id} title={g.name} required={g.minSelect > 0} done={count >= g.minSelect && count > 0} rule={groupRule(g.minSelect, g.maxSelect)}>
+                  {g.modifiers.map((m, i) => {
+                    const q = picks[m.id] ?? 0;
+                    const price = m.priceDeltaMinor > 0 ? `+ ${formatARS(m.priceDeltaMinor)}` : "";
+                    const last = i === g.modifiers.length - 1;
+                    if (m.maxQuantity > 1 && g.maxSelect > 1) {
+                      return (
+                        <StepperRow
+                          key={m.id}
+                          label={m.name}
+                          price={price}
+                          value={q}
+                          disabled={!m.available}
+                          canAdd={!full && q < m.maxQuantity}
+                          last={last}
+                          onChange={(next) => setPick(g.id, m.id, next)}
+                        />
+                      );
+                    }
+                    return (
+                      <OptionRow
+                        key={m.id}
+                        label={m.name}
+                        price={price}
+                        selected={q > 0}
+                        disabled={!m.available || (g.maxSelect > 1 && full && q === 0)}
+                        kind={g.maxSelect === 1 ? "radio" : "check"}
+                        last={last}
+                        onPress={() => setPick(g.id, m.id, g.maxSelect === 1 ? 1 : q > 0 ? 0 : 1)}
+                      />
+                    );
+                  })}
+                </Group>
+              );
+            })}
 
-        <View style={styles.quantity}>
-          <Text style={{ color: t.text, fontSize: 16, fontWeight: "600" }}>Cantidad</Text>
-          <Stepper value={quantity} min={1} max={20} onChange={setQuantity} label="Cantidad" />
+            <Text style={[styles.label, { color: t.text }]}>Aclaraciones</Text>
+            <TextInput
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="Por ejemplo: sin cebolla"
+              placeholderTextColor={t.muted}
+              maxLength={200}
+              multiline
+              accessibilityLabel="Aclaraciones para el comercio"
+              style={[styles.notes, cardShadow(t), { backgroundColor: t.card, color: t.text }]}
+            />
+          </View>
+        </ScrollView>
+
+        {/* Pie fijo: cantidad + agregar */}
+        <View
+          style={[
+            styles.footer,
+            cardShadow(t),
+            { backgroundColor: t.card, borderColor: t.border, paddingBottom: Math.max(insets.bottom, space.md) },
+          ]}
+        >
+          {hint && <Text style={[styles.footerNote, { color: t.muted }]}>{hint}</Text>}
+          {!hint && !branchOpen && <Text style={[styles.footerNote, { color: t.muted }]}>El comercio está cerrado ahora.</Text>}
+          {otherMerchant && canAdd && (
+            <Text style={[styles.footerNote, { color: t.muted }]}>
+              Tenés un pedido en curso de {otherMerchant}. Si agregás esto, se reemplaza.
+            </Text>
+          )}
+          <View style={styles.footerRow}>
+            <View style={[styles.quantityPill, { backgroundColor: t.surface }]}>
+              <Stepper value={quantity} min={1} max={20} onChange={setQuantity} label="Cantidad" />
+            </View>
+            <Pressable
+              onPress={addToCart}
+              disabled={!canAdd}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: !canAdd }}
+              style={({ pressed }) => [
+                styles.addButton,
+                { backgroundColor: t.primary, opacity: !canAdd ? 0.4 : pressed ? 0.85 : 1 },
+              ]}
+            >
+              <Text style={[styles.addText, { color: t.primaryText }]} numberOfLines={1}>
+                {otherMerchant ? "Vaciar y agregar" : "Agregar"}
+              </Text>
+              {total !== null && <Text style={[styles.addText, { color: t.primaryText }]}>{formatARS(total)}</Text>}
+            </Pressable>
+          </View>
         </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
 
-      <View style={[styles.footer, { borderColor: t.border, backgroundColor: t.background }]}>
-        {hint && <Text style={{ color: t.muted, textAlign: "center" }}>{hint}</Text>}
-        {otherMerchant && canAdd && (
-          <Text style={{ color: t.muted, fontSize: 13, textAlign: "center" }}>
-            Tenés un pedido en curso de {otherMerchant}. Si agregás esto, se reemplaza.
-          </Text>
-        )}
-        <Button
-          label={
-            total === null
-              ? "Agregar al pedido"
-              : otherMerchant
-                ? `Vaciar y agregar · ${formatARS(total)}`
-                : `Agregar al pedido · ${formatARS(total)}`
-          }
-          disabled={!canAdd}
-          onPress={addToCart}
-        />
-        {!branchOpen && (
-          <Text style={{ color: t.muted, fontSize: 12, textAlign: "center" }}>El comercio está cerrado ahora.</Text>
-        )}
-      </View>
-    </SafeAreaView>
+      {/* Cerrar, flotante sobre la imagen */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Cerrar"
+        onPress={onClose}
+        hitSlop={8}
+        style={[styles.close, cardShadow(t), { top: topGap, backgroundColor: t.card }]}
+      >
+        <Icon name="close" size={20} color={t.text} />
+      </Pressable>
+    </View>
   );
 }
 
@@ -245,15 +290,37 @@ function groupRule(min: number, max: number): string {
   return `Obligatorio · de ${min} a ${max}`;
 }
 
-function Group({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+/** Bloque de opciones. Los obligatorios llevan etiqueta naranja que pasa a «Listo» al completarse. */
+function Group({
+  title,
+  rule,
+  required,
+  done,
+  children,
+}: {
+  title: string;
+  rule: string;
+  required: boolean;
+  done: boolean;
+  children: ReactNode;
+}) {
   const t = useTheme();
+  const tag = required ? (done ? { label: "Listo", bg: t.successBg, fg: t.success } : { label: "Obligatorio", bg: t.primarySoft, fg: t.primary }) : null;
   return (
     <View style={styles.group}>
-      <View style={[styles.groupHeader, { backgroundColor: t.surface }]}>
-        <Text style={{ color: t.text, fontWeight: "700", fontSize: 16 }}>{title}</Text>
-        <Text style={{ color: t.muted, fontSize: 13 }}>{subtitle}</Text>
+      <View style={styles.groupHeader}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[styles.groupTitle, { color: t.text }]}>{title}</Text>
+          <Text style={[styles.groupRule, { color: t.muted }]}>{rule}</Text>
+        </View>
+        {tag && (
+          <View style={[styles.groupTag, { backgroundColor: tag.bg }]}>
+            {done && <Icon name="check" size={12} color={tag.fg} />}
+            <Text style={[styles.groupTagText, { color: tag.fg }]}>{tag.label}</Text>
+          </View>
+        )}
       </View>
-      {children}
+      <View style={[styles.groupCard, cardShadow(t), { backgroundColor: t.card }]}>{children}</View>
     </View>
   );
 }
@@ -264,6 +331,7 @@ function OptionRow({
   selected,
   disabled,
   kind,
+  last,
   onPress,
 }: {
   label: string;
@@ -271,6 +339,7 @@ function OptionRow({
   selected: boolean;
   disabled: boolean;
   kind: "radio" | "check";
+  last: boolean;
   onPress: () => void;
 }) {
   const t = useTheme();
@@ -281,16 +350,23 @@ function OptionRow({
       accessibilityRole={kind === "radio" ? "radio" : "checkbox"}
       accessibilityState={{ checked: selected, disabled }}
       accessibilityLabel={`${label} ${price}${disabled ? ", no disponible" : ""}`}
-      style={[styles.option, { borderColor: t.border, opacity: disabled ? 0.4 : 1 }]}
+      style={({ pressed }) => [
+        styles.option,
+        !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border },
+        { opacity: disabled ? 0.4 : pressed ? 0.7 : 1 },
+      ]}
     >
-      <View
-        style={[
-          kind === "radio" ? styles.radio : styles.check,
-          { borderColor: selected ? t.primary : t.muted, backgroundColor: selected ? t.primary : "transparent" },
-        ]}
-      />
-      <Text style={{ color: t.text, fontSize: 16, flex: 1 }}>{label}</Text>
-      <Text style={{ color: t.muted }}>{disabled && !selected ? "Sin stock" : price}</Text>
+      {kind === "radio" ? (
+        <View style={[styles.radio, { borderColor: selected ? t.primary : t.border }]}>
+          {selected && <View style={[styles.radioDot, { backgroundColor: t.primary }]} />}
+        </View>
+      ) : (
+        <View style={[styles.check, { borderColor: selected ? t.primary : t.border, backgroundColor: selected ? t.primary : "transparent" }]}>
+          {selected && <Icon name="check" size={14} color={t.primaryText} />}
+        </View>
+      )}
+      <Text style={[styles.optionLabel, { color: t.text, fontWeight: selected ? "600" : "400" }]}>{label}</Text>
+      <Text style={[styles.optionPrice, { color: t.muted }]}>{disabled && !selected ? "Sin stock" : price}</Text>
     </Pressable>
   );
 }
@@ -301,6 +377,7 @@ function StepperRow({
   value,
   disabled,
   canAdd,
+  last,
   onChange,
 }: {
   label: string;
@@ -308,14 +385,21 @@ function StepperRow({
   value: number;
   disabled: boolean;
   canAdd: boolean;
+  last: boolean;
   onChange: (v: number) => void;
 }) {
   const t = useTheme();
   return (
-    <View style={[styles.option, { borderColor: t.border, opacity: disabled ? 0.4 : 1 }]}>
+    <View
+      style={[
+        styles.option,
+        !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border },
+        { opacity: disabled ? 0.4 : 1 },
+      ]}
+    >
       <View style={{ flex: 1 }}>
-        <Text style={{ color: t.text, fontSize: 16 }}>{label}</Text>
-        {price ? <Text style={{ color: t.muted }}>{price}</Text> : null}
+        <Text style={[styles.optionLabel, { color: t.text, fontWeight: value > 0 ? "600" : "400" }]}>{label}</Text>
+        {price ? <Text style={[styles.optionPrice, { color: t.muted }]}>{price}</Text> : null}
       </View>
       <Stepper value={value} min={0} max={canAdd ? value + 1 : value} onChange={onChange} label={label} disabled={disabled} />
     </View>
@@ -338,50 +422,83 @@ function Stepper({
   disabled?: boolean;
 }) {
   const t = useTheme();
-  const btn = (text: string, next: number, enabled: boolean, a11y: string) => (
+  const btn = (icon: IconName, next: number, enabled: boolean, a11y: string, filled: boolean) => (
     <Pressable
       onPress={() => onChange(next)}
       disabled={!enabled || disabled}
       accessibilityRole="button"
       accessibilityLabel={a11y}
       hitSlop={8}
-      style={[styles.stepBtn, { borderColor: t.border, opacity: enabled && !disabled ? 1 : 0.3 }]}
+      style={[
+        styles.stepBtn,
+        filled
+          ? { backgroundColor: t.primary, borderColor: t.primary }
+          : { backgroundColor: t.card, borderColor: t.border },
+        { opacity: enabled && !disabled ? 1 : 0.3 },
+      ]}
     >
-      <Text style={{ color: t.text, fontSize: 18, fontWeight: "600" }}>{text}</Text>
+      <Icon name={icon} size={18} color={filled ? t.primaryText : t.text} />
     </Pressable>
   );
   return (
     <View style={styles.stepper}>
-      {btn("−", value - 1, value > min, `Quitar uno de ${label}`)}
-      <Text style={{ color: t.text, fontSize: 16, minWidth: 20, textAlign: "center" }} accessibilityLabel={`${label}: ${value}`}>
+      {btn("remove", value - 1, value > min, `Quitar uno de ${label}`, false)}
+      <Text style={[styles.stepValue, { color: t.text }]} accessibilityLabel={`${label}: ${value}`}>
         {value}
       </Text>
-      {btn("+", value + 1, value < max, `Agregar uno de ${label}`)}
+      {btn("add", value + 1, value < max, `Agregar uno de ${label}`, true)}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: space.lg, gap: space.md, paddingBottom: space.xl },
-  close: { alignSelf: "flex-end" },
+  content: { paddingBottom: space.xl },
+
+  hero: { height: 230, alignItems: "center", justifyContent: "center" },
+  heroArt: { width: 130, height: 130, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  close: { position: "absolute", right: space.lg, width: 38, height: 38, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+
+  sheet: { marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: space.lg, paddingTop: space.xl, gap: space.sm },
   title: { fontSize: 24, fontWeight: "800" },
-  group: { gap: 0, marginTop: space.sm },
-  groupHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: space.md, borderRadius: 10 },
-  option: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: space.md,
-    paddingVertical: space.md,
-    paddingHorizontal: space.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    minHeight: 48,
-  },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2 },
-  check: { width: 20, height: 20, borderRadius: 4, borderWidth: 2 },
-  notes: { borderRadius: 12, paddingHorizontal: space.md, paddingVertical: 10, fontSize: 15 },
-  quantity: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: space.md },
+  basePrice: { fontSize: 18, fontWeight: "800" },
+  description: { fontSize: 15, lineHeight: 21 },
+
+  group: { marginTop: space.lg, gap: space.sm },
+  groupHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  groupTitle: { fontSize: 17, fontWeight: "800" },
+  groupRule: { fontSize: 13 },
+  groupTag: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: 4 },
+  groupTagText: { fontSize: 12, fontWeight: "700" },
+  groupCard: { borderRadius: radius.lg, paddingHorizontal: space.md },
+
+  option: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md, minHeight: 52 },
+  optionLabel: { fontSize: 16, flex: 1 },
+  optionPrice: { fontSize: 14 },
+  radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  radioDot: { width: 10, height: 10, borderRadius: radius.pill },
+  check: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+
+  label: { fontSize: 17, fontWeight: "800", marginTop: space.lg },
+  notes: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.md, fontSize: 15, minHeight: 64, textAlignVertical: "top" },
+
   stepper: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  stepBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  footer: { borderTopWidth: StyleSheet.hairlineWidth, padding: space.lg, gap: space.sm },
+  stepBtn: { width: 34, height: 34, borderRadius: radius.pill, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  stepValue: { fontSize: 16, fontWeight: "700", minWidth: 22, textAlign: "center" },
+
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, paddingTop: space.md, gap: space.sm },
+  footerNote: { fontSize: 13, textAlign: "center" },
+  footerRow: { flexDirection: "row", alignItems: "center", gap: space.md },
+  quantityPill: { borderRadius: radius.pill, padding: 6 },
+  addButton: {
+    flex: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: space.sm,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.lg,
+    height: 52,
+  },
+  addText: { fontSize: 16, fontWeight: "800" },
 });

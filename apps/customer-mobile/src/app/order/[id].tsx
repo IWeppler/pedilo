@@ -2,20 +2,33 @@ import { ApiError, type Order, unwrap } from "@pedilo/api-client";
 import { customerCanCancel, formatARS, isOrderFinal, ORDER_STATUS_LABELS } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Icon, type IconName } from "@/components/icon";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { api, useOrder } from "@/lib/api";
 import { useMyOrders } from "@/lib/my-orders";
-import { space, useTheme } from "@/lib/theme";
+import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 type Status = Order["status"];
 
 const PICKUP_STEPS: Status[] = ["PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP"];
 const DELIVERY_STEPS: Status[] = ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP_BY_COURIER", "DELIVERED"];
 const FAILED: Status[] = ["REJECTED", "CANCELLED", "EXPIRED", "DELIVERY_FAILED"];
+const COMPLETED: Status[] = ["PICKED_UP", "DELIVERED"];
+
+const STATUS_ICON: Partial<Record<Status, IconName>> = {
+  PLACED: "clock",
+  ACCEPTED: "check",
+  PREPARING: "food",
+  READY: "pickup",
+  READY_FOR_PICKUP: "pickup",
+  PICKED_UP_BY_COURIER: "delivery",
+  PICKED_UP: "check",
+  DELIVERED: "check",
+};
 
 /** Seguimiento de un pedido hecho desde este teléfono (se actualiza solo cada 10 s). */
 export default function OrderScreen() {
@@ -27,6 +40,8 @@ export default function OrderScreen() {
   const order = useOrder(id, token);
   const queryClient = useQueryClient();
   const [cancelError, setCancelError] = useState<string | null>(null);
+  // Cancelar pide un segundo toque para confirmar (no se usan diálogos del sistema).
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const cancel = useMutation({
     mutationFn: () =>
@@ -36,9 +51,14 @@ export default function OrderScreen() {
           body: {},
         }),
       ),
-    onSuccess: (updated) => queryClient.setQueryData(["order", id], updated),
+    onSuccess: (updated) => {
+      setConfirmingCancel(false);
+      queryClient.setQueryData(["order", id], updated);
+    },
     onError: (err) => setCancelError(err instanceof ApiError ? err.message : "No pudimos cancelar. Probá de nuevo."),
   });
+
+  const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
 
   if (!token) {
     return (
@@ -59,103 +79,250 @@ export default function OrderScreen() {
   const o = order.data;
   const steps = o.fulfillmentType === "PICKUP" ? PICKUP_STEPS : DELIVERY_STEPS;
   const failed = FAILED.includes(o.status);
+  const completed = COMPLETED.includes(o.status);
   const currentIndex = steps.indexOf(o.status);
+  const final = isOrderFinal(o.status);
+
+  const hero = failed
+    ? { bg: t.dangerBg, fg: t.danger, iconBg: t.danger, iconFg: "#ffffff" }
+    : completed
+      ? { bg: t.successBg, fg: t.success, iconBg: t.success, iconFg: "#ffffff" }
+      : { bg: t.primary, fg: t.primaryText, iconBg: "rgba(255,255,255,0.22)", iconFg: t.primaryText };
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
+          onPress={back}
+          hitSlop={8}
+          style={[styles.backButton, cardShadow(t), { backgroundColor: t.card }]}
+        >
+          <Icon name="back" size={20} color={t.text} />
+        </Pressable>
+        <Text style={[styles.topTitle, { color: t.text }]}>Pedido {o.code}</Text>
+        <View style={styles.backButton} />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={order.isRefetching} onRefresh={() => void order.refetch()} />}
+        refreshControl={<RefreshControl refreshing={order.isRefetching} onRefresh={() => void order.refetch()} tintColor={t.primary} />}
       >
-        <Pressable accessibilityRole="button" onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} hitSlop={12}>
-          <Text style={{ color: t.text, fontSize: 16 }}>‹ Volver</Text>
-        </Pressable>
-
-        <Text style={{ color: t.muted }}>
-          Pedido {o.code} · {o.merchant.name}
-        </Text>
-        <Text style={[styles.status, { color: failed ? t.danger : t.text }]} accessibilityLiveRegion="polite">
-          {ORDER_STATUS_LABELS[o.status]}
-        </Text>
-        {o.statusReason && failed && <Text style={{ color: t.text, fontSize: 16 }}>Motivo: {o.statusReason}</Text>}
-        {o.status === "PLACED" && <Text style={{ color: t.muted }}>Esperando que {o.merchant.name} confirme tu pedido.</Text>}
-        {o.status === "READY_FOR_PICKUP" && (
-          <Text style={{ color: t.text, fontSize: 16 }}>Ya podés pasar a buscarlo por {o.branch.address}.</Text>
-        )}
-
-        {!failed && (
-          <View style={styles.steps}>
-            {steps.map((s, i) => {
-              const done = i <= currentIndex;
-              return (
-                <View key={s} style={styles.step}>
-                  <View style={[styles.dot, { backgroundColor: done ? t.primary : "transparent", borderColor: done ? t.primary : t.border }]} />
-                  <Text style={{ color: done ? t.text : t.muted, fontWeight: i === currentIndex ? "700" : "400", fontSize: 15 }}>
-                    {ORDER_STATUS_LABELS[s]}
-                  </Text>
-                </View>
-              );
-            })}
+        {/* Estado actual */}
+        <View style={[styles.hero, { backgroundColor: hero.bg }]}>
+          <View style={[styles.heroIcon, { backgroundColor: hero.iconBg }]}>
+            <Icon name={failed ? "warning" : (STATUS_ICON[o.status] ?? "clock")} size={34} color={hero.iconFg} />
           </View>
+          <View style={styles.heroBody}>
+            <Text style={[styles.heroMerchant, { color: hero.fg }]} numberOfLines={1}>
+              {o.merchant.name}
+            </Text>
+            <Text style={[styles.heroStatus, { color: hero.fg }]} accessibilityLiveRegion="polite">
+              {ORDER_STATUS_LABELS[o.status]}
+            </Text>
+            {statusMessage(o) && <Text style={[styles.heroMessage, { color: hero.fg }]}>{statusMessage(o)}</Text>}
+          </View>
+        </View>
+        {!final && <Text style={[styles.autoRefresh, { color: t.muted }]}>Se actualiza solo · deslizá para refrescar</Text>}
+
+        {/* Progreso */}
+        {!failed && (
+          <Card t={t}>
+            {steps.map((s, i) => (
+              <Step key={s} label={ORDER_STATUS_LABELS[s]} state={i < currentIndex || (i === currentIndex && completed) ? "done" : i === currentIndex ? "current" : "pending"} last={i === steps.length - 1} t={t} />
+            ))}
+          </Card>
         )}
 
-        <View style={[styles.box, { backgroundColor: t.surface }]}>
-          <View style={styles.rowBetween}>
-            <Text style={{ color: t.text, fontWeight: "700" }}>{o.fulfillmentType === "PICKUP" ? "Retiro en el local" : "Envío a domicilio"}</Text>
+        {/* Entrega */}
+        <Card t={t}>
+          <View style={styles.infoRow}>
+            <View style={[styles.infoIcon, { backgroundColor: t.primarySoft }]}>
+              <Icon name={o.fulfillmentType === "PICKUP" ? "pickup" : "delivery"} size={20} color={t.primary} />
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={[styles.infoTitle, { color: t.text }]}>{o.fulfillmentType === "PICKUP" ? "Retiro en el local" : "Envío a domicilio"}</Text>
+              <Text style={[styles.meta, { color: t.muted }]}>
+                {o.delivery ? `${o.delivery.addressLine}${o.delivery.addressNotes ? ` (${o.delivery.addressNotes})` : ""}` : o.branch.address}
+              </Text>
+            </View>
             <Badge label="Efectivo" />
           </View>
-          <Text style={{ color: t.muted }}>
-            {o.delivery ? `${o.delivery.addressLine}${o.delivery.addressNotes ? ` (${o.delivery.addressNotes})` : ""}` : o.branch.address}
-          </Text>
-        </View>
+        </Card>
 
-        {o.items.map((item) => (
-          <View key={item.id} style={styles.rowBetween}>
-            <Text style={{ color: t.text, flex: 1 }}>
-              {item.quantity} × {item.productName}
-              {item.variantName ? ` (${item.variantName})` : ""}
-              {item.options.length > 0 ? `\n${item.options.map((op) => op.name).join(", ")}` : ""}
-            </Text>
-            <Text style={{ color: t.text }}>{formatARS(item.totalMinor)}</Text>
-          </View>
-        ))}
-        {o.deliveryFeeMinor > 0 && (
+        {/* Detalle */}
+        <Text style={[styles.section, { color: t.text }]}>Detalle</Text>
+        <Card t={t} padded>
+          {o.items.map((item) => (
+            <View key={item.id} style={styles.item}>
+              <View style={[styles.qtyPill, { backgroundColor: t.primarySoft }]}>
+                <Text style={[styles.qtyText, { color: t.primary }]}>{item.quantity}×</Text>
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.itemName, { color: t.text }]}>
+                  {item.productName}
+                  {item.variantName ? ` (${item.variantName})` : ""}
+                </Text>
+                {item.options.length > 0 && <Text style={[styles.meta, { color: t.muted }]}>{item.options.map((op) => op.name).join(", ")}</Text>}
+              </View>
+              <Text style={[styles.itemPrice, { color: t.text }]}>{formatARS(item.totalMinor)}</Text>
+            </View>
+          ))}
+          <View style={[styles.divider, { backgroundColor: t.border }]} />
+          {o.deliveryFeeMinor > 0 && (
+            <View style={styles.rowBetween}>
+              <Text style={[styles.meta, { color: t.muted, fontSize: 15 }]}>Envío</Text>
+              <Text style={{ color: t.text, fontSize: 15 }}>{formatARS(o.deliveryFeeMinor)}</Text>
+            </View>
+          )}
           <View style={styles.rowBetween}>
-            <Text style={{ color: t.muted }}>Envío</Text>
-            <Text style={{ color: t.muted }}>{formatARS(o.deliveryFeeMinor)}</Text>
+            <Text style={[styles.total, { color: t.text }]}>Total</Text>
+            <Text style={[styles.total, { color: t.text }]}>{formatARS(o.totalMinor)}</Text>
           </View>
-        )}
-        <View style={styles.rowBetween}>
-          <Text style={{ color: t.text, fontWeight: "700", fontSize: 17 }}>Total</Text>
-          <Text style={{ color: t.text, fontWeight: "700", fontSize: 17 }}>{formatARS(o.totalMinor)}</Text>
-        </View>
+        </Card>
 
-        {customerCanCancel(o.status) && (
-          <Button
-            label={cancel.isPending ? "Cancelando…" : "Cancelar pedido"}
-            variant="outline"
-            disabled={cancel.isPending}
-            onPress={() => {
-              setCancelError(null);
-              cancel.mutate();
-            }}
-            style={{ marginTop: space.md }}
-          />
-        )}
-        {cancelError && <Text style={{ color: t.danger }}>{cancelError}</Text>}
-        {isOrderFinal(o.status) && <Button label="Hacer otro pedido" variant="outline" onPress={() => router.replace("/")} />}
+        {/* Acciones */}
+        {customerCanCancel(o.status) &&
+          (confirmingCancel ? (
+            <View style={[styles.confirmBox, { backgroundColor: t.dangerBg }]}>
+              <Text style={[styles.confirmText, { color: t.danger }]}>¿Seguro que querés cancelar el pedido?</Text>
+              <View style={styles.confirmActions}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => setConfirmingCancel(false)}
+                  disabled={cancel.isPending}
+                  style={[styles.confirmButton, { backgroundColor: t.card }]}
+                >
+                  <Text style={[styles.confirmButtonText, { color: t.text }]}>No, seguir</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setCancelError(null);
+                    cancel.mutate();
+                  }}
+                  disabled={cancel.isPending}
+                  style={[styles.confirmButton, { backgroundColor: t.danger, opacity: cancel.isPending ? 0.6 : 1 }]}
+                >
+                  <Text style={[styles.confirmButtonText, { color: "#ffffff" }]}>{cancel.isPending ? "Cancelando…" : "Sí, cancelar"}</Text>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <Pressable accessibilityRole="button" onPress={() => setConfirmingCancel(true)} style={styles.cancelLink} hitSlop={8}>
+              <Text style={[styles.cancelLinkText, { color: t.danger }]}>Cancelar pedido</Text>
+            </Pressable>
+          ))}
+        {cancelError && <Text style={{ color: t.danger, textAlign: "center" }}>{cancelError}</Text>}
+        {final && <Button label="Hacer otro pedido" onPress={() => router.replace("/")} style={{ marginTop: space.sm }} />}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+/** Texto de ayuda según el estado. */
+function statusMessage(o: Order): string | null {
+  if (FAILED.includes(o.status)) return o.statusReason ? `Motivo: ${o.statusReason}` : null;
+  switch (o.status) {
+    case "PLACED":
+      return `Esperando que ${o.merchant.name} confirme tu pedido.`;
+    case "ACCEPTED":
+      return "El comercio confirmó tu pedido.";
+    case "PREPARING":
+      return "Están preparando tu pedido.";
+    case "READY_FOR_PICKUP":
+      return `Ya podés pasar a buscarlo por ${o.branch.address}.`;
+    case "PICKED_UP_BY_COURIER":
+      return "Tu pedido va en camino.";
+    case "PICKED_UP":
+    case "DELIVERED":
+      return "¡Que lo disfrutes!";
+    default:
+      return null;
+  }
+}
+
+function Card({ t, padded, children }: { t: Theme; padded?: boolean; children: ReactNode }) {
+  return <View style={[styles.card, padded && styles.cardPadded, cardShadow(t), { backgroundColor: t.card }]}>{children}</View>;
+}
+
+function Step({ label, state, last, t }: { label: string; state: "done" | "current" | "pending"; last: boolean; t: Theme }) {
+  const active = state !== "pending";
+  return (
+    <View style={styles.step}>
+      <View style={styles.stepRail}>
+        <View
+          style={[
+            styles.stepDot,
+            state === "done" && { backgroundColor: t.primary, borderColor: t.primary },
+            state === "current" && { backgroundColor: t.primarySoft, borderColor: t.primary },
+            state === "pending" && { backgroundColor: "transparent", borderColor: t.border },
+          ]}
+        >
+          {state === "done" && <Icon name="check" size={14} color={t.primaryText} />}
+          {state === "current" && <View style={[styles.stepInner, { backgroundColor: t.primary }]} />}
+        </View>
+        {!last && <View style={[styles.stepLine, { backgroundColor: state === "done" ? t.primary : t.border }]} />}
+      </View>
+      <Text
+        style={[
+          styles.stepLabel,
+          { color: active ? t.text : t.muted, fontWeight: state === "current" ? "800" : active ? "600" : "400" },
+        ]}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  content: { padding: space.lg, gap: space.md, paddingBottom: space.xl },
-  status: { fontSize: 28, fontWeight: "800" },
-  steps: { gap: space.sm, marginVertical: space.sm },
-  step: { flexDirection: "row", alignItems: "center", gap: space.md },
-  dot: { width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
-  box: { borderRadius: 12, padding: space.md, gap: 4 },
+  content: { padding: space.lg, paddingTop: space.sm, gap: space.md, paddingBottom: space.xl },
+
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space.lg, paddingVertical: space.sm },
+  backButton: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  topTitle: { fontSize: 18, fontWeight: "800" },
+
+  hero: { flexDirection: "row", alignItems: "center", gap: space.lg, borderRadius: radius.lg, padding: space.lg },
+  heroIcon: { width: 64, height: 64, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  heroBody: { flex: 1, gap: 2 },
+  heroMerchant: { fontSize: 13, fontWeight: "600", opacity: 0.9 },
+  heroStatus: { fontSize: 24, fontWeight: "800" },
+  heroMessage: { fontSize: 14, opacity: 0.95 },
+  autoRefresh: { fontSize: 12, textAlign: "center", marginTop: -space.xs },
+
+  card: { borderRadius: radius.lg, paddingHorizontal: space.md },
+  cardPadded: { paddingVertical: space.md, gap: space.md },
+
+  step: { flexDirection: "row", gap: space.md },
+  stepRail: { alignItems: "center", width: 26 },
+  stepDot: { width: 26, height: 26, borderRadius: radius.pill, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: space.md },
+  stepInner: { width: 10, height: 10, borderRadius: radius.pill },
+  stepLine: { width: 2, flex: 1, minHeight: 14 },
+  stepLabel: { fontSize: 15, paddingTop: space.md + 3, paddingBottom: space.sm, flex: 1 },
+
+  infoRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
+  infoIcon: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  infoTitle: { fontSize: 15, fontWeight: "700" },
+  meta: { fontSize: 13 },
+
+  section: { fontSize: 18, fontWeight: "800", marginTop: space.sm },
+  item: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
+  qtyPill: { borderRadius: radius.sm, paddingHorizontal: space.sm, paddingVertical: 3, minWidth: 36, alignItems: "center" },
+  qtyText: { fontSize: 13, fontWeight: "800" },
+  itemName: { fontSize: 15, fontWeight: "600" },
+  itemPrice: { fontSize: 15 },
+  divider: { height: StyleSheet.hairlineWidth },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  total: { fontSize: 18, fontWeight: "800" },
+
+  cancelLink: { alignSelf: "center", paddingVertical: space.sm },
+  cancelLinkText: { fontSize: 15, fontWeight: "700" },
+  confirmBox: { borderRadius: radius.lg, padding: space.md, gap: space.md },
+  confirmText: { fontSize: 15, fontWeight: "700", textAlign: "center" },
+  confirmActions: { flexDirection: "row", gap: space.sm },
+  confirmButton: { flex: 1, borderRadius: radius.pill, paddingVertical: 12, alignItems: "center" },
+  confirmButtonText: { fontSize: 15, fontWeight: "700" },
 });

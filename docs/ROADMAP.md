@@ -77,7 +77,7 @@ Falta:
 
 1. ✅ ~~Versionar el proyecto en git~~ — en `github.com/IWeppler/pedilo`, rama `main`.
 2. **Probar la app del cliente en Expo Go** y anotar lo que falle en el celular.
-3. **UI de la app del cliente:** identidad visual (color, tipografía, ícono), navegación por secciones en el menú, carrito y pedido en curso más visibles.
+3. 🟡 **UI de la app del cliente:** rediseño hecho (naranja de marca, íconos `expo-symbols`, pestañas Inicio/Pedidos/Carrito, home con destacados y rubros, menú con portada y pestañas por sección, modal de producto, checkout, seguimiento con línea de tiempo, ciudad por GPS con `expo-location`). Falta: probarlo en Expo Go, tipografía e ícono de la app, fotos reales.
 4. **Fotos:** ADR de storage y subida de imágenes de productos/logos.
 5. 🟡 **Supabase Auth:** login de comercio/admin hecho (falta prueba con email real); pendiente login del cliente con OTP y asociar pedidos al usuario.
 6. **Avisos robustos al comercio + workers** (vencimiento de pedidos) → G3.

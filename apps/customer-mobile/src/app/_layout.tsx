@@ -19,13 +19,12 @@ export default function RootLayout() {
         <CartProvider>
           <MyOrdersProvider>
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.background } }}>
-              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" />
               <Stack.Screen name="city" options={{ presentation: "modal" }} />
               <Stack.Screen name="merchant/[slug]" />
               <Stack.Screen name="product/[slug]/[productId]" options={{ presentation: "modal" }} />
               <Stack.Screen name="cart" />
               <Stack.Screen name="order/[id]" />
-              <Stack.Screen name="orders" />
             </Stack>
           </MyOrdersProvider>
         </CartProvider>
