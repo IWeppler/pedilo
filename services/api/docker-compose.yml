@@ -1,0 +1,21 @@
+# Postgres local para desarrollo (ADR 0003). Los tests no lo necesitan: usan PGlite.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pedilo-postgres
+    environment:
+      POSTGRES_USER: pedilo
+      POSTGRES_PASSWORD: pedilo
+      POSTGRES_DB: pedilo
+    ports:
+      - "5433:5432"
+    volumes:
+      - pedilo-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pedilo -d pedilo"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pedilo-pgdata:

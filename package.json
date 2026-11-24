@@ -1,0 +1,23 @@
+{
+  "name": "pedilo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:merchant": "npm run dev -w @pedilo/merchant-web",
+    "build:merchant": "npm run build -w @pedilo/merchant-web",
+    "lint": "npm run lint --workspaces --if-present",
+    "dev:customer": "npm run start -w @pedilo/customer-mobile",
+    "dev:courier": "npm run start -w @pedilo/courier-mobile",
+    "test": "npm run test --workspaces --if-present",
+    "dev:api": "npm run dev -w @pedilo/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "api:contract": "npm run openapi -w @pedilo/api && npm run generate -w @pedilo/api-client",
+    "dev:admin": "npm run dev -w @pedilo/admin-web",
+    "db:demo": "npm run db:seed:demo -w @pedilo/api"
+  }
+}
