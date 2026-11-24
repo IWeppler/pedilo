@@ -115,7 +115,7 @@ export default function MerchantScreen() {
   return (
     <View style={[styles.screen, { backgroundColor: t.background }]}>
       {/* Íconos claros sobre la portada naranja; normales con la barra compacta. */}
-      <StatusBar style={compact ? "auto" : "light"} />
+      <StatusBar style={compact ? "dark" : "light"} />
       <SectionList
         ref={listRef}
         sections={sections}

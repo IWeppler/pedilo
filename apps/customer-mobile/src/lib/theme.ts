@@ -1,5 +1,3 @@
-import { useColorScheme } from "react-native";
-
 /**
  * Paleta de Pedilo con modo claro y oscuro.
  * `primary` es el naranja de marca: botones principales, selección, acentos.
@@ -40,8 +38,14 @@ const dark: typeof light = {
 
 export type Theme = typeof light;
 
+/**
+ * La app se ve siempre en claro, sin importar el tema del teléfono (`userInterfaceStyle: "light"`
+ * en app.json). La paleta oscura queda lista por si más adelante se ofrece como opción.
+ */
+export const colorScheme: "light" | "dark" = "light";
+
 export function useTheme(): Theme {
-  return useColorScheme() === "dark" ? dark : light;
+  return colorScheme === "dark" ? dark : light;
 }
 
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
