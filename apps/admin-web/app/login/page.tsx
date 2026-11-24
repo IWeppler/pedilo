@@ -2,15 +2,18 @@ import { Suspense } from "react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabaseEnv } from "@/lib/supabase";
 
-import { LoginForm } from "./login-form";
+import { DevTokenForm, EmailLoginForm } from "./login-form";
 
 const REASONS: Record<string, string> = {
   expired: "Tu sesión venció. Entrá de nuevo.",
   forbidden: "Ese usuario no tiene permisos de administrador.",
+  link: "El link no es válido o ya se usó. Pedí uno nuevo y abrilo en este mismo navegador.",
 };
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
+  const supabase = supabaseEnv() !== null;
   return (
     <main className="flex flex-1 items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -22,10 +25,12 @@ export default function LoginPage({ searchParams }: PageProps<"/login">) {
           <Suspense>
             <ReasonMessage searchParams={searchParams} />
           </Suspense>
-          <LoginForm />
-          <p className="text-xs text-muted-foreground">
-            Modo desarrollo. El login con email se habilita cuando se configure Supabase Auth.
-          </p>
+          {supabase ? <EmailLoginForm /> : <DevTokenForm />}
+          {!supabase && (
+            <p className="text-xs text-muted-foreground">
+              Modo desarrollo: configurá NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY para entrar con email.
+            </p>
+          )}
         </CardContent>
       </Card>
     </main>

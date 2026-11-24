@@ -36,8 +36,8 @@ Hecho:
 - ✅ Proyecto Supabase creado (`btezhwbhgttfbmtccqvd`) y conectado al MCP de Claude Code (`.mcp.json`).
 
 Falta:
-- 🟡 Supabase: migraciones `0000`–`0004` aplicadas (18 tablas, RLS activado sin políticas para cerrar la Data API). `DATABASE_URL` apunta al session pooler de Supabase (`aws-1-us-west-2`) y el seed base está cargado (Tostado + 5 rubros). Falta `SUPABASE_URL` (llega con Supabase Auth; hoy la API sigue con tokens de desarrollo).
-- ⬜ Supabase Auth real (login de comercio y admin por email; hoy se pega un token de desarrollo).
+- ✅ Supabase como base: migraciones `0000`–`0004` aplicadas (18 tablas, RLS activado sin políticas para cerrar la Data API), `DATABASE_URL` por el session pooler (`aws-1-us-west-2`) y seed base cargado (Tostado + 5 rubros).
+- 🟡 Supabase Auth en los paneles de comercio y admin: login con link al email (PKCE), sesión refrescada en `proxy.ts`, API verificando tokens por JWKS (`SUPABASE_URL` activa). Sin las variables de Supabase los paneles siguen con token de desarrollo. Falta probarlo de punta a punta con un email real y cargar las Redirect URLs en Supabase.
 - ⬜ CI (lint, typecheck, tests y build en cada cambio).
 - ⬜ Fotos de productos y logos (requiere ADR de storage).
 - ⬜ Cierres excepcionales (feriados), invitar operadores al comercio, suspender comercio desde el admin.
@@ -79,7 +79,7 @@ Falta:
 2. **Probar la app del cliente en Expo Go** y anotar lo que falle en el celular.
 3. **UI de la app del cliente:** identidad visual (color, tipografía, ícono), navegación por secciones en el menú, carrito y pedido en curso más visibles.
 4. **Fotos:** ADR de storage y subida de imágenes de productos/logos.
-5. **Supabase Auth:** login real de comercio/admin y del cliente con OTP; asociar pedidos al usuario.
+5. 🟡 **Supabase Auth:** login de comercio/admin hecho (falta prueba con email real); pendiente login del cliente con OTP y asociar pedidos al usuario.
 6. **Avisos robustos al comercio + workers** (vencimiento de pedidos) → G3.
 7. **CI.**
 8. En paralelo, fuera del código: **Fase 0** (prueba de Mercado Pago, legal, entrevistas).
