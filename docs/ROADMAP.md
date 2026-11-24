@@ -33,8 +33,10 @@ Hecho:
 - ✅ Alta de comercio: datos con CUIT, sucursales, horario semanal, zonas de envío, envío a revisión, aprobación/rechazo con motivo.
 - ✅ Catálogo: secciones, productos, variantes, grupos de opciones, pausar/archivar; menú público.
 - ✅ Datos de demo para desarrollar la UI ([DESARROLLO-UI.md](DESARROLLO-UI.md)).
+- ✅ Proyecto Supabase creado (`btezhwbhgttfbmtccqvd`) y conectado al MCP de Claude Code (`.mcp.json`).
 
 Falta:
+- 🟡 Supabase: migraciones `0000`–`0004` aplicadas (18 tablas, RLS activado sin políticas para cerrar la Data API). `DATABASE_URL` apunta al session pooler de Supabase (`aws-1-us-west-2`) y el seed base está cargado (Tostado + 5 rubros). Falta `SUPABASE_URL` (llega con Supabase Auth; hoy la API sigue con tokens de desarrollo).
 - ⬜ Supabase Auth real (login de comercio y admin por email; hoy se pega un token de desarrollo).
 - ⬜ CI (lint, typecheck, tests y build en cada cambio).
 - ⬜ Fotos de productos y logos (requiere ADR de storage).
@@ -73,7 +75,7 @@ Falta:
 
 ## Próximos pasos sugeridos (en orden)
 
-1. **Versionar el proyecto en git** (hoy `pedilo` no está en ningún repositorio).
+1. ✅ ~~Versionar el proyecto en git~~ — en `github.com/IWeppler/pedilo`, rama `main`.
 2. **Probar la app del cliente en Expo Go** y anotar lo que falle en el celular.
 3. **UI de la app del cliente:** identidad visual (color, tipografía, ícono), navegación por secciones en el menú, carrito y pedido en curso más visibles.
 4. **Fotos:** ADR de storage y subida de imágenes de productos/logos.
