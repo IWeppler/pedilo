@@ -7,8 +7,9 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
+import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
-import { api, useMerchantCategories, useMerchantMenu } from "@/lib/api";
+import { api, useBranchSlots, useMerchantCategories, useMerchantMenu } from "@/lib/api";
 import { type CartLine, useCart } from "@/lib/cart";
 import { useMyOrders } from "@/lib/my-orders";
 import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
@@ -18,6 +19,10 @@ const newIdempotencyKey = () => `${Date.now()}-${Math.random().toString(36).slic
 /** Mensajes para los errores de negocio de POST /v1/public/orders (ADR 0007). */
 const REASON_MESSAGES: Record<string, string> = {
   BRANCH_CLOSED: "El comercio cerró hace un momento. Probá más tarde.",
+  SCHEDULING_DISABLED: "El comercio dejó de aceptar pedidos programados.",
+  SLOT_UNAVAILABLE: "Ese horario ya no está disponible. Elegí otro.",
+  SLOT_FULL: "Ese horario se llenó. Elegí otro.",
+  PAYMENT_METHOD_NOT_AVAILABLE: "El comercio dejó de aceptar ese medio de pago. Elegí otro.",
   PRODUCT_UNAVAILABLE: "Un producto de tu pedido ya no está disponible. Sacalo y probá de nuevo.",
   ITEM_INVALID: "Un producto cambió en el menú. Sacalo y volvé a agregarlo.",
   MIN_ORDER_NOT_MET: "No llegás al pedido mínimo de la zona.",
@@ -43,8 +48,16 @@ export default function CartScreen() {
   const [notes, setNotes] = useState("");
   const [idempotencyKey] = useState(newIdempotencyKey);
   const [error, setError] = useState<string | null>(null);
+  const [when, setWhen] = useState<"NOW" | "LATER" | null>(null);
+  const [slot, setSlot] = useState<string | null>(null);
+  const [payWith, setPayWith] = useState<"CASH" | "TRANSFER" | null>(null);
 
   // Valores efectivos (defaults según lo que ofrece la sucursal).
+  const canSchedule = Boolean(branch?.scheduling.enabled);
+  const timing = when ?? (branch && !branch.openNow && canSchedule ? "LATER" : "NOW");
+  const payments = menu.data?.merchant.payment;
+  const paymentMethod = payWith ?? (payments?.cash === false && payments.transfer ? "TRANSFER" : "CASH");
+  const slots = useBranchSlots(cart?.merchantSlug ?? "", branch?.id, canSchedule && timing === "LATER");
   const mode = fulfillment ?? (branch?.acceptsPickup ? "PICKUP" : branch?.acceptsDelivery ? "DELIVERY" : null);
   const zone = branch?.zones.find((z) => z.id === zoneId) ?? branch?.zones[0];
   const deliveryFee = mode === "DELIVERY" ? (zone?.feeMinor ?? 0) : 0;
@@ -65,6 +78,8 @@ export default function CartScreen() {
             }),
             customer: { name: name.trim(), phone: phone.trim() },
             notes: notes.trim() || null,
+            paymentMethod,
+            ...(timing === "LATER" && slot && { scheduledFor: slot }),
             items: cart!.lines.map((l) => ({
               productId: l.productId,
               variantId: l.variantId,
@@ -85,6 +100,10 @@ export default function CartScreen() {
       if (err instanceof ApiError && err.code === "CONFLICT") {
         const reason = (err.details as { reason?: string } | undefined)?.reason;
         setError((reason && REASON_MESSAGES[reason]) ?? err.message);
+        if (reason === "SLOT_FULL" || reason === "SLOT_UNAVAILABLE") {
+          setSlot(null);
+          void slots.refetch();
+        }
       } else if (err instanceof ApiError && err.code === "VALIDATION_ERROR") {
         const fields = Object.keys(fieldErrors(err));
         const labels = fields.map((f) =>
@@ -123,7 +142,8 @@ export default function CartScreen() {
   const total = subtotalMinor + deliveryFee;
   const missing =
     !name.trim() || phone.replace(/\D/g, "").length < 8 || (mode === "DELIVERY" && addressLine.trim().length < 3) || !mode;
-  const canSubmit = !missing && !belowMinimum && Boolean(branch?.openNow) && !submit.isPending;
+  const timingOk = timing === "LATER" ? Boolean(slot) : Boolean(branch?.openNow);
+  const canSubmit = !missing && !belowMinimum && timingOk && !submit.isPending;
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
@@ -239,6 +259,61 @@ export default function CartScreen() {
             </>
           )}
 
+          {/* Cuándo */}
+          {branch && canSchedule && (
+            <>
+              <SectionTitle t={t}>¿Cuándo?</SectionTitle>
+              <View style={styles.modes}>
+                {branch.openNow && (
+                  <ModeOption icon="bolt" label="Lo antes posible" detail="Ahora" selected={timing === "NOW"} onPress={() => setWhen("NOW")} />
+                )}
+                <ModeOption
+                  icon="calendar"
+                  label="Programar"
+                  detail={slot && timing === "LATER" ? describeSlot(slot, branch.timezone) : "Elegí el horario"}
+                  selected={timing === "LATER"}
+                  onPress={() => setWhen("LATER")}
+                />
+              </View>
+              {timing === "LATER" && (
+                <Card t={t} padded>
+                  {slots.data ? (
+                    <SlotPicker data={slots.data} value={slot} onChange={setSlot} />
+                  ) : slots.isError ? (
+                    <Text style={[styles.meta, { color: t.danger }]}>No pudimos cargar los horarios. Probá de nuevo.</Text>
+                  ) : (
+                    <Text style={[styles.meta, { color: t.muted }]}>Cargando horarios…</Text>
+                  )}
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* Pago */}
+          {payments?.transfer && (
+            <>
+              <SectionTitle t={t}>¿Cómo pagás?</SectionTitle>
+              <View style={styles.modes}>
+                {payments.cash && (
+                  <ModeOption
+                    icon="cash"
+                    label="Efectivo"
+                    detail="Al recibir o retirar"
+                    selected={paymentMethod === "CASH"}
+                    onPress={() => setPayWith("CASH")}
+                  />
+                )}
+                <ModeOption
+                  icon="bank"
+                  label="Transferencia"
+                  detail="Te pasamos el alias"
+                  selected={paymentMethod === "TRANSFER"}
+                  onPress={() => setPayWith("TRANSFER")}
+                />
+              </View>
+            </>
+          )}
+
           {/* Datos */}
           <SectionTitle t={t}>Tus datos</SectionTitle>
           <Card t={t} padded>
@@ -255,13 +330,19 @@ export default function CartScreen() {
             <View style={[styles.divider, { backgroundColor: t.border }]} />
             <SummaryRow label="Total" value={formatARS(total)} strong />
             <View style={[styles.payment, { backgroundColor: t.surface }]}>
-              <Icon name="cash" size={18} color={t.success} />
-              <Text style={[styles.meta, { color: t.text }]}>Pagás en efectivo al recibir o retirar</Text>
+              <Icon name={paymentMethod === "TRANSFER" ? "bank" : "cash"} size={18} color={t.success} />
+              <Text style={[styles.meta, { color: t.text, flex: 1 }]}>
+                {paymentMethod === "TRANSFER"
+                  ? "Pagás por transferencia: al confirmar te mostramos los datos de la cuenta"
+                  : "Pagás en efectivo al recibir o retirar"}
+              </Text>
             </View>
           </Card>
 
           {belowMinimum && zone && <Notice t={t}>El pedido mínimo para {zone.name} es {formatARS(zone.minOrderMinor)}.</Notice>}
-          {branch && !branch.openNow && <Notice t={t}>El comercio está cerrado ahora.</Notice>}
+          {branch && !branch.openNow && timing === "NOW" && (
+            <Notice t={t}>El comercio está cerrado ahora{canSchedule ? ". Podés programar el pedido." : "."}</Notice>
+          )}
           {error && <Notice t={t}>{error}</Notice>}
         </ScrollView>
 

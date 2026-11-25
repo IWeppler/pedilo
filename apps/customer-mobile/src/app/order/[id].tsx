@@ -7,12 +7,16 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/icon";
+import { describeSlot } from "@/components/slot-picker";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { api, useOrder } from "@/lib/api";
 import { useMyOrders } from "@/lib/my-orders";
 import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 type Status = Order["status"];
+
+/** Todas las sucursales están hoy en Argentina; el pedido no trae la zona horaria. */
+const ORDER_TIMEZONE = "America/Argentina/Buenos_Aires";
 
 const PICKUP_STEPS: Status[] = ["PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP"];
 const DELIVERY_STEPS: Status[] = ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP_BY_COURIER", "DELIVERED"];
@@ -147,9 +151,48 @@ export default function OrderScreen() {
                 {o.delivery ? `${o.delivery.addressLine}${o.delivery.addressNotes ? ` (${o.delivery.addressNotes})` : ""}` : o.branch.address}
               </Text>
             </View>
-            <Badge label="Efectivo" />
+            <Badge label={o.paymentMethod === "TRANSFER" ? "Transferencia" : "Efectivo"} />
           </View>
+          {o.scheduledFor && (
+            <View style={[styles.infoRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
+              <View style={[styles.infoIcon, { backgroundColor: t.primarySoft }]}>
+                <Icon name="calendar" size={20} color={t.primary} />
+              </View>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[styles.infoTitle, { color: t.text }]}>Programado</Text>
+                <Text style={[styles.meta, { color: t.muted }]}>
+                  {describeSlot(o.scheduledFor, ORDER_TIMEZONE)} · franja de 30 min
+                </Text>
+              </View>
+            </View>
+          )}
         </Card>
+
+        {/* Transferencia */}
+        {o.transfer && !(failed && o.paymentStatus !== "APPROVED") && (
+          <>
+            <Text style={[styles.section, { color: t.text }]}>Transferencia</Text>
+            <Card t={t} padded>
+              {o.paymentStatus === "APPROVED" ? (
+                <View style={styles.rowStart}>
+                  <Icon name="check" size={20} color={t.success} />
+                  <Text style={[styles.infoTitle, { color: t.success, flex: 1 }]}>El comercio confirmó que le llegó tu transferencia.</Text>
+                </View>
+              ) : (
+                <>
+                  <Text style={[styles.meta, { color: t.muted }]}>
+                    Transferí {formatARS(o.totalMinor)} a esta cuenta. Mantené apretado un dato para copiarlo. El comercio
+                    confirma cuando le llega.
+                  </Text>
+                  <TransferRow t={t} label="Titular" value={o.transfer.holder} />
+                  {o.transfer.alias && <TransferRow t={t} label="Alias" value={o.transfer.alias} />}
+                  {o.transfer.cbu && <TransferRow t={t} label="CBU / CVU" value={o.transfer.cbu} />}
+                  <TransferRow t={t} label="Monto" value={formatARS(o.totalMinor)} />
+                </>
+              )}
+            </Card>
+          </>
+        )}
 
         {/* Detalle */}
         <Text style={[styles.section, { color: t.text }]}>Detalle</Text>
@@ -221,12 +264,25 @@ export default function OrderScreen() {
   );
 }
 
+function TransferRow({ t, label, value }: { t: Theme; label: string; value: string }) {
+  return (
+    <View style={styles.rowBetween}>
+      <Text style={[styles.meta, { color: t.muted }]}>{label}</Text>
+      <Text selectable style={[styles.infoTitle, { color: t.text, flexShrink: 1, textAlign: "right" }]}>
+        {value}
+      </Text>
+    </View>
+  );
+}
+
 /** Texto de ayuda según el estado. */
 function statusMessage(o: Order): string | null {
   if (FAILED.includes(o.status)) return o.statusReason ? `Motivo: ${o.statusReason}` : null;
   switch (o.status) {
     case "PLACED":
-      return `Esperando que ${o.merchant.name} confirme tu pedido.`;
+      return o.scheduledFor
+        ? `Pedido programado para ${describeSlot(o.scheduledFor, ORDER_TIMEZONE)}. Esperando que ${o.merchant.name} lo confirme.`
+        : `Esperando que ${o.merchant.name} confirme tu pedido.`;
     case "ACCEPTED":
       return "El comercio confirmó tu pedido.";
     case "PREPARING":
@@ -316,6 +372,7 @@ const styles = StyleSheet.create({
   itemPrice: { fontSize: 15 },
   divider: { height: StyleSheet.hairlineWidth },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  rowStart: { flexDirection: "row", alignItems: "center", gap: space.sm },
   total: { fontSize: 18, fontWeight: "800" },
 
   cancelLink: { alignSelf: "center", paddingVertical: space.sm },

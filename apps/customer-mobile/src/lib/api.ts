@@ -56,3 +56,17 @@ export function useMerchantMenu(slug: string) {
     staleTime: 60 * 1000,
   });
 }
+
+/** Franjas para programar un pedido (ADR 0011). Se refrescan cada minuto: los cupos cambian. */
+export function useBranchSlots(slug: string, branchId: string | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: ["branch-slots", slug, branchId],
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/public/merchants/{slug}/branches/{branchId}/slots", { params: { path: { slug, branchId: branchId! } } }),
+      ),
+    enabled: enabled && Boolean(branchId),
+    staleTime: 30 * 1000,
+    refetchInterval: 60 * 1000,
+  });
+}
