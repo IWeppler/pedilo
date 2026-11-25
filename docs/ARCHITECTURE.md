@@ -212,7 +212,8 @@ Pantallas (Expo Router, `src/app/`):
 - **Datos:** TanStack Query (`src/lib/api.ts`), con `staleTime` corto para «abierto ahora».
 - **Almacenamiento:** `src/lib/storage.ts` usa `expo-sqlite/kv-store` (incluido en Expo Go); `storage.web.ts` usa `localStorage` para probar en el navegador sin configurar WebAssembly.
 - **Web solo para probar:** `npx expo start --web` (salida `single`, sin SSR). La app objetivo es Android.
-- **Pendiente:** login del comprador (Supabase), pedidos programados, push. En web el seguimiento no refresca con la pestaña oculta (TanStack Query pausa el polling); en el celular refresca mientras la app está abierta.
+- **Carrito:** «¿Cuándo?» (lo antes posible o una franja de `GET .../slots`) y «¿Cómo pagás?» (efectivo o transferencia, según el comercio). El seguimiento muestra la franja y los datos para transferir (ADR 0011).
+- **Pendiente:** login del comprador (Supabase), push al cliente. En web el seguimiento no refresca con la pestaña oculta (TanStack Query pausa el polling); en el celular refresca mientras la app está abierta.
 
 ## 6. Webs (Next.js)
 
@@ -246,7 +247,9 @@ Reglas de edición (las aplica la API, la UI las refleja): en revisión o suspen
 - El editor de horarios envía con `onSubmit` + `startTransition` en lugar de `<form action>`: el reseteo automático de formularios de React 19 desmarcaba los checkboxes controlados.
 - Los componentes chicos de UI (`form-field`, `native-select`, `submit-button`, `page-header`…) están copiados en las dos webs, como es habitual con shadcn. Si crecen, pasarlos a un `packages/ui`.
 
-**Pedidos** (`/m/[id]/orders`, ADR 0007): tablero «En curso» (nuevos arriba, resaltados) y «Finalizados». Cada pedido muestra cliente, teléfono, entrega, ítems con opciones y aclaraciones, total en efectivo, y las acciones válidas según `merchantOrderActions` (@pedilo/domain); rechazar/cancelar piden motivo, que ve el cliente. Se refresca cada 10 s con la pestaña visible y muestra los nuevos en el título. Realtime, sonido y push quedan para después (SPEC §10).
+**Pedidos** (`/m/[id]/orders`, ADR 0007): tablero «En curso» (nuevos arriba, resaltados) y «Finalizados». Cada pedido muestra cliente, teléfono, entrega, ítems con opciones y aclaraciones, total en efectivo, y las acciones válidas según `merchantOrderActions` (@pedilo/domain); rechazar/cancelar piden motivo, que ve el cliente. Cada pedido nuevo muestra «Sin ver» y cuánto le queda para vencer.
+
+**Avisos** (ADR 0008): `m/[merchantId]/layout.tsx` monta `OrderAlerts` en todas las páginas del comercio. Consulta `/api/m/[merchantId]/orders/pulse` (route handler que adjunta el token) cada 5 s y recarga si cambió algún pedido. Con pedidos sin ver: banner con «Visto», título que parpadea, sonido (se activa con un toque) y notificación del sistema (con permiso). El tablero tiene «Activar en este dispositivo» para Web Push (ADR 0009): registra `public/sw.js`, guarda la suscripción en la API y permite mandar un aviso de prueba. Realtime: pendiente.
 
 ### 6.3 `packages/web-utils`
 

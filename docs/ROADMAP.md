@@ -3,7 +3,7 @@
 Seguimiento del roadmap del [SPEC §13](SPEC.md#13-roadmap-hitos-y-puertas-de-salida). Se actualiza al cerrar cada tanda de trabajo.
 Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ⛔ bloqueado.
 
-**Última actualización:** 2026-11-23
+**Última actualización:** 2026-11-25
 
 ## Resumen
 
@@ -12,7 +12,7 @@ Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ⛔ bloqueado.
 | 0 — Viabilidad | ⬜ No empezada (es trabajo fuera del código) | G0 ⛔ bloquea pagos reales |
 | 1 — Plataforma y catálogo | 🟡 Casi completa | — |
 | 2 — Primer pedido real | 🟡 Pedido sin dinero funcionando | G1 ⬜ · G3 ⬜ |
-| 3 — Reparto | ⬜ | G2 ⬜ |
+| 3 — Reparto | 🟡 backend listo, falta app del repartidor | G2 🟡 (probado en API) |
 | 4 — Piloto Tostado | ⬜ | G4 ⬜ |
 | 5 — Lanzamiento público | ⬜ | G5 ⬜ |
 
@@ -22,7 +22,7 @@ Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ⛔ bloqueado.
 - ⬜ Revisión legal y fiscal puntual (términos, privacidad, rol del marketplace, reclamos, repartidores).
 - ⬜ Entrevistas con 3–5 comercios y repartidores de Tostado; simulación de pricing por rubro.
 - ✅ ADRs técnicos iniciales: [0001](adr/0001-monorepo-npm-workspaces.md)–[0007](adr/0007-pedidos-invitado-sin-dinero.md).
-- ⬜ ADRs pendientes: realtime/push/workers durables, hosting de la API, storage de imágenes.
+- ⬜ ADRs pendientes: hosting de la API, storage de imágenes (realtime por SSE cuando se decida el hosting).
 
 ## Fase 1 — Plataforma y catálogo (E1, E2)
 
@@ -53,23 +53,25 @@ Hecho:
 Falta:
 - ⬜ Probar la app en un celular real con Expo Go.
 - ⬜ Login del cliente con verificación de teléfono (OTP) — requiere Supabase.
-- ⬜ Avisos robustos al comercio: realtime, sonido, push, alarma de pedidos sin aceptar (SPEC §10) → puerta **G3**.
-- ⬜ Vencimiento automático de pedidos no aceptados (requiere workers).
-- ⬜ Rate limiting de pedidos anónimos.
-- ⬜ Pedidos programados.
-- ⬜ Transferencia como medio de pago.
+- 🟡 Avisos al comercio ([ADR 0008](adr/0008-avisos-comercio-y-vencimientos.md)): pulso cada 5 s, alarma con sonido, notificación del sistema y «Visto» en todas las páginas del comercio. Web Push con la pestaña cerrada y outbox durable ([ADR 0009](adr/0009-web-push-y-outbox.md)). Falta: prueba en campo (PC y Android con pantalla apagada), `notification_seen` y realtime → puerta **G3**.
+- ✅ Vencimiento automático de pedidos no aceptados: plazo por pedido (15 min por defecto) y worker en la API ([ADR 0008](adr/0008-avisos-comercio-y-vencimientos.md)).
+- ✅ Rate limiting de pedidos anónimos: por IP (en memoria) y por teléfono (en la base) ([ADR 0010](adr/0010-limites-anti-abuso-pedidos.md)).
+- ✅ Pedidos programados: franjas de 30 min dentro del horario, anticipación mínima, días hacia adelante y cupo por franja ([ADR 0011](adr/0011-pedidos-programados-y-transferencia.md)).
+- ✅ Transferencia como medio de pago: alias/CBU del comercio copiado al pedido y confirmación manual del cobro en el panel ([ADR 0011](adr/0011-pedidos-programados-y-transferencia.md)). Pendiente: comprobante opcional del cliente.
 - ⛔ Pago con Mercado Pago y reembolsos (E5) — bloqueado por G0 → puerta **G1**.
-- ⬜ Planes, comisiones y ledger (E9) — los comercios todavía no tienen plan asignado.
+- ✅ Planes, comisiones y ledger (E9): pricing versionado en la base, plan por comercio con historial, comisión por tramos y tope congelada en cada pedido, devengo al completar, ajustes del admin, simulador ([ADR 0012](adr/0012-planes-comisiones-y-ledger.md)).
+- ✅ Liquidación semanal: corte los lunes, vencimiento, pagos parciales registrados por el admin, estado derivado y todo append-only ([ADR 0013](adr/0013-liquidacion-semanal.md)).
+- ⬜ Mora escalonada (SPEC §8.4, requiere validación legal), anulación de pagos, cobro de la mensualidad.
 
 ## Fase 3 — Reparto (E6)
 
-- ⬜ Módulo `deliveries` desacoplado de pedidos (SPEC §9.0).
+- ✅ Módulo `deliveries` desacoplado de pedidos (SPEC §9.0): comandos y eventos en la misma transacción, ofertas con aceptación atómica, estados del repartidor con deduplicación, moderación de repartidores y pedir repartidor desde el panel ([ADR 0014](adr/0014-reparto-desacoplado-y-ofertas.md)).
 - ⬜ App del repartidor: registro, disponibilidad, ofertas, aceptación atómica, estados de retiro/entrega → puerta **G2**.
 
 ## Fase 4 — Piloto Tostado (E8, E9, E10, E11)
 
 - ⬜ Chat por pedido y reclamos.
-- ⬜ Comisión por tramos aplicada a pedidos + simulador para el comercio (las reglas ya están en `@pedilo/domain`).
+- ✅ Comisión por tramos aplicada a pedidos + simulador para el comercio (ADR 0012).
 - ⬜ Cupones básicos.
 - ⬜ Operación: monitoreo, backups probados, soporte → puerta **G4** (5–10 comercios piloto).
 
@@ -80,7 +82,7 @@ Falta:
 3. 🟡 **UI de la app del cliente:** rediseño hecho (naranja de marca, íconos `expo-symbols`, pestañas Inicio/Pedidos/Carrito, home con destacados y rubros, menú con portada y pestañas por sección, modal de producto, checkout, seguimiento con línea de tiempo, ciudad por GPS con `expo-location`). Falta: probarlo en Expo Go, tipografía e ícono de la app, fotos reales.
 4. **Fotos:** ADR de storage y subida de imágenes de productos/logos.
 5. 🟡 **Supabase Auth:** login de comercio/admin hecho (falta prueba con email real); pendiente login del cliente con OTP y asociar pedidos al usuario.
-6. **Avisos robustos al comercio + workers** (vencimiento de pedidos) → G3.
+6. 🟡 **Avisos al comercio:** alarma, notificación, Web Push y vencimientos hechos. Sigue: prueba en campo con comercios reales → G3.
 7. **CI.**
 8. En paralelo, fuera del código: **Fase 0** (prueba de Mercado Pago, legal, entrevistas).
 
