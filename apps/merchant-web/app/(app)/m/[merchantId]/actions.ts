@@ -6,6 +6,7 @@ import {
   errorToFormState,
   type FormState,
   formValues,
+  optionalInt,
   optionalMoney,
   optionalText,
   ONBOARDING_ISSUE_LABELS,
@@ -115,6 +116,64 @@ export async function updateBranch(
     return errorToFormState(err, values);
   }
   revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  return { saved: true };
+}
+
+// --- Pedidos programados (ADR 0011) ---
+
+export async function saveScheduling(
+  merchantId: string,
+  branchId: string,
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const values = formValues(formData);
+  const enabled = checkbox(formData, "enabled");
+  try {
+    await merchantCall((api) =>
+      api.PATCH("/v1/merchants/{merchantId}/branches/{branchId}", {
+        params: { path: { merchantId, branchId } },
+        body: {
+          scheduling: enabled
+            ? {
+                enabled,
+                leadMinutes: optionalInt(formData, "leadMinutes") ?? Number.NaN,
+                maxDays: optionalInt(formData, "maxDays") ?? Number.NaN,
+                slotCapacity: optionalInt(formData, "slotCapacity") ?? null,
+              }
+            : { enabled },
+        },
+      }),
+    );
+  } catch (err) {
+    return errorToFormState(err, values);
+  }
+  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  return { saved: true };
+}
+
+// --- Medios de pago (ADR 0011) ---
+
+export async function savePaymentSettings(merchantId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const values = formValues(formData);
+  const acceptsTransfer = checkbox(formData, "acceptsTransfer");
+  try {
+    await merchantCall((api) =>
+      api.PUT("/v1/merchants/{merchantId}/payment-settings", {
+        params: { path: { merchantId } },
+        body: {
+          acceptsCash: checkbox(formData, "acceptsCash"),
+          acceptsTransfer,
+          transfer: formData.has("holder")
+            ? { holder: optionalText(formData, "holder") ?? null, alias: optionalText(formData, "alias") ?? null, cbu: optionalText(formData, "cbu") ?? null }
+            : undefined,
+        },
+      }),
+    );
+  } catch (err) {
+    return errorToFormState(err, values);
+  }
+  revalidatePath(`${home(merchantId)}/profile`);
   return { saved: true };
 }
 

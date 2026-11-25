@@ -3,10 +3,12 @@ import { Suspense } from "react";
 import { MerchantForm } from "@/components/merchant-form";
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { PaymentSettingsForm } from "@/components/payment-settings-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getMyMerchant, getReferenceData, operationsLocked } from "@/lib/api";
 
-import { updateProfile } from "../actions";
+import { savePaymentSettings, updateProfile } from "../actions";
 
 export default function ProfilePage({ params }: PageProps<"/m/[merchantId]/profile">) {
   return (
@@ -31,11 +33,22 @@ async function Profile({ params }: { params: PageProps<"/m/[merchantId]/profile"
     );
   }
   return (
-    <MerchantForm
-      action={updateProfile.bind(null, merchant.id)}
-      rubros={rubros}
-      merchant={merchant}
-      cancelHref={`/m/${merchant.id}`}
-    />
+    <>
+      <MerchantForm
+        action={updateProfile.bind(null, merchant.id)}
+        rubros={rubros}
+        merchant={merchant}
+        cancelHref={`/m/${merchant.id}`}
+      />
+      <Card>
+        <CardHeader>
+          <CardTitle>Medios de pago</CardTitle>
+          <CardDescription>Cómo te pueden pagar los clientes. Se puede cambiar en cualquier momento.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PaymentSettingsForm action={savePaymentSettings.bind(null, merchant.id)} payment={merchant.payment} />
+        </CardContent>
+      </Card>
+    </>
   );
 }

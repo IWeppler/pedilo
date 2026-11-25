@@ -1,6 +1,6 @@
-import type { Order } from "@pedilo/api-client";
+import type { MerchantOrder as Order } from "@pedilo/api-client";
 import { formatARS, isOrderFinal, merchantOrderActions, ORDER_STATUS_LABELS } from "@pedilo/domain";
-import { formatDateTime } from "@pedilo/web-utils";
+import { formatDateTime, formatSlot } from "@pedilo/web-utils";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -12,9 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { merchantCall } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-import { AutoRefresh } from "./auto-refresh";
+import { Deadline } from "./deadline";
+import { DispatchPanel } from "./dispatch";
 import { Elapsed } from "./elapsed";
 import { OrderActions } from "./order-actions";
+import { PaymentConfirm } from "./payment-confirm";
+import { PushSetup } from "./push-setup";
 
 type Props = PageProps<"/m/[merchantId]/orders">;
 
@@ -38,20 +41,20 @@ async function Orders({ params, searchParams }: Pick<Props, "params" | "searchPa
     scope === "active"
       ? [...orders.filter((o) => o.status === "PLACED"), ...orders.filter((o) => o.status !== "PLACED")]
       : orders;
-  const newCount = orders.filter((o) => o.status === "PLACED").length;
 
   return (
     <>
       <PageHeader
         title="Pedidos"
-        description={scope === "active" ? "Se actualiza solo cada 10 segundos." : "Últimos 50 pedidos finalizados."}
+        description={scope === "active" ? "Se actualiza solo: los pedidos nuevos suenan y aparecen arriba." : "Últimos 50 pedidos finalizados."}
         actions={
           <Link href={`/m/${merchantId}`} className={buttonVariants({ variant: "outline" })}>
             Volver
           </Link>
         }
       />
-      {scope === "active" && <AutoRefresh intervalMs={10_000} newCount={newCount} />}
+
+      {scope === "active" && <PushSetup merchantId={merchantId} />}
 
       <nav className="inline-flex w-fit rounded-lg bg-muted p-1" aria-label="Pedidos">
         {(
@@ -89,6 +92,21 @@ async function Orders({ params, searchParams }: Pick<Props, "params" | "searchPa
   );
 }
 
+const BY_COURIER: string[] = ["PICKED_UP_BY_COURIER", "DELIVERED", "DELIVERY_FAILED"];
+
+const PAYMENT_LABELS: Record<Order["paymentMethod"], string> = {
+  CASH: "Efectivo",
+  TRANSFER: "Transferencia",
+  MERCADO_PAGO: "Mercado Pago",
+};
+
+function paymentStatusLabel(o: Order): string {
+  if (o.paymentStatus === "APPROVED") return o.paymentMethod === "TRANSFER" ? "recibida" : "cobrado";
+  if (o.paymentStatus === "CANCELLED") return "sin cobrar";
+  if (o.paymentStatus === "PENDING") return o.paymentMethod === "TRANSFER" ? "a confirmar" : "a cobrar";
+  return o.paymentStatus.toLowerCase();
+}
+
 function OrderCard({ order: o, merchantId }: { order: Order; merchantId: string }) {
   const isNew = o.status === "PLACED";
   const final = isOrderFinal(o.status);
@@ -101,9 +119,18 @@ function OrderCard({ order: o, merchantId }: { order: Order; merchantId: string 
             <span className="font-mono">{o.code}</span>
             <Badge variant={isNew ? "default" : final ? "outline" : "secondary"}>{ORDER_STATUS_LABELS[o.status]}</Badge>
             <Badge variant="outline">{o.fulfillmentType === "PICKUP" ? "Retiro" : "Envío"}</Badge>
+            {o.scheduledFor && <Badge variant="secondary">Programado · {formatSlot(o.scheduledFor)}</Badge>}
+            {isNew && !o.acknowledgedAt && <Badge variant="destructive">Sin ver</Badge>}
           </CardTitle>
           <p className="text-sm text-muted-foreground">
-            {final ? formatDateTime(o.updatedAt) : <Elapsed since={o.createdAt} />} · {o.customer.name} ·{" "}
+            {final ? formatDateTime(o.updatedAt) : <Elapsed since={o.createdAt} />}
+            {isNew && (
+              <>
+                {" "}
+                · <Deadline at={o.acceptDeadlineAt} />
+              </>
+            )}{" "}
+            · {o.customer.name} ·{" "}
             <a href={`tel:${o.customer.phone.replace(/[^\d+]/g, "")}`} className="underline underline-offset-2">
               {o.customer.phone}
             </a>
@@ -111,7 +138,9 @@ function OrderCard({ order: o, merchantId }: { order: Order; merchantId: string 
         </div>
         <div className="text-right">
           <p className="text-lg font-semibold tabular-nums">{formatARS(o.totalMinor)}</p>
-          <p className="text-xs text-muted-foreground">Efectivo</p>
+          <p className="text-xs text-muted-foreground">
+            {PAYMENT_LABELS[o.paymentMethod]} · {paymentStatusLabel(o)}
+          </p>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3 text-sm">
@@ -147,8 +176,30 @@ function OrderCard({ order: o, merchantId }: { order: Order; merchantId: string 
             Subtotal {formatARS(o.subtotalMinor)} + envío {formatARS(o.deliveryFeeMinor)}
           </p>
         )}
+        {o.transfer && o.paymentStatus === "PENDING" && (
+          <p className="text-muted-foreground">
+            Transferencia a {o.transfer.alias ?? o.transfer.cbu} ({o.transfer.holder}). Confirmala recién cuando la veas en tu cuenta.
+          </p>
+        )}
+        {o.commission && (
+          <p className="text-xs text-muted-foreground">
+            Comisión Pedilo {formatARS(o.commission.amountMinor)}
+            {o.commission.capApplied && " (tope del rubro)"} · se suma al completar el pedido
+          </p>
+        )}
         {o.statusReason && final && <p className="text-muted-foreground">Motivo: {o.statusReason}</p>}
-        <OrderActions merchantId={merchantId} orderId={o.id} actions={merchantOrderActions(o.status, o.fulfillmentType)} />
+        {!final && <DispatchPanel merchantId={merchantId} order={o} />}
+        <div className="flex flex-wrap items-start gap-2">
+          <OrderActions
+            merchantId={merchantId}
+            orderId={o.id}
+            // Con repartidor de Pedilo, salida y entrega las marca su app (ADR 0014).
+            actions={merchantOrderActions(o.status, o.fulfillmentType).filter((a) => !o.dispatch || !BY_COURIER.includes(a.to))}
+          />
+          {o.paymentStatus === "PENDING" && o.paymentMethod !== "MERCADO_PAGO" && (o.paymentMethod === "TRANSFER" || !final) && (
+            <PaymentConfirm merchantId={merchantId} orderId={o.id} method={o.paymentMethod} />
+          )}
+        </div>
       </CardContent>
     </Card>
   );
