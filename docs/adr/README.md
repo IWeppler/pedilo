@@ -18,6 +18,7 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0012](0012-planes-comisiones-y-ledger.md) | Planes, comisiones y ledger | Aceptada |
 | [0013](0013-liquidacion-semanal.md) | Liquidación semanal de comisiones | Aceptada |
 | [0014](0014-reparto-desacoplado-y-ofertas.md) | Reparto desacoplado y ofertas con aceptación atómica | Aceptada |
+| [0015](0015-app-repartidor.md) | App del repartidor | Aceptada |
 
 Pendientes (SPEC §17): realtime (SSE), hosting de `services/api`, storage de imágenes.
 

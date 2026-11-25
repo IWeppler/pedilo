@@ -12,7 +12,7 @@ Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ⛔ bloqueado.
 | 0 — Viabilidad | ⬜ No empezada (es trabajo fuera del código) | G0 ⛔ bloquea pagos reales |
 | 1 — Plataforma y catálogo | 🟡 Casi completa | — |
 | 2 — Primer pedido real | 🟡 Pedido sin dinero funcionando | G1 ⬜ · G3 ⬜ |
-| 3 — Reparto | 🟡 backend listo, falta app del repartidor | G2 🟡 (probado en API) |
+| 3 — Reparto | 🟡 backend y app listos, falta probar en dispositivos | G2 🟡 (probado en API) |
 | 4 — Piloto Tostado | ⬜ | G4 ⬜ |
 | 5 — Lanzamiento público | ⬜ | G5 ⬜ |
 
@@ -66,7 +66,9 @@ Falta:
 ## Fase 3 — Reparto (E6)
 
 - ✅ Módulo `deliveries` desacoplado de pedidos (SPEC §9.0): comandos y eventos en la misma transacción, ofertas con aceptación atómica, estados del repartidor con deduplicación, moderación de repartidores y pedir repartidor desde el panel ([ADR 0014](adr/0014-reparto-desacoplado-y-ofertas.md)).
-- ⬜ App del repartidor: registro, disponibilidad, ofertas, aceptación atómica, estados de retiro/entrega → puerta **G2**.
+- ✅ App del repartidor (`apps/courier-mobile`): login por código, registro, disponibilidad, ofertas, aceptación, estados de retiro/entrega con cola persistente sin señal ([ADR 0015](adr/0015-app-repartidor.md)).
+- ⬜ Puerta **G2** en dispositivos reales: dos repartidores disputando una oferta, desconexión y recuperación (SPEC §9.3).
+- ⬜ Push FCM de ofertas, chat e incidencias, PIN de entrega, saldos comercio↔repartidor.
 
 ## Fase 4 — Piloto Tostado (E8, E9, E10, E11)
 
