@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminCall } from "@/lib/api";
 import { commissionLabel } from "@/lib/categories";
 
+import { BillingCard } from "./billing-card";
 import { ReviewActions } from "./review-actions";
 
 export default function MerchantReviewPage({ params }: PageProps<"/merchants/[id]">) {
@@ -32,9 +33,10 @@ async function MerchantReview({ params }: { params: PageProps<"/merchants/[id]">
       throw err;
     },
   );
-  const [rubros, cities] = await Promise.all([
+  const [rubros, cities, billing] = await Promise.all([
     adminCall((api) => api.GET("/v1/admin/categories", { params: { query: { kind: "MERCHANT" } } })),
     adminCall((api) => api.GET("/v1/admin/cities")),
+    adminCall((api) => api.GET("/v1/admin/merchants/{merchantId}/billing", { params: { path: { merchantId: id } } })),
   ]);
   const rubro = rubros.find((r) => r.id === merchant.categoryId);
   const cityName = new Map(cities.map((c) => [c.id, `${c.name}, ${c.province}`]));
@@ -157,6 +159,8 @@ async function MerchantReview({ params }: { params: PageProps<"/merchants/[id]">
           </CardContent>
         </Card>
       ))}
+
+      <BillingCard merchantId={merchant.id} billing={billing} />
 
       {merchant.status === "PENDING_REVIEW" && (
         <ReviewActions merchantId={merchant.id} ready={merchant.onboarding.ready} />

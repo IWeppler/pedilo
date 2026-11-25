@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 
 export const NAV_ITEMS = [
   { href: "/merchants", label: "Comercios" },
+  { href: "/settlements", label: "Liquidaciones" },
+  { href: "/couriers", label: "Repartidores" },
   { href: "/cities", label: "Ciudades" },
   { href: "/categories", label: "Categorías" },
 ] as const;
