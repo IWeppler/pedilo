@@ -47,12 +47,29 @@ export interface MerchantDto {
   categoryId: string;
   contactPhone: string;
   contactEmail: string | null;
+  /** Medios de pago (ADR 0011). */
+  payment: PaymentSettingsDto;
   status: MerchantStatus;
   rejectionReason: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PaymentSettingsDto {
+  acceptsCash: boolean;
+  acceptsTransfer: boolean;
+  /** Datos para transferir (null si no cargó ninguno). */
+  transfer: { alias: string | null; cbu: string | null; holder: string | null } | null;
+}
+
+export interface SchedulingDto {
+  enabled: boolean;
+  leadMinutes: number;
+  maxDays: number;
+  /** Pedidos por franja de 30 min; null = sin límite. */
+  slotCapacity: number | null;
 }
 
 export interface OpeningRangeDto {
@@ -83,6 +100,7 @@ export interface BranchDto {
   acceptsPickup: boolean;
   acceptsDelivery: boolean;
   active: boolean;
+  scheduling: SchedulingDto;
   hours: OpeningRangeDto[];
   zones: DeliveryZoneDto[];
 }
@@ -117,6 +135,14 @@ export function toMerchantDto(row: MerchantRow): MerchantDto {
     categoryId: row.categoryId,
     contactPhone: row.contactPhone,
     contactEmail: row.contactEmail,
+    payment: {
+      acceptsCash: row.acceptsCash,
+      acceptsTransfer: row.acceptsTransfer,
+      transfer:
+        row.transferAlias || row.transferCbu || row.transferHolder
+          ? { alias: row.transferAlias, cbu: row.transferCbu, holder: row.transferHolder }
+          : null,
+    },
     status: row.status,
     rejectionReason: row.rejectionReason,
     submittedAt: iso(row.submittedAt),
@@ -151,6 +177,12 @@ function toBranchDto(b: BranchRow, hours: BusinessHoursRow[], zones: DeliveryZon
     acceptsPickup: b.acceptsPickup,
     acceptsDelivery: b.acceptsDelivery,
     active: b.active,
+    scheduling: {
+      enabled: b.schedulingEnabled,
+      leadMinutes: b.scheduleLeadMinutes,
+      maxDays: b.scheduleMaxDays,
+      slotCapacity: b.slotCapacity,
+    },
     hours: hours
       .filter((h) => h.branchId === b.id)
       .sort((a, c) => a.weekday - c.weekday || a.opensAt - c.opensAt)
@@ -191,9 +223,16 @@ export interface BranchInput {
   acceptsPickup?: boolean | undefined;
   acceptsDelivery?: boolean | undefined;
   active?: boolean | undefined;
+  scheduling?: Partial<SchedulingDto> | undefined;
 }
 
 export type UpdateBranchInput = Partial<BranchInput>;
+
+export interface PaymentSettingsInput {
+  acceptsCash: boolean;
+  acceptsTransfer: boolean;
+  transfer?: { alias?: string | null | undefined; cbu?: string | null | undefined; holder?: string | null | undefined } | null | undefined;
+}
 
 export interface ZoneInput {
   name: string;
@@ -431,6 +470,67 @@ export async function updateMerchantProfile(
   });
 }
 
+/**
+ * Medios de pago y datos de transferencia (ADR 0011). Se pueden cambiar con el comercio aprobado:
+ * es configuración operativa. Al menos un medio; para transferencia, titular y alias o CBU/CVU.
+ */
+export async function updatePaymentSettings(
+  db: Db,
+  merchantId: string,
+  input: PaymentSettingsInput,
+  actor: Actor,
+): Promise<MerchantDetailDto> {
+  return db.transaction(async (tx) => {
+    const { merchant } = await loadOwnership(tx, merchantId, actor.userId);
+    assertOperationsEditable(merchant.status);
+    if (!input.acceptsCash && !input.acceptsTransfer) {
+      throw badRequest("Elegí al menos un medio de pago", { field: "acceptsCash" });
+    }
+    const clean = (v: string | null | undefined) => v?.trim() || null;
+    const alias = clean(input.transfer?.alias);
+    const cbu = input.transfer?.cbu ? input.transfer.cbu.replace(/\D/g, "") || null : null;
+    const holder = clean(input.transfer?.holder);
+    if (input.acceptsTransfer) {
+      if (!alias && !cbu) throw badRequest("Para transferencias cargá el alias o el CBU/CVU", { field: "transfer.alias" });
+      if (!holder) throw badRequest("Indicá el titular de la cuenta", { field: "transfer.holder" });
+    }
+    if (cbu && cbu.length !== 22) throw badRequest("El CBU/CVU tiene 22 dígitos", { field: "transfer.cbu" });
+
+    const [row] = await tx
+      .update(merchants)
+      .set({ acceptsCash: input.acceptsCash, acceptsTransfer: input.acceptsTransfer, transferAlias: alias, transferCbu: cbu, transferHolder: holder })
+      .where(eq(merchants.id, merchantId))
+      .returning();
+    if (!row) throw notFound("Comercio");
+    await recordAudit(tx, actor, {
+      action: "merchant.payment_settings",
+      entityType: "merchant",
+      entityId: merchantId,
+      before: toMerchantDto(merchant).payment,
+      after: toMerchantDto(row).payment,
+    });
+    return loadDetail(tx, row);
+  });
+}
+
+/** Datos de transferencia vigentes de un comercio (para copiarlos al pedido). Null si no acepta transferencias. */
+export async function getTransferDetails(
+  db: DbOrTx,
+  merchantId: string,
+): Promise<{ alias: string | null; cbu: string | null; holder: string } | null> {
+  const [row] = await db
+    .select({
+      acceptsTransfer: merchants.acceptsTransfer,
+      alias: merchants.transferAlias,
+      cbu: merchants.transferCbu,
+      holder: merchants.transferHolder,
+    })
+    .from(merchants)
+    .where(eq(merchants.id, merchantId));
+  if (!row?.acceptsTransfer || !row.holder) return null;
+  return { alias: row.alias, cbu: row.cbu, holder: row.holder };
+}
+
 /** Borrador o rechazado → en revisión, solo si el checklist de onboarding está completo. */
 export async function submitMerchant(db: Db, merchantId: string, actor: Actor): Promise<MerchantDetailDto> {
   return db.transaction(async (tx) => {
@@ -494,6 +594,7 @@ export async function createBranch(
         ...(input.acceptsPickup !== undefined && { acceptsPickup: input.acceptsPickup }),
         ...(input.acceptsDelivery !== undefined && { acceptsDelivery: input.acceptsDelivery }),
         ...(input.active !== undefined && { active: input.active }),
+        ...schedulingColumns(input.scheduling),
       })
       .returning();
     if (!row) throw new Error("insert sin resultado");
@@ -501,6 +602,15 @@ export async function createBranch(
     await recordAudit(tx, actor, { action: "branch.create", entityType: "branch", entityId: row.id, after: dto });
     return dto;
   });
+}
+
+function schedulingColumns(s: Partial<SchedulingDto> | undefined) {
+  return {
+    ...(s?.enabled !== undefined && { schedulingEnabled: s.enabled }),
+    ...(s?.leadMinutes !== undefined && { scheduleLeadMinutes: s.leadMinutes }),
+    ...(s?.maxDays !== undefined && { scheduleMaxDays: s.maxDays }),
+    ...(s?.slotCapacity !== undefined && { slotCapacity: s.slotCapacity }),
+  };
 }
 
 async function branchDto(db: DbOrTx, row: BranchRow): Promise<BranchDto> {
@@ -537,6 +647,7 @@ export async function updateBranch(
         ...(input.acceptsPickup !== undefined && { acceptsPickup: input.acceptsPickup }),
         ...(input.acceptsDelivery !== undefined && { acceptsDelivery: input.acceptsDelivery }),
         ...(input.active !== undefined && { active: input.active }),
+        ...schedulingColumns(input.scheduling),
       })
       .where(eq(branches.id, branchId))
       .returning();
@@ -691,6 +802,27 @@ export async function getMerchantAccess(
   return { merchantId: merchant.id, status: merchant.status, role };
 }
 
+/** Nombre visible de varios comercios (para listados de otros módulos). */
+export async function getMerchantNames(db: DbOrTx, ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.select({ id: merchants.id, name: merchants.displayName }).from(merchants).where(inArray(merchants.id, ids));
+  return new Map(rows.map((r) => [r.id, r.name]));
+}
+
+/** Ciudad y teléfono de una sucursal (para el reparto). 404 si no existe. */
+export async function getBranchSummary(db: DbOrTx, branchId: string): Promise<{ cityId: string; phone: string | null }> {
+  const [row] = await db.select({ cityId: branches.cityId, phone: branches.phone }).from(branches).where(eq(branches.id, branchId));
+  if (!row) throw notFound("Sucursal");
+  return row;
+}
+
+/** Rubro de un comercio (para el tope de comisión). 404 si no existe. */
+export async function getMerchantCategoryId(db: DbOrTx, merchantId: string): Promise<string> {
+  const [row] = await db.select({ categoryId: merchants.categoryId }).from(merchants).where(eq(merchants.id, merchantId));
+  if (!row) throw notFound("Comercio");
+  return row.categoryId;
+}
+
 export interface PublicBranchDto {
   id: string;
   name: string;
@@ -703,6 +835,8 @@ export interface PublicBranchDto {
   hours: OpeningRangeDto[];
   /** Abierta en este momento, según su horario y su zona horaria. */
   openNow: boolean;
+  /** Pedidos programados. Las franjas disponibles salen de GET .../slots. */
+  scheduling: SchedulingDto;
   zones: Array<Pick<DeliveryZoneDto, "id" | "name" | "description" | "feeMinor" | "minOrderMinor">>;
 }
 
@@ -711,6 +845,8 @@ export interface PublicMerchantDto {
   slug: string;
   displayName: string;
   categoryId: string;
+  /** Medios de pago que acepta. Los datos de transferencia se ven recién en el pedido. */
+  payment: { cash: boolean; transfer: boolean };
   branches: PublicBranchDto[];
 }
 
@@ -736,6 +872,7 @@ function toPublicBranch(b: BranchDto, now: Date): PublicBranchDto {
     timezone: b.timezone,
     hours: b.hours,
     openNow: branchOpenAt(b, now),
+    scheduling: b.scheduling,
     zones: b.zones
       .filter((z) => z.active)
       .map(({ id, name, description, feeMinor, minOrderMinor }) => ({ id, name, description, feeMinor, minOrderMinor })),
@@ -762,6 +899,7 @@ export async function findApprovedMerchantBySlug(
     slug: row.slug,
     displayName: row.displayName,
     categoryId: row.categoryId,
+    payment: { cash: row.acceptsCash, transfer: row.acceptsTransfer },
     branches: detail.branches.filter((b) => b.active).map((b) => toPublicBranch(b, now)),
   };
 }

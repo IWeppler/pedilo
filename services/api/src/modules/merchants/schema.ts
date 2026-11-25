@@ -36,6 +36,13 @@ export const merchants = pgTable(
       .references(() => categories.id, { onDelete: "restrict" }),
     contactPhone: text("contact_phone").notNull(),
     contactEmail: text("contact_email"),
+    /** Medios de pago que acepta (ADR 0011). Siempre al menos uno. */
+    acceptsCash: boolean("accepts_cash").notNull().default(true),
+    acceptsTransfer: boolean("accepts_transfer").notNull().default(false),
+    /** Datos para transferir: se copian al pedido (el cliente los ve solo después de pedir). */
+    transferAlias: text("transfer_alias"),
+    transferCbu: text("transfer_cbu"),
+    transferHolder: text("transfer_holder"),
     status: text("status").$type<MerchantStatus>().notNull().default("DRAFT"),
     rejectionReason: text("rejection_reason"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
@@ -51,6 +58,11 @@ export const merchants = pgTable(
       sql`${t.status} IN ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'SUSPENDED')`,
     ),
     check("merchants_tax_id_check", sql`${t.taxId} ~ '^[0-9]{11}$'`),
+    check("merchants_payment_method_check", sql`${t.acceptsCash} OR ${t.acceptsTransfer}`),
+    check(
+      "merchants_transfer_details_check",
+      sql`NOT ${t.acceptsTransfer} OR ((${t.transferAlias} IS NOT NULL OR ${t.transferCbu} IS NOT NULL) AND ${t.transferHolder} IS NOT NULL)`,
+    ),
   ],
 );
 
@@ -95,6 +107,14 @@ export const branches = pgTable(
     timezone: text("timezone").notNull(),
     acceptsPickup: boolean("accepts_pickup").notNull().default(true),
     acceptsDelivery: boolean("accepts_delivery").notNull().default(false),
+    /** Pedidos programados (ADR 0011): franjas de 30 min dentro del horario. */
+    schedulingEnabled: boolean("scheduling_enabled").notNull().default(false),
+    /** Anticipación mínima en minutos (fecha de corte). */
+    scheduleLeadMinutes: smallint("schedule_lead_minutes").notNull().default(60),
+    /** Hasta cuántos días adelante. */
+    scheduleMaxDays: smallint("schedule_max_days").notNull().default(3),
+    /** Pedidos programados por franja; null = sin límite. */
+    slotCapacity: smallint("slot_capacity"),
     active: boolean("active").notNull().default(true),
     ...timestamps,
   },
@@ -104,6 +124,10 @@ export const branches = pgTable(
     check(
       "branches_lat_lng_check",
       sql`(${t.lat} IS NULL AND ${t.lng} IS NULL) OR (${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180)`,
+    ),
+    check(
+      "branches_scheduling_check",
+      sql`${t.scheduleLeadMinutes} BETWEEN 15 AND 2880 AND ${t.scheduleMaxDays} BETWEEN 1 AND 14 AND (${t.slotCapacity} IS NULL OR ${t.slotCapacity} >= 1)`,
     ),
   ],
 );

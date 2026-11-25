@@ -334,6 +334,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -443,6 +458,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -571,6 +601,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -838,6 +883,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -949,6 +1009,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1094,6 +1169,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         trace?: never;
@@ -1150,6 +1240,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -1172,6 +1271,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -1278,6 +1387,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -1320,6 +1444,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -1396,6 +1529,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -1418,6 +1560,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -1526,6 +1678,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         put?: never;
@@ -1581,6 +1748,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -1603,6 +1779,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -1709,8 +1895,248 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/payment-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Medios de pago y datos de transferencia
+         * @description Solo el dueño. Se puede cambiar con el comercio aprobado. Al menos un medio; transferencia exige titular y alias o CBU/CVU.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        acceptsCash: boolean;
+                        acceptsTransfer: boolean;
+                        transfer?: {
+                            alias?: string | null;
+                            /** @description CBU o CVU (22 dígitos) */
+                            cbu?: string | null;
+                            /** @description Titular de la cuenta */
+                            holder?: string | null;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            legalName: string;
+                            taxId: string;
+                            slug: string;
+                            /** Format: uuid */
+                            categoryId: string;
+                            contactPhone: string;
+                            contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            rejectionReason: string | null;
+                            submittedAt: string | null;
+                            reviewedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            branches: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                cityId: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                                lat: number | null;
+                                lng: number | null;
+                                phone: string | null;
+                                timezone: string;
+                                acceptsPickup: boolean;
+                                acceptsDelivery: boolean;
+                                active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
+                                hours: {
+                                    /** @description 0 = domingo … 6 = sábado */
+                                    weekday: number;
+                                    opensAt: string;
+                                    /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                    closesAt: string;
+                                }[];
+                                zones: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    description: string | null;
+                                    /** @description Tarifa de envío en centavos */
+                                    feeMinor: number;
+                                    /** @description Pedido mínimo en centavos */
+                                    minOrderMinor: number;
+                                    active: boolean;
+                                }[];
+                            }[];
+                            onboarding: {
+                                ready: boolean;
+                                problems: {
+                                    /** @enum {string} */
+                                    issue: "NO_ACTIVE_BRANCH" | "BRANCH_WITHOUT_HOURS" | "BRANCH_WITHOUT_FULFILLMENT";
+                                    /** Format: uuid */
+                                    branchId?: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/merchants/{merchantId}/submit": {
@@ -1754,6 +2180,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -1776,6 +2211,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -1869,6 +2314,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1923,6 +2383,16 @@ export interface paths {
                         acceptsPickup?: boolean;
                         acceptsDelivery?: boolean;
                         active?: boolean;
+                        scheduling?: {
+                            /** @description Acepta pedidos programados */
+                            enabled?: boolean;
+                            /** @description Anticipación mínima en minutos */
+                            leadMinutes?: number;
+                            /** @description Hasta cuántos días adelante */
+                            maxDays?: number;
+                            /** @description Pedidos por franja de 30 min; null = sin límite */
+                            slotCapacity?: number | null;
+                        };
                     };
                 };
             };
@@ -1948,6 +2418,16 @@ export interface paths {
                             acceptsPickup: boolean;
                             acceptsDelivery: boolean;
                             active: boolean;
+                            scheduling: {
+                                /** @description Acepta pedidos programados */
+                                enabled: boolean;
+                                /** @description Anticipación mínima en minutos */
+                                leadMinutes: number;
+                                /** @description Hasta cuántos días adelante */
+                                maxDays: number;
+                                /** @description Pedidos por franja de 30 min; null = sin límite */
+                                slotCapacity: number | null;
+                            };
                             hours: {
                                 /** @description 0 = domingo … 6 = sábado */
                                 weekday: number;
@@ -2031,6 +2511,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2090,6 +2585,16 @@ export interface paths {
                         acceptsPickup?: boolean;
                         acceptsDelivery?: boolean;
                         active?: boolean;
+                        scheduling?: {
+                            /** @description Acepta pedidos programados */
+                            enabled?: boolean;
+                            /** @description Anticipación mínima en minutos */
+                            leadMinutes?: number;
+                            /** @description Hasta cuántos días adelante */
+                            maxDays?: number;
+                            /** @description Pedidos por franja de 30 min; null = sin límite */
+                            slotCapacity?: number | null;
+                        };
                     };
                 };
             };
@@ -2115,6 +2620,16 @@ export interface paths {
                             acceptsPickup: boolean;
                             acceptsDelivery: boolean;
                             active: boolean;
+                            scheduling: {
+                                /** @description Acepta pedidos programados */
+                                enabled: boolean;
+                                /** @description Anticipación mínima en minutos */
+                                leadMinutes: number;
+                                /** @description Hasta cuántos días adelante */
+                                maxDays: number;
+                                /** @description Pedidos por franja de 30 min; null = sin límite */
+                                slotCapacity: number | null;
+                            };
                             hours: {
                                 /** @description 0 = domingo … 6 = sábado */
                                 weekday: number;
@@ -2198,6 +2713,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2269,6 +2799,16 @@ export interface paths {
                             acceptsPickup: boolean;
                             acceptsDelivery: boolean;
                             active: boolean;
+                            scheduling: {
+                                /** @description Acepta pedidos programados */
+                                enabled: boolean;
+                                /** @description Anticipación mínima en minutos */
+                                leadMinutes: number;
+                                /** @description Hasta cuántos días adelante */
+                                maxDays: number;
+                                /** @description Pedidos por franja de 30 min; null = sin límite */
+                                slotCapacity: number | null;
+                            };
                             hours: {
                                 /** @description 0 = domingo … 6 = sábado */
                                 weekday: number;
@@ -2352,6 +2892,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2488,6 +3043,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2641,6 +3211,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         trace?: never;
@@ -2754,6 +3339,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -2847,6 +3441,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -2869,6 +3472,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -2968,6 +3581,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3029,6 +3657,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -3051,6 +3688,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -3150,6 +3797,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3215,6 +3877,15 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
                             /** @enum {string} */
                             status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
                             rejectionReason: string | null;
@@ -3237,6 +3908,16 @@ export interface paths {
                                 acceptsPickup: boolean;
                                 acceptsDelivery: boolean;
                                 active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
                                 hours: {
                                     /** @description 0 = domingo … 6 = sábado */
                                     weekday: number;
@@ -3349,6 +4030,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         delete?: never;
@@ -3393,6 +4089,11 @@ export interface paths {
                                 displayName: string;
                                 /** Format: uuid */
                                 categoryId: string;
+                                /** @description Medios de pago que acepta */
+                                payment: {
+                                    cash: boolean;
+                                    transfer: boolean;
+                                };
                                 branches: {
                                     /** Format: uuid */
                                     id: string;
@@ -3411,6 +4112,13 @@ export interface paths {
                                     }[];
                                     /** @description Abierta ahora según su horario y zona horaria */
                                     openNow: boolean;
+                                    /** @description Pedidos programados; las franjas libres salen de GET /public/merchants/{slug}/branches/{branchId}/slots */
+                                    scheduling: {
+                                        enabled: boolean;
+                                        leadMinutes: number;
+                                        maxDays: number;
+                                        slotCapacity: number | null;
+                                    };
                                     zones: {
                                         /** Format: uuid */
                                         id: string;
@@ -3640,6 +4348,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         put?: never;
@@ -3756,6 +4479,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -3888,6 +4626,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4078,6 +4831,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4285,6 +5053,21 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
         post?: never;
@@ -4449,8 +5232,4383 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
+        trace?: never;
+    };
+    "/v1/courier/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrarse como repartidor
+         * @description Queda en revisión hasta que un admin lo aprueba. 409 ALREADY_REGISTERED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        displayName: string;
+                        phone: string;
+                        /** @enum {string} */
+                        vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                        /** Format: uuid */
+                        cityId: string;
+                        /** @description No ver ofertas que paguen menos (centavos) */
+                        minFeeMinor?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            phone: string;
+                            /** @enum {string} */
+                            vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            /** Format: uuid */
+                            cityId: string;
+                            minFeeMinor: number;
+                            /** @enum {string} */
+                            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            statusReason: string | null;
+                            available: boolean;
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/courier/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mi perfil de repartidor */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            phone: string;
+                            /** @enum {string} */
+                            vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            /** Format: uuid */
+                            cityId: string;
+                            minFeeMinor: number;
+                            /** @enum {string} */
+                            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            statusReason: string | null;
+                            available: boolean;
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Disponibilidad, tarifa mínima y datos
+         * @description Ponerse disponible requiere perfil aprobado.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        available?: boolean;
+                        minFeeMinor?: number;
+                        displayName?: string;
+                        phone?: string;
+                        /** @enum {string} */
+                        vehicle?: "WALK" | "BIKE" | "MOTO" | "CAR";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            phone: string;
+                            /** @enum {string} */
+                            vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            /** Format: uuid */
+                            cityId: string;
+                            minFeeMinor: number;
+                            /** @enum {string} */
+                            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            statusReason: string | null;
+                            available: boolean;
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/v1/courier/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ofertas abiertas en mi ciudad
+         * @description Solo si estoy disponible. Las que pagan menos que mi mínimo o que rechacé no aparecen. Sin la dirección exacta.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            reference: string;
+                            pickupName: string;
+                            pickupAddress: string;
+                            /** @description Zona aproximada: la dirección exacta se ve recién al aceptar */
+                            dropoffArea: string;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            /** @description Efectivo a cobrar al cliente (se le debe al comercio) */
+                            cashToCollectMinor: number;
+                            /** @description Hora del servidor */
+                            expiresAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/courier/offers/{deliveryId}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aceptar una oferta
+         * @description Atómico: si dos repartidores aceptan a la vez, gana uno. 409 OFFER_TAKEN u OFFER_EXPIRED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    deliveryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/courier/offers/{deliveryId}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rechazar una oferta (no penaliza) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    deliveryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/courier/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mis repartos: en curso o terminados */
+        get: {
+            parameters: {
+                query?: {
+                    scope?: "active" | "done";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/courier/deliveries/{deliveryId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Avanzar el estado de mi reparto
+         * @description Solo las acciones de `courierDeliveryActions` (@pedilo/domain). `eventId` lo genera la app por acción: reintentar con el mismo no duplica nada (SPEC §9.3).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    deliveryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        to: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                        reason?: string | null;
+                        eventId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repartos del comercio (últimos 100) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/deliveries/{deliveryId}/reoffer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Volver a ofertar (o subir la tarifa)
+         * @description Desde OFFERED, OFFER_EXPIRED o COURIER_CANCELLED. Quienes la habían rechazado la vuelven a ver.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    deliveryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        feeMinor: number;
+                        offerMinutes?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/deliveries/{deliveryId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancelar la búsqueda o el reparto antes del retiro
+         * @description 409 ALREADY_PICKED_UP si el repartidor ya lo retiró. El pedido sigue; se puede enviar por cuenta propia.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    deliveryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/couriers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Repartidores (moderación) */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            phone: string;
+                            /** @enum {string} */
+                            vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            /** Format: uuid */
+                            cityId: string;
+                            minFeeMinor: number;
+                            /** @enum {string} */
+                            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            statusReason: string | null;
+                            available: boolean;
+                            createdAt: string;
+                            /** Format: uuid */
+                            userId: string;
+                            lastSeenAt: string | null;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/couriers/{courierId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aprobar, rechazar o suspender un repartidor
+         * @description Rechazar y suspender exigen motivo. Suspender lo saca de disponible.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    courierId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "APPROVED" | "REJECTED" | "SUSPENDED";
+                        reason?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            phone: string;
+                            /** @enum {string} */
+                            vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            /** Format: uuid */
+                            cityId: string;
+                            minFeeMinor: number;
+                            /** @enum {string} */
+                            status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            statusReason: string | null;
+                            available: boolean;
+                            createdAt: string;
+                            /** Format: uuid */
+                            userId: string;
+                            lastSeenAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/settlements/{settlementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una liquidación del comercio */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    settlementId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            periodStart: string;
+                            /** @description Corte: entran los asientos anteriores a este instante */
+                            periodEnd: string;
+                            totalMinor: number;
+                            paidMinor: number;
+                            outstandingMinor: number;
+                            entryCount: number;
+                            dueAt: string;
+                            /** @enum {string} */
+                            status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                            createdAt: string;
+                            payments: {
+                                /** Format: uuid */
+                                id: string;
+                                amountMinor: number;
+                                /** @enum {string} */
+                                method: "TRANSFER" | "CASH" | "OTHER";
+                                reference: string | null;
+                                paidAt: string;
+                                createdAt: string;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                kind: string;
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/settlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liquidaciones de todos los comercios (vencidas primero) */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            periodStart: string;
+                            /** @description Corte: entran los asientos anteriores a este instante */
+                            periodEnd: string;
+                            totalMinor: number;
+                            paidMinor: number;
+                            outstandingMinor: number;
+                            entryCount: number;
+                            dueAt: string;
+                            /** @enum {string} */
+                            status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                            createdAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/settlements/{settlementId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de una liquidación: asientos y pagos */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    settlementId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            periodStart: string;
+                            /** @description Corte: entran los asientos anteriores a este instante */
+                            periodEnd: string;
+                            totalMinor: number;
+                            paidMinor: number;
+                            outstandingMinor: number;
+                            entryCount: number;
+                            dueAt: string;
+                            /** @enum {string} */
+                            status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                            createdAt: string;
+                            payments: {
+                                /** Format: uuid */
+                                id: string;
+                                amountMinor: number;
+                                /** @enum {string} */
+                                method: "TRANSFER" | "CASH" | "OTHER";
+                                reference: string | null;
+                                paidAt: string;
+                                createdAt: string;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                kind: string;
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/settlements/{settlementId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar un pago del comercio
+         * @description Parcial o total. 409 OVERPAYMENT si supera lo pendiente, ALREADY_PAID si ya está pagada. Los pagos no se editan.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    settlementId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        amountMinor: number;
+                        /** @enum {string} */
+                        method: "TRANSFER" | "CASH" | "OTHER";
+                        /** @description Número de operación o comprobante */
+                        reference?: string | null;
+                        /**
+                         * Format: date-time
+                         * @description Cuándo pagó (por defecto, ahora)
+                         */
+                        paidAt?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            periodStart: string;
+                            /** @description Corte: entran los asientos anteriores a este instante */
+                            periodEnd: string;
+                            totalMinor: number;
+                            paidMinor: number;
+                            outstandingMinor: number;
+                            entryCount: number;
+                            dueAt: string;
+                            /** @enum {string} */
+                            status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                            createdAt: string;
+                            payments: {
+                                /** Format: uuid */
+                                id: string;
+                                amountMinor: number;
+                                /** @enum {string} */
+                                method: "TRANSFER" | "CASH" | "OTHER";
+                                reference: string | null;
+                                paidAt: string;
+                                createdAt: string;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                kind: string;
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/settlements/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cerrar la última semana ahora
+         * @description Lo hace solo el worker cada lunes; esto lo corre a mano. Idempotente: no duplica liquidaciones.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            created: number;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/pricing/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versión de pricing vigente (planes, tramos y topes)
+         * @description Para comparar planes y simular comisiones. Son la hipótesis comercial: precios a validar (SPEC §6.1).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Identificador inmutable, p. ej. v0.5 */
+                            id: string;
+                            brackets: {
+                                /** @description Límite superior del tramo en centavos; null en el último */
+                                upToMinor: number | null;
+                                /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                rateFactorBps: number;
+                            }[];
+                            capsByCategory: {
+                                GASTRONOMY: number;
+                                KIOSK: number;
+                                SUPERMARKET: number;
+                                ELECTRONICS: number;
+                                ENTREPRENEUR: number;
+                            };
+                            plans: {
+                                EMPRENDEDOR: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                                NEGOCIO: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                                PRO: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                            };
+                            effectiveFrom: string;
+                            notes: string | null;
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plan, comisiones y estado de cuenta del comercio */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            plan: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                /** @description null = nunca asignado (Emprendedor) */
+                                since: string | null;
+                            };
+                            /** @enum {string} */
+                            category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
+                            /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
+                            categoryDefaulted: boolean;
+                            capMinor: number;
+                            pricing: {
+                                /** @description Identificador inmutable, p. ej. v0.5 */
+                                id: string;
+                                brackets: {
+                                    /** @description Límite superior del tramo en centavos; null en el último */
+                                    upToMinor: number | null;
+                                    /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                    rateFactorBps: number;
+                                }[];
+                                capsByCategory: {
+                                    GASTRONOMY: number;
+                                    KIOSK: number;
+                                    SUPERMARKET: number;
+                                    ELECTRONICS: number;
+                                    ENTREPRENEUR: number;
+                                };
+                                plans: {
+                                    EMPRENDEDOR: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    NEGOCIO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    PRO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                };
+                                effectiveFrom: string;
+                                notes: string | null;
+                                createdAt: string;
+                            };
+                            /** @description Lo que el comercio debe: asientos − pagos */
+                            balanceMinor: number;
+                            /** @description Parte del saldo que todavía no entró en una liquidación */
+                            unsettledMinor: number;
+                            settlements: {
+                                /** Format: uuid */
+                                id: string;
+                                merchant: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                periodStart: string;
+                                /** @description Corte: entran los asientos anteriores a este instante */
+                                periodEnd: string;
+                                totalMinor: number;
+                                paidMinor: number;
+                                outstandingMinor: number;
+                                entryCount: number;
+                                dueAt: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                                createdAt: string;
+                            }[];
+                            history: {
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                startsAt: string;
+                                endsAt: string | null;
+                                reason: string | null;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "ACCRUED" | "ADJUSTMENT";
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/pricing-versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Versiones de pricing, la más nueva primero */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Identificador inmutable, p. ej. v0.5 */
+                            id: string;
+                            brackets: {
+                                /** @description Límite superior del tramo en centavos; null en el último */
+                                upToMinor: number | null;
+                                /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                rateFactorBps: number;
+                            }[];
+                            capsByCategory: {
+                                GASTRONOMY: number;
+                                KIOSK: number;
+                                SUPERMARKET: number;
+                                ELECTRONICS: number;
+                                ENTREPRENEUR: number;
+                            };
+                            plans: {
+                                EMPRENDEDOR: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                                NEGOCIO: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                                PRO: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                            };
+                            effectiveFrom: string;
+                            notes: string | null;
+                            createdAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Crear una versión de pricing (solo hacia adelante)
+         * @description `effectiveFrom` tiene que ser futura. Las versiones no se editan: un cambio es una versión nueva.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description Identificador inmutable, p. ej. v0.5 */
+                        id: string;
+                        brackets: {
+                            /** @description Límite superior del tramo en centavos; null en el último */
+                            upToMinor: number | null;
+                            /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                            rateFactorBps: number;
+                        }[];
+                        capsByCategory: {
+                            GASTRONOMY: number;
+                            KIOSK: number;
+                            SUPERMARKET: number;
+                            ELECTRONICS: number;
+                            ENTREPRENEUR: number;
+                        };
+                        plans: {
+                            EMPRENDEDOR: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                            };
+                            NEGOCIO: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                            };
+                            PRO: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                            };
+                        };
+                        /** Format: date-time */
+                        effectiveFrom: string;
+                        notes?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Identificador inmutable, p. ej. v0.5 */
+                            id: string;
+                            brackets: {
+                                /** @description Límite superior del tramo en centavos; null en el último */
+                                upToMinor: number | null;
+                                /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                rateFactorBps: number;
+                            }[];
+                            capsByCategory: {
+                                GASTRONOMY: number;
+                                KIOSK: number;
+                                SUPERMARKET: number;
+                                ELECTRONICS: number;
+                                ENTREPRENEUR: number;
+                            };
+                            plans: {
+                                EMPRENDEDOR: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                                NEGOCIO: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                                PRO: {
+                                    /** @description Mensualidad en centavos */
+                                    monthlyFeeMinor: number;
+                                    /** @description Tasa base en puntos básicos (400 = 4%) */
+                                    baseRateBps: number;
+                                    maxBranches: number;
+                                    maxUsers: number;
+                                };
+                            };
+                            effectiveFrom: string;
+                            notes: string | null;
+                            createdAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/merchants/{merchantId}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plan y estado de cuenta de un comercio */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            plan: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                /** @description null = nunca asignado (Emprendedor) */
+                                since: string | null;
+                            };
+                            /** @enum {string} */
+                            category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
+                            /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
+                            categoryDefaulted: boolean;
+                            capMinor: number;
+                            pricing: {
+                                /** @description Identificador inmutable, p. ej. v0.5 */
+                                id: string;
+                                brackets: {
+                                    /** @description Límite superior del tramo en centavos; null en el último */
+                                    upToMinor: number | null;
+                                    /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                    rateFactorBps: number;
+                                }[];
+                                capsByCategory: {
+                                    GASTRONOMY: number;
+                                    KIOSK: number;
+                                    SUPERMARKET: number;
+                                    ELECTRONICS: number;
+                                    ENTREPRENEUR: number;
+                                };
+                                plans: {
+                                    EMPRENDEDOR: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    NEGOCIO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    PRO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                };
+                                effectiveFrom: string;
+                                notes: string | null;
+                                createdAt: string;
+                            };
+                            /** @description Lo que el comercio debe: asientos − pagos */
+                            balanceMinor: number;
+                            /** @description Parte del saldo que todavía no entró en una liquidación */
+                            unsettledMinor: number;
+                            settlements: {
+                                /** Format: uuid */
+                                id: string;
+                                merchant: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                periodStart: string;
+                                /** @description Corte: entran los asientos anteriores a este instante */
+                                periodEnd: string;
+                                totalMinor: number;
+                                paidMinor: number;
+                                outstandingMinor: number;
+                                entryCount: number;
+                                dueAt: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                                createdAt: string;
+                            }[];
+                            history: {
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                startsAt: string;
+                                endsAt: string | null;
+                                reason: string | null;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "ACCRUED" | "ADJUSTMENT";
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/merchants/{merchantId}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Cambiar el plan de un comercio desde ahora
+         * @description Nunca retroactivo: los pedidos ya creados conservan su comisión.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        plan: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                        reason?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            plan: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                /** @description null = nunca asignado (Emprendedor) */
+                                since: string | null;
+                            };
+                            /** @enum {string} */
+                            category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
+                            /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
+                            categoryDefaulted: boolean;
+                            capMinor: number;
+                            pricing: {
+                                /** @description Identificador inmutable, p. ej. v0.5 */
+                                id: string;
+                                brackets: {
+                                    /** @description Límite superior del tramo en centavos; null en el último */
+                                    upToMinor: number | null;
+                                    /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                    rateFactorBps: number;
+                                }[];
+                                capsByCategory: {
+                                    GASTRONOMY: number;
+                                    KIOSK: number;
+                                    SUPERMARKET: number;
+                                    ELECTRONICS: number;
+                                    ENTREPRENEUR: number;
+                                };
+                                plans: {
+                                    EMPRENDEDOR: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    NEGOCIO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    PRO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                };
+                                effectiveFrom: string;
+                                notes: string | null;
+                                createdAt: string;
+                            };
+                            /** @description Lo que el comercio debe: asientos − pagos */
+                            balanceMinor: number;
+                            /** @description Parte del saldo que todavía no entró en una liquidación */
+                            unsettledMinor: number;
+                            settlements: {
+                                /** Format: uuid */
+                                id: string;
+                                merchant: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                periodStart: string;
+                                /** @description Corte: entran los asientos anteriores a este instante */
+                                periodEnd: string;
+                                totalMinor: number;
+                                paidMinor: number;
+                                outstandingMinor: number;
+                                entryCount: number;
+                                dueAt: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                                createdAt: string;
+                            }[];
+                            history: {
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                startsAt: string;
+                                endsAt: string | null;
+                                reason: string | null;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "ACCRUED" | "ADJUSTMENT";
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/merchants/{merchantId}/commission-adjustments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajuste manual del saldo de comisiones
+         * @description Asiento compensatorio con motivo: positivo suma deuda, negativo es crédito. Nunca se editan asientos.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        amountMinor: number;
+                        description: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            plan: {
+                                /** @description Mensualidad en centavos */
+                                monthlyFeeMinor: number;
+                                /** @description Tasa base en puntos básicos (400 = 4%) */
+                                baseRateBps: number;
+                                maxBranches: number;
+                                maxUsers: number;
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                /** @description null = nunca asignado (Emprendedor) */
+                                since: string | null;
+                            };
+                            /** @enum {string} */
+                            category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
+                            /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
+                            categoryDefaulted: boolean;
+                            capMinor: number;
+                            pricing: {
+                                /** @description Identificador inmutable, p. ej. v0.5 */
+                                id: string;
+                                brackets: {
+                                    /** @description Límite superior del tramo en centavos; null en el último */
+                                    upToMinor: number | null;
+                                    /** @description Porción de la tasa base en este tramo (10000 = 100%) */
+                                    rateFactorBps: number;
+                                }[];
+                                capsByCategory: {
+                                    GASTRONOMY: number;
+                                    KIOSK: number;
+                                    SUPERMARKET: number;
+                                    ELECTRONICS: number;
+                                    ENTREPRENEUR: number;
+                                };
+                                plans: {
+                                    EMPRENDEDOR: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    NEGOCIO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                    PRO: {
+                                        /** @description Mensualidad en centavos */
+                                        monthlyFeeMinor: number;
+                                        /** @description Tasa base en puntos básicos (400 = 4%) */
+                                        baseRateBps: number;
+                                        maxBranches: number;
+                                        maxUsers: number;
+                                    };
+                                };
+                                effectiveFrom: string;
+                                notes: string | null;
+                                createdAt: string;
+                            };
+                            /** @description Lo que el comercio debe: asientos − pagos */
+                            balanceMinor: number;
+                            /** @description Parte del saldo que todavía no entró en una liquidación */
+                            unsettledMinor: number;
+                            settlements: {
+                                /** Format: uuid */
+                                id: string;
+                                merchant: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                periodStart: string;
+                                /** @description Corte: entran los asientos anteriores a este instante */
+                                periodEnd: string;
+                                totalMinor: number;
+                                paidMinor: number;
+                                outstandingMinor: number;
+                                entryCount: number;
+                                dueAt: string;
+                                /** @enum {string} */
+                                status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "OVERDUE";
+                                createdAt: string;
+                            }[];
+                            history: {
+                                /** @enum {string} */
+                                code: "EMPRENDEDOR" | "NEGOCIO" | "PRO";
+                                startsAt: string;
+                                endsAt: string | null;
+                                reason: string | null;
+                            }[];
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "ACCRUED" | "ADJUSTMENT";
+                                amountMinor: number;
+                                description: string;
+                                orderId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/public/orders": {
@@ -4463,8 +9621,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Crear un pedido (invitado, pago en efectivo)
-         * @description La API recalcula precios, disponibilidad, horario, zona y mínimo. Errores de negocio: 409 con `details.reason` (BRANCH_CLOSED, PRODUCT_UNAVAILABLE, ITEM_INVALID, MIN_ORDER_NOT_MET, PICKUP_NOT_AVAILABLE, DELIVERY_NOT_AVAILABLE).
+         * Crear un pedido (invitado, efectivo o transferencia, inmediato o programado)
+         * @description La API recalcula precios, disponibilidad, horario, zona y mínimo. Errores de negocio: 409 con `details.reason` (BRANCH_CLOSED, PRODUCT_UNAVAILABLE, ITEM_INVALID, MIN_ORDER_NOT_MET, PICKUP_NOT_AVAILABLE, DELIVERY_NOT_AVAILABLE, PAYMENT_METHOD_NOT_AVAILABLE, SCHEDULING_DISABLED, SLOT_UNAVAILABLE, SLOT_FULL). Anti-abuso: 429 RATE_LIMITED con `details.reason` IP_RATE_LIMIT, TOO_MANY_ACTIVE_ORDERS o DAILY_LIMIT (ADR 0010).
          */
         post: {
             parameters: {
@@ -4495,6 +9653,16 @@ export interface paths {
                             phone: string;
                         };
                         notes?: string | null;
+                        /**
+                         * @description Efectivo por defecto
+                         * @enum {string}
+                         */
+                        paymentMethod?: "CASH" | "TRANSFER";
+                        /**
+                         * Format: date-time
+                         * @description Programar: inicio de una franja de GET .../slots. Sin esto, lo antes posible
+                         */
+                        scheduledFor?: string;
                         items: {
                             /** Format: uuid */
                             productId: string;
@@ -4580,6 +9748,20 @@ export interface paths {
                                     reason: string | null;
                                     createdAt: string;
                                 }[];
+                                /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                                acceptDeadlineAt: string | null;
+                                /** @description Cuándo el comercio lo vio por primera vez */
+                                acknowledgedAt: string | null;
+                                /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                                scheduledFor: string | null;
+                                /** @description Datos para transferir (solo con pago por transferencia) */
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string;
+                                } | null;
+                                /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                                paymentConfirmedAt: string | null;
                                 createdAt: string;
                                 updatedAt: string;
                             };
@@ -4663,8 +9845,86 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/merchants/{slug}/branches/{branchId}/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Franjas para programar un pedido
+         * @description Franjas de 30 min dentro del horario, desde ahora + anticipación mínima hasta el máximo de días. `available: false` = sin cupo. Lista vacía si la sucursal no acepta programados.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                    branchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            timezone: string;
+                            slots: {
+                                startsAt: string;
+                                available: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4764,6 +10024,20 @@ export interface paths {
                                 reason: string | null;
                                 createdAt: string;
                             }[];
+                            /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                            acceptDeadlineAt: string | null;
+                            /** @description Cuándo el comercio lo vio por primera vez */
+                            acknowledgedAt: string | null;
+                            /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                            scheduledFor: string | null;
+                            /** @description Datos para transferir (solo con pago por transferencia) */
+                            transfer: {
+                                alias: string | null;
+                                cbu: string | null;
+                                holder: string;
+                            } | null;
+                            /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                            paymentConfirmedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -4892,6 +10166,20 @@ export interface paths {
                                 reason: string | null;
                                 createdAt: string;
                             }[];
+                            /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                            acceptDeadlineAt: string | null;
+                            /** @description Cuándo el comercio lo vio por primera vez */
+                            acknowledgedAt: string | null;
+                            /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                            scheduledFor: string | null;
+                            /** @description Datos para transferir (solo con pago por transferencia) */
+                            transfer: {
+                                alias: string | null;
+                                cbu: string | null;
+                                holder: string;
+                            } | null;
+                            /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                            paymentConfirmedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
                         };
@@ -4959,6 +10247,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5069,8 +10372,73 @@ export interface paths {
                                 reason: string | null;
                                 createdAt: string;
                             }[];
+                            /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                            acceptDeadlineAt: string | null;
+                            /** @description Cuándo el comercio lo vio por primera vez */
+                            acknowledgedAt: string | null;
+                            /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                            scheduledFor: string | null;
+                            /** @description Datos para transferir (solo con pago por transferencia) */
+                            transfer: {
+                                alias: string | null;
+                                cbu: string | null;
+                                holder: string;
+                            } | null;
+                            /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                            paymentConfirmedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
+                            /** @description Comisión Pedilo congelada al crear el pedido (ADR 0012) */
+                            commission: {
+                                amountMinor: number;
+                                basisMinor: number;
+                                plan: string;
+                                pricingVersionId: string;
+                                capMinor: number;
+                                capApplied: boolean;
+                            } | null;
+                            /** @description Reparto con repartidor de Pedilo (ADR 0014), si se pidió */
+                            dispatch: {
+                                /** Format: uuid */
+                                id: string;
+                                orderId: string | null;
+                                reference: string;
+                                /** @description DeliveryStatus (@pedilo/domain) */
+                                status: string;
+                                version: number;
+                                pickup: {
+                                    name: string;
+                                    address: string;
+                                    phone: string | null;
+                                };
+                                dropoff: {
+                                    area: string;
+                                    address: string | null;
+                                    notes: string | null;
+                                };
+                                recipient: {
+                                    name: string;
+                                    phone: string;
+                                } | null;
+                                packageDescription: string;
+                                courierFeeMinor: number;
+                                tipMinor: number;
+                                cashToCollectMinor: number;
+                                courier: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    phone: string;
+                                    vehicle: string;
+                                } | null;
+                                offerExpiresAt: string | null;
+                                statusReason: string | null;
+                                assignedAt: string | null;
+                                pickedUpAt: string | null;
+                                deliveredAt: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            } | null;
                         }[];
                     };
                 };
@@ -5136,6 +10504,21 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5260,8 +10643,31 @@ export interface paths {
                                 reason: string | null;
                                 createdAt: string;
                             }[];
+                            /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                            acceptDeadlineAt: string | null;
+                            /** @description Cuándo el comercio lo vio por primera vez */
+                            acknowledgedAt: string | null;
+                            /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                            scheduledFor: string | null;
+                            /** @description Datos para transferir (solo con pago por transferencia) */
+                            transfer: {
+                                alias: string | null;
+                                cbu: string | null;
+                                holder: string;
+                            } | null;
+                            /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                            paymentConfirmedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
+                            /** @description Comisión Pedilo congelada al crear el pedido (ADR 0012) */
+                            commission: {
+                                amountMinor: number;
+                                basisMinor: number;
+                                plan: string;
+                                pricingVersionId: string;
+                                capMinor: number;
+                                capApplied: boolean;
+                            } | null;
                         };
                     };
                 };
@@ -5327,6 +10733,1231 @@ export interface paths {
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/orders/{orderId}/payment/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar que se cobró el efectivo o que llegó la transferencia
+         * @description Nunca automático (SPEC §8.3). Idempotente. 409 si el pago es digital o ya no se puede confirmar.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                slug: string;
+                                name: string;
+                            };
+                            branch: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                address: string;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+                            statusReason: string | null;
+                            /** @enum {string} */
+                            fulfillmentType: "PICKUP" | "DELIVERY";
+                            /** @enum {string} */
+                            paymentMethod: "MERCADO_PAGO" | "CASH" | "TRANSFER";
+                            paymentStatus: string;
+                            customer: {
+                                name: string;
+                                phone: string;
+                            };
+                            delivery: {
+                                zoneName: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                            } | null;
+                            notes: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                productName: string;
+                                variantName: string | null;
+                                unitPriceMinor: number;
+                                quantity: number;
+                                totalMinor: number;
+                                notes: string | null;
+                                options: {
+                                    groupName: string;
+                                    name: string;
+                                    quantity: number;
+                                    priceDeltaMinor: number;
+                                }[];
+                            }[];
+                            subtotalMinor: number;
+                            deliveryFeeMinor: number;
+                            totalMinor: number;
+                            events: {
+                                fromStatus: ("DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED") | null;
+                                /** @enum {string} */
+                                toStatus: "DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+                                /** @enum {string} */
+                                actorType: "CUSTOMER" | "MERCHANT" | "SYSTEM";
+                                reason: string | null;
+                                createdAt: string;
+                            }[];
+                            /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                            acceptDeadlineAt: string | null;
+                            /** @description Cuándo el comercio lo vio por primera vez */
+                            acknowledgedAt: string | null;
+                            /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                            scheduledFor: string | null;
+                            /** @description Datos para transferir (solo con pago por transferencia) */
+                            transfer: {
+                                alias: string | null;
+                                cbu: string | null;
+                                holder: string;
+                            } | null;
+                            /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                            paymentConfirmedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            /** @description Comisión Pedilo congelada al crear el pedido (ADR 0012) */
+                            commission: {
+                                amountMinor: number;
+                                basisMinor: number;
+                                plan: string;
+                                pricingVersionId: string;
+                                capMinor: number;
+                                capApplied: boolean;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/orders/{orderId}/delivery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pedir un repartidor de Pedilo para un pedido con envío
+         * @description Crea el reparto y publica la oferta a los repartidores de la ciudad. Tarifa sugerida: el costo de envío del pedido. 409 NOT_DELIVERY, INVALID_STATUS (antes de aceptar o ya salió) o DELIVERY_EXISTS.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description Lo que le pagás al repartidor (centavos) */
+                        feeMinor?: number;
+                        /** @description Minutos que dura la oferta (10) */
+                        offerMinutes?: number;
+                    } | null;
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            code: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                slug: string;
+                                name: string;
+                            };
+                            branch: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                address: string;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+                            statusReason: string | null;
+                            /** @enum {string} */
+                            fulfillmentType: "PICKUP" | "DELIVERY";
+                            /** @enum {string} */
+                            paymentMethod: "MERCADO_PAGO" | "CASH" | "TRANSFER";
+                            paymentStatus: string;
+                            customer: {
+                                name: string;
+                                phone: string;
+                            };
+                            delivery: {
+                                zoneName: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                            } | null;
+                            notes: string | null;
+                            items: {
+                                /** Format: uuid */
+                                id: string;
+                                productName: string;
+                                variantName: string | null;
+                                unitPriceMinor: number;
+                                quantity: number;
+                                totalMinor: number;
+                                notes: string | null;
+                                options: {
+                                    groupName: string;
+                                    name: string;
+                                    quantity: number;
+                                    priceDeltaMinor: number;
+                                }[];
+                            }[];
+                            subtotalMinor: number;
+                            deliveryFeeMinor: number;
+                            totalMinor: number;
+                            events: {
+                                fromStatus: ("DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED") | null;
+                                /** @enum {string} */
+                                toStatus: "DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+                                /** @enum {string} */
+                                actorType: "CUSTOMER" | "MERCHANT" | "SYSTEM";
+                                reason: string | null;
+                                createdAt: string;
+                            }[];
+                            /** @description Hasta cuándo el comercio puede aceptarlo; después vence solo */
+                            acceptDeadlineAt: string | null;
+                            /** @description Cuándo el comercio lo vio por primera vez */
+                            acknowledgedAt: string | null;
+                            /** @description Pedido programado: inicio de la franja de 30 min. null = lo antes posible */
+                            scheduledFor: string | null;
+                            /** @description Datos para transferir (solo con pago por transferencia) */
+                            transfer: {
+                                alias: string | null;
+                                cbu: string | null;
+                                holder: string;
+                            } | null;
+                            /** @description Cuándo el comercio confirmó el cobro o la transferencia */
+                            paymentConfirmedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            /** @description Comisión Pedilo congelada al crear el pedido (ADR 0012) */
+                            commission: {
+                                amountMinor: number;
+                                basisMinor: number;
+                                plan: string;
+                                pricingVersionId: string;
+                                capMinor: number;
+                                capApplied: boolean;
+                            } | null;
+                            /** @description Reparto con repartidor de Pedilo (ADR 0014), si se pidió */
+                            dispatch: {
+                                /** Format: uuid */
+                                id: string;
+                                orderId: string | null;
+                                reference: string;
+                                /** @description DeliveryStatus (@pedilo/domain) */
+                                status: string;
+                                version: number;
+                                pickup: {
+                                    name: string;
+                                    address: string;
+                                    phone: string | null;
+                                };
+                                dropoff: {
+                                    area: string;
+                                    address: string | null;
+                                    notes: string | null;
+                                };
+                                recipient: {
+                                    name: string;
+                                    phone: string;
+                                } | null;
+                                packageDescription: string;
+                                courierFeeMinor: number;
+                                tipMinor: number;
+                                cashToCollectMinor: number;
+                                courier: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    phone: string;
+                                    vehicle: string;
+                                } | null;
+                                offerExpiresAt: string | null;
+                                statusReason: string | null;
+                                assignedAt: string | null;
+                                pickedUpAt: string | null;
+                                deliveredAt: string | null;
+                                createdAt: string;
+                                updatedAt: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/orders/pulse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resumen liviano para consultar cada pocos segundos
+         * @description `version` cambia cuando cambia cualquier pedido del comercio (entonces conviene recargar el tablero). `waiting` lista los pedidos esperando confirmación; los que tienen `acknowledged: false` deben hacer sonar la alarma.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            version: string;
+                            activeCount: number;
+                            waiting: {
+                                /** Format: uuid */
+                                id: string;
+                                code: string;
+                                createdAt: string;
+                                acceptDeadlineAt: string | null;
+                                acknowledged: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/orders/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Marcar pedidos como vistos (apaga la alarma)
+         * @description Idempotente: los pedidos ya vistos o de otro comercio se ignoran.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        orderIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            acknowledged: number;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/public-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clave pública VAPID para suscribirse a Web Push
+         * @description `publicKey: null` si el servidor no tiene Web Push configurado.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            publicKey: string | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/push-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar este navegador para recibir avisos de pedidos
+         * @description Idempotente por endpoint: volver a registrarlo actualiza las claves.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        endpoint: string;
+                        keys: {
+                            p256dh: string;
+                            auth: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/push-subscriptions/remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dejar de recibir avisos en este navegador */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        endpoint: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/push-subscriptions/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mandar un aviso de prueba a los dispositivos del comercio */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };

@@ -2,14 +2,20 @@ import { OrderStatus } from "@pedilo/domain";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 
+import type { OrderLimits } from "../../config";
 import type { Db } from "../../db/client";
 import { badRequest, errorResponses } from "../../lib/errors";
 import { authOf, requireAuth } from "../identity/auth-plugin";
 import {
+  acknowledgeMerchantOrders,
   cancelOrderByCustomer,
+  confirmMerchantPayment,
   createOrder,
+  getMerchantOrdersPulse,
   getOrderForCustomer,
+  listBranchSlots,
   listMerchantOrders,
+  requestOrderDelivery,
   transitionMerchantOrder,
 } from "./service";
 
@@ -54,9 +60,62 @@ const orderSchema = z.object({
       createdAt: z.string(),
     }),
   ),
+  acceptDeadlineAt: z.string().nullable().describe("Hasta cuándo el comercio puede aceptarlo; después vence solo"),
+  acknowledgedAt: z.string().nullable().describe("Cuándo el comercio lo vio por primera vez"),
+  scheduledFor: z.string().nullable().describe("Pedido programado: inicio de la franja de 30 min. null = lo antes posible"),
+  transfer: z
+    .object({ alias: z.string().nullable(), cbu: z.string().nullable(), holder: z.string() })
+    .nullable()
+    .describe("Datos para transferir (solo con pago por transferencia)"),
+  paymentConfirmedAt: z.string().nullable().describe("Cuándo el comercio confirmó el cobro o la transferencia"),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
+
+/** Lo que ve el comercio: el pedido más la comisión Pedilo. El cliente nunca la ve. */
+const merchantOrderSchema = orderSchema.extend({
+  commission: z
+    .object({
+      amountMinor: z.number().int(),
+      basisMinor: z.number().int(),
+      plan: z.string(),
+      pricingVersionId: z.string(),
+      capMinor: z.number().int(),
+      capApplied: z.boolean(),
+    })
+    .nullable()
+    .describe("Comisión Pedilo congelada al crear el pedido (ADR 0012)"),
+});
+
+const deliverySchema = z.object({
+  id: z.uuid(),
+  orderId: z.uuid().nullable(),
+  reference: z.string(),
+  status: z.string().describe("DeliveryStatus (@pedilo/domain)"),
+  version: z.number().int(),
+  pickup: z.object({ name: z.string(), address: z.string(), phone: z.string().nullable() }),
+  dropoff: z.object({ area: z.string(), address: z.string().nullable(), notes: z.string().nullable() }),
+  recipient: z.object({ name: z.string(), phone: z.string() }).nullable(),
+  packageDescription: z.string(),
+  courierFeeMinor: z.number().int(),
+  tipMinor: z.number().int(),
+  cashToCollectMinor: z.number().int(),
+  courier: z.object({ id: z.uuid(), name: z.string(), phone: z.string(), vehicle: z.string() }).nullable(),
+  offerExpiresAt: z.string().nullable(),
+  statusReason: z.string().nullable(),
+  assignedAt: z.string().nullable(),
+  pickedUpAt: z.string().nullable(),
+  deliveredAt: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+const merchantOrderWithDeliverySchema = merchantOrderSchema.extend({
+  dispatch: deliverySchema.nullable().describe("Reparto con repartidor de Pedilo (ADR 0014), si se pidió"),
+});
+
+/** Saca la comisión de lo que se le devuelve al cliente. */
+const forCustomer = <T extends { commission: unknown }>({ commission: _commission, ...order }: T) => order;
 
 const phoneSchema = z
   .string()
@@ -74,6 +133,11 @@ const createOrderBody = z.object({
     .optional(),
   customer: z.object({ name: z.string().trim().min(2).max(80), phone: phoneSchema }),
   notes: z.string().trim().max(500).nullable().optional(),
+  paymentMethod: z.enum(["CASH", "TRANSFER"]).optional().describe("Efectivo por defecto"),
+  scheduledFor: z.iso
+    .datetime({ offset: true })
+    .optional()
+    .describe("Programar: inicio de una franja de GET .../slots. Sin esto, lo antes posible"),
   items: z
     .array(
       z.object({
@@ -100,21 +164,30 @@ const orderParams = z.object({ orderId: z.uuid() });
 const merchantParams = z.object({ merchantId: z.uuid() });
 const security = [{ bearerAuth: [] }];
 
-export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: string }> = async (
-  app,
-  { db, orderTokenSecret },
-) => {
+export const orderRoutes: FastifyPluginAsyncZod<{
+  db: Db;
+  orderTokenSecret: string;
+  acceptTimeoutMs?: number | undefined;
+  limits?: OrderLimits | undefined;
+}> = async (app, { db, orderTokenSecret, acceptTimeoutMs, limits }) => {
+  // Límites anti-abuso (ADR 0010). Sin `limits` (tests) no se aplican.
+  const createLimit = limits?.perIpPer10Min ? { max: limits.perIpPer10Min, timeWindow: "10 minutes" } : false;
+  const trackLimit = limits ? { max: 120, timeWindow: "1 minute" } : false;
+
   // --- Cliente (invitado, ADR 0007) ---
 
   app.post(
     "/public/orders",
     {
+      config: { rateLimit: createLimit },
       schema: {
         tags: ["orders"],
-        summary: "Crear un pedido (invitado, pago en efectivo)",
+        summary: "Crear un pedido (invitado, efectivo o transferencia, inmediato o programado)",
         description:
           "La API recalcula precios, disponibilidad, horario, zona y mínimo. Errores de negocio: 409 con `details.reason` " +
-          "(BRANCH_CLOSED, PRODUCT_UNAVAILABLE, ITEM_INVALID, MIN_ORDER_NOT_MET, PICKUP_NOT_AVAILABLE, DELIVERY_NOT_AVAILABLE).",
+          "(BRANCH_CLOSED, PRODUCT_UNAVAILABLE, ITEM_INVALID, MIN_ORDER_NOT_MET, PICKUP_NOT_AVAILABLE, DELIVERY_NOT_AVAILABLE, " +
+          "PAYMENT_METHOD_NOT_AVAILABLE, SCHEDULING_DISABLED, SLOT_UNAVAILABLE, SLOT_FULL). " +
+          "Anti-abuso: 429 RATE_LIMITED con `details.reason` IP_RATE_LIMIT, TOO_MANY_ACTIVE_ORDERS o DAILY_LIMIT (ADR 0010).",
         headers: idempotencyHeaders,
         body: createOrderBody,
         response: { 201: z.object({ order: orderSchema, trackingToken: z.string(), replayed: z.boolean() }), ...errorResponses },
@@ -124,14 +197,39 @@ export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
       const result = await createOrder(db, request.body, request.headers["idempotency-key"], {
         secret: orderTokenSecret,
         customerUserId: request.auth?.userId ?? null,
+        ...(acceptTimeoutMs !== undefined && { acceptTimeoutMs }),
+        ...(limits && { limits }),
       });
-      return reply.code(201).send(result);
+      return reply.code(201).send({ ...result, order: forCustomer(result.order) });
     },
+  );
+
+  app.get(
+    "/public/merchants/:slug/branches/:branchId/slots",
+    {
+      schema: {
+        tags: ["orders"],
+        summary: "Franjas para programar un pedido",
+        description:
+          "Franjas de 30 min dentro del horario, desde ahora + anticipación mínima hasta el máximo de días. " +
+          "`available: false` = sin cupo. Lista vacía si la sucursal no acepta programados.",
+        params: z.object({ slug: z.string().min(1).max(100), branchId: z.uuid() }),
+        response: {
+          200: z.object({
+            timezone: z.string(),
+            slots: z.array(z.object({ startsAt: z.string(), available: z.boolean() })),
+          }),
+          404: errorResponses[404],
+        },
+      },
+    },
+    (request) => listBranchSlots(db, request.params.slug, request.params.branchId),
   );
 
   app.get(
     "/public/orders/:orderId",
     {
+      config: { rateLimit: trackLimit },
       schema: {
         tags: ["orders"],
         summary: "Seguimiento de un pedido con su token",
@@ -141,7 +239,8 @@ export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
         response: { 200: orderSchema, 404: errorResponses[404] },
       },
     },
-    (request) => getOrderForCustomer(db, request.params.orderId, request.headers["x-order-token"], orderTokenSecret),
+    async (request) =>
+      forCustomer(await getOrderForCustomer(db, request.params.orderId, request.headers["x-order-token"], orderTokenSecret)),
   );
 
   app.post(
@@ -156,13 +255,15 @@ export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
         response: { 200: orderSchema, ...errorResponses },
       },
     },
-    (request) =>
-      cancelOrderByCustomer(
-        db,
-        request.params.orderId,
-        request.headers["x-order-token"],
-        orderTokenSecret,
-        request.body?.reason?.trim() || null,
+    async (request) =>
+      forCustomer(
+        await cancelOrderByCustomer(
+          db,
+          request.params.orderId,
+          request.headers["x-order-token"],
+          orderTokenSecret,
+          request.body?.reason?.trim() || null,
+        ),
       ),
   );
 
@@ -178,7 +279,7 @@ export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
         security,
         params: merchantParams,
         querystring: z.object({ scope: z.enum(["active", "done"]).default("active") }),
-        response: { 200: z.array(orderSchema), ...errorResponses },
+        response: { 200: z.array(merchantOrderWithDeliverySchema), ...errorResponses },
       },
     },
     (request) => listMerchantOrders(db, request.params.merchantId, authOf(request).userId, request.query.scope),
@@ -195,7 +296,7 @@ export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
         security,
         params: merchantParams.extend({ orderId: z.uuid() }),
         body: z.object({ to: statusSchema, reason: z.string().trim().max(300).nullable().optional() }),
-        response: { 200: orderSchema, ...errorResponses },
+        response: { 200: merchantOrderSchema, ...errorResponses },
       },
     },
     (request) => {
@@ -209,5 +310,104 @@ export const orderRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
         authOf(request).userId,
       );
     },
+  );
+
+  app.post(
+    "/merchants/:merchantId/orders/:orderId/payment/confirm",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["orders"],
+        summary: "Confirmar que se cobró el efectivo o que llegó la transferencia",
+        description: "Nunca automático (SPEC §8.3). Idempotente. 409 si el pago es digital o ya no se puede confirmar.",
+        security,
+        params: merchantParams.extend({ orderId: z.uuid() }),
+        response: { 200: merchantOrderSchema, ...errorResponses },
+      },
+    },
+    (request) =>
+      confirmMerchantPayment(db, request.params.merchantId, request.params.orderId, {
+        userId: authOf(request).userId,
+        requestId: request.id,
+      }),
+  );
+
+  app.post(
+    "/merchants/:merchantId/orders/:orderId/delivery",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["deliveries"],
+        summary: "Pedir un repartidor de Pedilo para un pedido con envío",
+        description:
+          "Crea el reparto y publica la oferta a los repartidores de la ciudad. Tarifa sugerida: el costo de envío del pedido. " +
+          "409 NOT_DELIVERY, INVALID_STATUS (antes de aceptar o ya salió) o DELIVERY_EXISTS.",
+        security,
+        params: merchantParams.extend({ orderId: z.uuid() }),
+        body: z
+          .object({
+            feeMinor: z.number().int().min(0).max(10_000_000).optional().describe("Lo que le pagás al repartidor (centavos)"),
+            offerMinutes: z.number().int().min(2).max(60).optional().describe("Minutos que dura la oferta (10)"),
+          })
+          .nullish(),
+        response: { 201: merchantOrderWithDeliverySchema, ...errorResponses },
+      },
+    },
+    async (request, reply) =>
+      reply
+        .code(201)
+        .send(await requestOrderDelivery(db, request.params.merchantId, request.params.orderId, request.body ?? {}, authOf(request).userId)),
+  );
+
+  // --- Avisos al comercio (SPEC §10) ---
+
+  app.get(
+    "/merchants/:merchantId/orders/pulse",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["orders"],
+        summary: "Resumen liviano para consultar cada pocos segundos",
+        description:
+          "`version` cambia cuando cambia cualquier pedido del comercio (entonces conviene recargar el tablero). " +
+          "`waiting` lista los pedidos esperando confirmación; los que tienen `acknowledged: false` deben hacer sonar la alarma.",
+        security,
+        params: merchantParams,
+        response: {
+          200: z.object({
+            version: z.string(),
+            activeCount: z.number().int(),
+            waiting: z.array(
+              z.object({
+                id: z.uuid(),
+                code: z.string(),
+                createdAt: z.string(),
+                acceptDeadlineAt: z.string().nullable(),
+                acknowledged: z.boolean(),
+              }),
+            ),
+          }),
+          ...errorResponses,
+        },
+      },
+    },
+    (request) => getMerchantOrdersPulse(db, request.params.merchantId, authOf(request).userId),
+  );
+
+  app.post(
+    "/merchants/:merchantId/orders/ack",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["orders"],
+        summary: "Marcar pedidos como vistos (apaga la alarma)",
+        description: "Idempotente: los pedidos ya vistos o de otro comercio se ignoran.",
+        security,
+        params: merchantParams,
+        body: z.object({ orderIds: z.array(z.uuid()).min(1).max(100) }),
+        response: { 200: z.object({ acknowledged: z.number().int() }), ...errorResponses },
+      },
+    },
+    (request) => acknowledgeMerchantOrders(db, request.params.merchantId, authOf(request).userId, request.body.orderIds),
   );
 };

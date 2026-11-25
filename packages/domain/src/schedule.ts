@@ -114,3 +114,56 @@ export function validateSchedule(ranges: readonly OpeningRange[]): ScheduleProbl
   }
   return problems;
 }
+
+// ---------------------------------------------------------------------------
+// Pedidos programados (SPEC §7.1, ADR 0011)
+// ---------------------------------------------------------------------------
+
+/** Duración de cada franja horaria para programar pedidos. */
+export const SLOT_MINUTES = 30;
+
+export interface SchedulingRules {
+  /** Anticipación mínima: no se puede programar para antes de ahora + esto (fecha de corte). */
+  leadMinutes: number;
+  /** Hasta cuántos días adelante se puede programar. */
+  maxDays: number;
+}
+
+/**
+ * Franjas en las que se puede programar un pedido, en orden. Cada franja empieza en un múltiplo
+ * de 30 minutos de la hora LOCAL de la sucursal y tiene que caer entera dentro del horario
+ * (abierto al empezar y en su último minuto).
+ */
+export function scheduleSlots(
+  ranges: readonly OpeningRange[],
+  timeZone: string,
+  now: Date,
+  rules: SchedulingRules,
+): Date[] {
+  const minuteMs = 60_000;
+  const earliest = new Date(Math.ceil((now.getTime() + rules.leadMinutes * minuteMs) / minuteMs) * minuteMs);
+  const { minute } = localWeekdayMinute(earliest, timeZone);
+  const first = earliest.getTime() + ((SLOT_MINUTES - (minute % SLOT_MINUTES)) % SLOT_MINUTES) * minuteMs;
+  const last = now.getTime() + rules.maxDays * MINUTES_PER_DAY * minuteMs;
+
+  const slots: Date[] = [];
+  for (let t = first; t <= last; t += SLOT_MINUTES * minuteMs) {
+    const start = localWeekdayMinute(new Date(t), timeZone);
+    const end = localWeekdayMinute(new Date(t + (SLOT_MINUTES - 1) * minuteMs), timeZone);
+    if (isOpenAt(ranges, start.weekday, start.minute) && isOpenAt(ranges, end.weekday, end.minute)) {
+      slots.push(new Date(t));
+    }
+  }
+  return slots;
+}
+
+/** ¿`slot` es una de las franjas válidas ahora? (horario, anticipación, máximo de días y alineación). */
+export function isSchedulableSlot(
+  ranges: readonly OpeningRange[],
+  timeZone: string,
+  now: Date,
+  rules: SchedulingRules,
+  slot: Date,
+): boolean {
+  return scheduleSlots(ranges, timeZone, now, rules).some((s) => s.getTime() === slot.getTime());
+}

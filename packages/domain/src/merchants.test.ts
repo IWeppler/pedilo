@@ -8,7 +8,16 @@ import {
   OnboardingIssue,
   onboardingProblems,
 } from "./merchants";
-import { formatTime, isOpenAt, localWeekdayMinute, parseTime, ScheduleError, validateSchedule } from "./schedule";
+import {
+  formatTime,
+  isOpenAt,
+  isSchedulableSlot,
+  localWeekdayMinute,
+  parseTime,
+  scheduleSlots,
+  ScheduleError,
+  validateSchedule,
+} from "./schedule";
 
 const branch = (over: Partial<BranchReadiness> = {}): BranchReadiness => ({
   id: "b1",
@@ -160,5 +169,52 @@ describe("abierto ahora", () => {
       weekday: 6,
       minute: 30,
     });
+  });
+});
+
+describe("scheduleSlots", () => {
+  const tz = "America/Argentina/Buenos_Aires"; // UTC-3, sin horario de verano
+  // Lunes a domingo 12:00–14:00 y viernes 20:00–01:00.
+  const ranges = [
+    ...[0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, opensAt: 720, closesAt: 840 })),
+    { weekday: 5, opensAt: 1200, closesAt: 60 },
+  ];
+  const rules = { leadMinutes: 60, maxDays: 1 };
+
+  it("respeta anticipación, horario y franjas de 30 min en hora local", () => {
+    // Lunes 2026-11-23 10:40 local = 13:40 UTC. Primera franja posible: 11:40 → 12:00 local.
+    const now = new Date("2026-11-23T13:40:00Z");
+    const slots = scheduleSlots(ranges, tz, now, rules).map((d) => d.toISOString());
+    expect(slots.slice(0, 4)).toEqual([
+      "2026-11-23T15:00:00.000Z",
+      "2026-11-23T15:30:00.000Z",
+      "2026-11-23T16:00:00.000Z",
+      "2026-11-23T16:30:00.000Z",
+    ]);
+    // 13:30–14:00 es la última del día; la de 14:00 queda afuera.
+    expect(slots).not.toContain("2026-11-23T17:00:00.000Z");
+    // Hasta 24 h después (martes 10:40 local): el martes todavía no abrió.
+    expect(slots.at(-1)).toBe("2026-11-23T16:30:00.000Z");
+  });
+
+  it("no ofrece franjas antes de la anticipación mínima", () => {
+    const now = new Date("2026-11-23T15:10:00Z"); // 12:10 local, abierto
+    const slots = scheduleSlots(ranges, tz, now, rules).map((d) => d.toISOString());
+    expect(slots[0]).toBe("2026-11-23T16:30:00.000Z"); // 13:10 → 13:30 local
+  });
+
+  it("incluye los rangos que cruzan la medianoche", () => {
+    const now = new Date("2026-11-27T21:00:00Z"); // viernes 18:00 local
+    const slots = scheduleSlots(ranges, tz, now, { leadMinutes: 30, maxDays: 1 }).map((d) => d.toISOString());
+    expect(slots).toContain("2026-11-28T03:30:00.000Z"); // sábado 00:30–01:00 local
+    expect(slots).not.toContain("2026-11-28T04:00:00.000Z"); // 01:00 ya cerró
+  });
+
+  it("isSchedulableSlot rechaza franjas desalineadas o fuera de horario", () => {
+    const now = new Date("2026-11-23T13:40:00Z");
+    expect(isSchedulableSlot(ranges, tz, now, rules, new Date("2026-11-23T15:30:00Z"))).toBe(true);
+    expect(isSchedulableSlot(ranges, tz, now, rules, new Date("2026-11-23T15:15:00Z"))).toBe(false);
+    expect(isSchedulableSlot(ranges, tz, now, rules, new Date("2026-11-23T18:00:00Z"))).toBe(false);
+    expect(isSchedulableSlot(ranges, tz, now, rules, new Date("2026-11-25T15:00:00Z"))).toBe(false);
   });
 });

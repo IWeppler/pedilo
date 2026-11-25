@@ -21,6 +21,7 @@ import {
   submitMerchant,
   updateBranch,
   updateMerchantProfile,
+  updatePaymentSettings,
   updateZone,
 } from "./service";
 
@@ -40,6 +41,11 @@ const merchantSchema = z.object({
   categoryId: z.uuid(),
   contactPhone: z.string(),
   contactEmail: z.string().nullable(),
+  payment: z.object({
+    acceptsCash: z.boolean(),
+    acceptsTransfer: z.boolean(),
+    transfer: z.object({ alias: z.string().nullable(), cbu: z.string().nullable(), holder: z.string().nullable() }).nullable(),
+  }),
   status: statusSchema,
   rejectionReason: z.string().nullable(),
   submittedAt: z.string().nullable(),
@@ -55,6 +61,13 @@ const openingRangeSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-4]):[0-5]\d$/, "Formato HH:MM")
     .describe("Si es menor o igual que opensAt, el rango cruza la medianoche"),
+});
+
+const schedulingSchema = z.object({
+  enabled: z.boolean().describe("Acepta pedidos programados"),
+  leadMinutes: z.number().int().min(15).max(2880).describe("Anticipación mínima en minutos"),
+  maxDays: z.number().int().min(1).max(14).describe("Hasta cuántos días adelante"),
+  slotCapacity: z.number().int().min(1).max(500).nullable().describe("Pedidos por franja de 30 min; null = sin límite"),
 });
 
 const zoneSchema = z.object({
@@ -79,6 +92,7 @@ const branchSchema = z.object({
   acceptsPickup: z.boolean(),
   acceptsDelivery: z.boolean(),
   active: z.boolean(),
+  scheduling: schedulingSchema,
   hours: z.array(openingRangeSchema),
   zones: z.array(zoneSchema),
 });
@@ -129,6 +143,20 @@ const branchBody = z.object({
   acceptsPickup: z.boolean().optional(),
   acceptsDelivery: z.boolean().optional(),
   active: z.boolean().optional(),
+  scheduling: schedulingSchema.partial().optional(),
+});
+
+const paymentSettingsBody = z.object({
+  acceptsCash: z.boolean(),
+  acceptsTransfer: z.boolean(),
+  transfer: z
+    .object({
+      alias: z.string().trim().max(40).nullable().optional(),
+      cbu: z.string().trim().max(30).nullable().optional().describe("CBU o CVU (22 dígitos)"),
+      holder: z.string().trim().max(120).nullable().optional().describe("Titular de la cuenta"),
+    })
+    .nullable()
+    .optional(),
 });
 
 const zoneBody = z.object({
@@ -217,6 +245,23 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
       },
     },
     (request) => updateMerchantProfile(db, request.params.merchantId, request.body, actorOf(request)),
+  );
+
+  app.put(
+    "/merchants/:merchantId/payment-settings",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["merchants"],
+        summary: "Medios de pago y datos de transferencia",
+        description: "Solo el dueño. Se puede cambiar con el comercio aprobado. Al menos un medio; transferencia exige titular y alias o CBU/CVU.",
+        security,
+        params: merchantParams,
+        body: paymentSettingsBody,
+        response: { 200: merchantDetailSchema, ...errorResponses },
+      },
+    },
+    (request) => updatePaymentSettings(db, request.params.merchantId, request.body, actorOf(request)),
   );
 
   app.post(

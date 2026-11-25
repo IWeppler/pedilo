@@ -1,6 +1,6 @@
-import type { FulfillmentType, OrderStatus, PaymentMethod, PaymentStatus } from "@pedilo/domain";
+import type { CommissionResult, FulfillmentType, MerchantCategory, OrderStatus, PaymentMethod, PaymentStatus, PlanCode } from "@pedilo/domain";
 import { sql } from "drizzle-orm";
-import { check, index, integer, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, index, integer, jsonb, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timestamps } from "../../lib/timestamps";
 // Solo para FKs (excepción documentada en ARCHITECTURE §4).
@@ -50,12 +50,45 @@ export const orders = pgTable(
     totalMinor: integer("total_minor").notNull(),
 
     idempotencyKey: text("idempotency_key").notNull(),
+
+    /** Pedido programado: inicio de la franja de 30 min (ADR 0011). Null = lo antes posible. */
+    scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    /** Transferencia: datos del comercio al momento de pedir (snapshot). */
+    transferDetails: jsonb("transfer_details").$type<TransferDetails>(),
+    /** El comercio confirmó que cobró (efectivo) o que le llegó la transferencia. Nunca automático. */
+    paymentConfirmedAt: timestamp("payment_confirmed_at", { withTimezone: true }),
+    paymentConfirmedBy: uuid("payment_confirmed_by"),
+
+    /**
+     * Comisión Pedilo calculada al crear el pedido (SPEC §6.2, ADR 0012) e inmutable: si después
+     * cambia el plan o el pricing, este pedido no cambia. Se devenga en el ledger al completarse.
+     */
+    pricingVersionId: text("pricing_version_id"),
+    commissionPlan: text("commission_plan").$type<PlanCode>(),
+    commissionCategory: text("commission_category").$type<MerchantCategory>(),
+    commissionBasisMinor: integer("commission_basis_minor"),
+    commissionMinor: integer("commission_minor"),
+    commissionDetail: jsonb("commission_detail").$type<CommissionResult>(),
+
+    /**
+     * Hasta cuándo el comercio puede aceptar (snapshot al crear). Vencido sin respuesta, el worker
+     * lo pasa a EXPIRED (SPEC §7.1 paso 7). Null en pedidos anteriores a esta columna.
+     */
+    acceptDeadlineAt: timestamp("accept_deadline_at", { withTimezone: true }),
+    /** Primera vez que el comercio lo marcó como visto (o lo aceptó/rechazó). Apaga la alarma (SPEC §10). */
+    acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
     ...timestamps,
   },
   (t) => [
     uniqueIndex("orders_idempotency_key_unique").on(t.idempotencyKey),
     index("orders_merchant_status_idx").on(t.merchantId, t.status, t.createdAt),
     index("orders_branch_idx").on(t.branchId, t.createdAt),
+    // Barrido de vencimientos: solo pedidos esperando confirmación.
+    index("orders_accept_deadline_idx").on(t.acceptDeadlineAt).where(sql`${t.status} = 'PLACED'`),
+    // Cupos por franja de los pedidos programados.
+    index("orders_branch_slot_idx").on(t.branchId, t.scheduledFor).where(sql`${t.scheduledFor} IS NOT NULL`),
+    check("orders_payment_method_check", sql`${t.paymentMethod} IN ('CASH', 'TRANSFER', 'MERCADO_PAGO')`),
+    check("orders_transfer_details_check", sql`${t.paymentMethod} <> 'TRANSFER' OR ${t.transferDetails} IS NOT NULL`),
     check("orders_fulfillment_check", sql`${t.fulfillmentType} IN ('PICKUP', 'DELIVERY')`),
     check(
       "orders_delivery_address_check",
@@ -67,6 +100,12 @@ export const orders = pgTable(
     ),
   ],
 );
+
+export interface TransferDetails {
+  alias: string | null;
+  cbu: string | null;
+  holder: string;
+}
 
 export const orderItems = pgTable(
   "order_items",

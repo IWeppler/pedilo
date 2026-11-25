@@ -2,6 +2,12 @@ import { buildApp } from "./app";
 import { createTokenVerifier } from "./auth";
 import { loadConfig } from "./config";
 import { createDb } from "./db/client";
+import { startIntervalWorker } from "./lib/interval-worker";
+import { processOutbox } from "./modules/notifications/service";
+import { createWebPushSender } from "./modules/notifications/web-push-sender";
+import { closeSettlementWeek } from "./modules/billing/settlements";
+import { expireOffers } from "./modules/deliveries/service";
+import { expireOverdueOrders } from "./modules/orders/service";
 
 const config = loadConfig();
 const { db, close } = createDb(config.databaseUrl);
@@ -12,8 +18,25 @@ if (config.auth.mode === "local") {
   app.log.warn("Auth en modo LOCAL: se aceptan tokens de `npm run dev:token`. Solo para desarrollo.");
 }
 
+// Workers dentro del proceso (ADR 0008/0009): el estado vive en la base, así que son durables.
+const pushSender = config.push.vapid ? createWebPushSender(config.push.vapid) : null;
+if (!pushSender) app.log.warn("Web Push sin configurar (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY): los avisos push se omiten.");
+const workers = [
+  startIntervalWorker({ name: "order-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOverdueOrders(db) }),
+  startIntervalWorker({ name: "push-outbox", intervalMs: config.push.outboxSweepMs, log: app.log, run: () => processOutbox(db, pushSender) }),
+  startIntervalWorker({ name: "offer-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOffers(db) }),
+  // Liquidación semanal (ADR 0013): idempotente, así que alcanza con intentarlo cada tanto.
+  startIntervalWorker({
+    name: "settlement-close",
+    intervalMs: config.settlement.sweepMs,
+    log: app.log,
+    run: () => closeSettlementWeek(db, { config: config.settlement }),
+  }),
+];
+
 const shutdown = async (signal: string) => {
   app.log.info({ signal }, "cerrando");
+  await Promise.all(workers.map((w) => w.stop()));
   await app.close();
   await close();
   process.exit(0);

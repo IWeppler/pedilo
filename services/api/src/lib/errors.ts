@@ -12,6 +12,8 @@ export const ErrorCode = {
   NOT_FOUND: "NOT_FOUND",
   CONFLICT: "CONFLICT",
   BAD_REQUEST: "BAD_REQUEST",
+  /** Demasiados requests o pedidos (rate limiting). `details.retryAfterSeconds` cuando se conoce. */
+  RATE_LIMITED: "RATE_LIMITED",
   INTERNAL: "INTERNAL",
 } as const;
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
@@ -37,6 +39,8 @@ export const conflict = (message: string, details?: unknown) =>
   new AppError(409, ErrorCode.CONFLICT, message, details);
 export const badRequest = (message: string, details?: unknown) =>
   new AppError(400, ErrorCode.BAD_REQUEST, message, details);
+export const tooManyRequests = (message: string, details?: unknown) =>
+  new AppError(429, ErrorCode.RATE_LIMITED, message, details);
 
 export const errorResponseSchema = z
   .object({
@@ -55,6 +59,7 @@ export const errorResponses = {
   403: errorResponseSchema,
   404: errorResponseSchema,
   409: errorResponseSchema,
+  429: errorResponseSchema,
 } as const;
 
 /** Detecta violaciones de unicidad de Postgres (directas o envueltas por Drizzle). */

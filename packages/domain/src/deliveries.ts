@@ -66,3 +66,69 @@ export const ACTIVE_COURIER_STATUSES: readonly DeliveryStatus[] = [
 export function canRevealDropoffAddress(status: DeliveryStatus): boolean {
   return ACTIVE_COURIER_STATUSES.includes(status) || status === S.DELIVERED;
 }
+
+// ---------------------------------------------------------------------------
+// Repartidores (SPEC §9.2–9.3, ADR 0014)
+// ---------------------------------------------------------------------------
+
+export const CourierStatus = {
+  /** Se registró; un admin tiene que verificar identidad y vehículo. */
+  PENDING_REVIEW: "PENDING_REVIEW",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  SUSPENDED: "SUSPENDED",
+} as const;
+export type CourierStatus = (typeof CourierStatus)[keyof typeof CourierStatus];
+
+export const Vehicle = { WALK: "WALK", BIKE: "BIKE", MOTO: "MOTO", CAR: "CAR" } as const;
+export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
+
+export const VEHICLE_LABELS: Record<Vehicle, string> = { WALK: "A pie", BIKE: "Bicicleta", MOTO: "Moto", CAR: "Auto" };
+
+export const DELIVERY_STATUS_LABELS: Record<DeliveryStatus, string> = {
+  DELIVERY_NEEDED: "Necesita repartidor",
+  OFFERED: "Buscando repartidor",
+  OFFER_EXPIRED: "Nadie aceptó",
+  ASSIGNED: "Repartidor asignado",
+  ARRIVING_PICKUP: "Yendo al comercio",
+  PICKED_UP: "Retirado",
+  ARRIVING_DROPOFF: "Llegando",
+  DELIVERED: "Entregado",
+  COURIER_CANCELLED: "El repartidor canceló",
+  DELIVERY_FAILED: "No se pudo entregar",
+  CANCELLED: "Cancelado",
+};
+
+export interface CourierDeliveryAction {
+  to: DeliveryStatus;
+  label: string;
+  tone: "primary" | "neutral" | "danger";
+  /** Requiere motivo (cancelar o no poder entregar). */
+  needsReason: boolean;
+}
+
+/** Lo que puede hacer el repartidor asignado en cada estado. */
+export function courierDeliveryActions(status: DeliveryStatus): CourierDeliveryAction[] {
+  const cancel: CourierDeliveryAction = { to: S.COURIER_CANCELLED, label: "No puedo hacerlo", tone: "danger", needsReason: true };
+  const fail: CourierDeliveryAction = { to: S.DELIVERY_FAILED, label: "No se pudo entregar", tone: "danger", needsReason: true };
+  switch (status) {
+    case S.ASSIGNED:
+      return [
+        { to: S.ARRIVING_PICKUP, label: "Voy al comercio", tone: "neutral", needsReason: false },
+        { to: S.PICKED_UP, label: "Ya lo retiré", tone: "primary", needsReason: false },
+        cancel,
+      ];
+    case S.ARRIVING_PICKUP:
+      return [{ to: S.PICKED_UP, label: "Ya lo retiré", tone: "primary", needsReason: false }, cancel];
+    case S.PICKED_UP:
+      return [
+        { to: S.ARRIVING_DROPOFF, label: "Llegando", tone: "neutral", needsReason: false },
+        { to: S.DELIVERED, label: "Entregado", tone: "primary", needsReason: false },
+        fail,
+      ];
+    case S.ARRIVING_DROPOFF:
+      return [{ to: S.DELIVERED, label: "Entregado", tone: "primary", needsReason: false }, fail];
+    default:
+      return [];
+  }
+}

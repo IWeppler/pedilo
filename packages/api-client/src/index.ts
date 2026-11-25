@@ -94,6 +94,19 @@ export type Order = JsonOf<paths["/v1/public/orders/{orderId}"]["get"]["response
 export type OrderStatus = Order["status"];
 export type CreateOrderBody = JsonOf<NonNullable<paths["/v1/public/orders"]["post"]["requestBody"]>>;
 export type CreateOrderResult = JsonOf<paths["/v1/public/orders"]["post"]["responses"][201]>;
+export type PaymentMethod = CreateOrderBody["paymentMethod"] & string;
+export type BranchSlots = JsonOf<
+  paths["/v1/public/merchants/{slug}/branches/{branchId}/slots"]["get"]["responses"][200]
+>;
+export type BranchScheduling = Branch["scheduling"];
+export type PaymentSettings = MerchantDetail["payment"];
+export type MerchantOrder = JsonOf<paths["/v1/merchants/{merchantId}/orders"]["get"]["responses"][200]>[number];
+export type MerchantBilling = JsonOf<paths["/v1/merchants/{merchantId}/billing"]["get"]["responses"][200]>;
+export type PricingVersionDoc = MerchantBilling["pricing"];
+export type PlanCode = MerchantBilling["plan"]["code"];
+export type Settlement = MerchantBilling["settlements"][number];
+export type SettlementStatus = Settlement["status"];
+export type SettlementDetail = JsonOf<paths["/v1/admin/settlements/{settlementId}"]["get"]["responses"][200]>;
 
 // ---------------------------------------------------------------------------
 // Errores (forma estable, ADR 0005)

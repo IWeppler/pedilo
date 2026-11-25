@@ -69,6 +69,7 @@ const publicMenuSchema = z.object({
     slug: z.string(),
     displayName: z.string(),
     categoryId: z.uuid(),
+    payment: z.object({ cash: z.boolean(), transfer: z.boolean() }).describe("Medios de pago que acepta"),
     branches: z.array(
       z.object({
         id: z.uuid(),
@@ -81,6 +82,14 @@ const publicMenuSchema = z.object({
         timezone: z.string(),
         hours: z.array(z.object({ weekday: z.number().int(), opensAt: z.string(), closesAt: z.string() })),
         openNow: z.boolean().describe("Abierta ahora según su horario y zona horaria"),
+        scheduling: z
+          .object({
+            enabled: z.boolean(),
+            leadMinutes: z.number().int(),
+            maxDays: z.number().int(),
+            slotCapacity: z.number().int().nullable(),
+          })
+          .describe("Pedidos programados; las franjas libres salen de GET /public/merchants/{slug}/branches/{branchId}/slots"),
         zones: z.array(
           z.object({
             id: z.uuid(),

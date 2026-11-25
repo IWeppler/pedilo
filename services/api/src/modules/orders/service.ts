@@ -5,6 +5,14 @@ import {
   customerCanCancel,
   FulfillmentType,
   isOrderFinal,
+  ACTIVE_COURIER_STATUSES,
+  DeliveryStatus,
+  isSchedulableSlot,
+  orderStatusForDeliveryStatus,
+  type OpeningRange,
+  parseTime,
+  paymentStateMachine,
+  scheduleSlots,
   merchantOrderActions,
   OrderStatus,
   PaymentMethod,
@@ -12,12 +20,31 @@ import {
   type PricedProduct,
   priceSelection,
 } from "@pedilo/domain";
-import { and, asc, desc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNull, lte, max, notInArray, sql } from "drizzle-orm";
 
 import type { Db, DbOrTx, Tx } from "../../db/client";
-import { badRequest, conflict, isUniqueViolation, notFound } from "../../lib/errors";
+import type { OrderLimits } from "../../config";
+import { badRequest, conflict, isUniqueViolation, notFound, tooManyRequests } from "../../lib/errors";
 import { getProductsForOrder } from "../menu/service";
-import { findApprovedMerchantBySlug, getMerchantAccess } from "../merchants/service";
+import { enqueueOrderPlaced } from "../notifications/service";
+import { type Actor, recordAudit } from "../audit/service";
+import { accrueOrderCommission, quoteOrderCommission } from "../billing/service";
+import {
+  cancelDeliveriesForOrder,
+  DEFAULT_OFFER_MINUTES,
+  type DeliveryDto,
+  type DeliveryStatusEvent,
+  getDeliveriesForOrders,
+  lastDeliveryChange,
+  requestDelivery,
+} from "../deliveries/service";
+import {
+  findApprovedMerchantBySlug,
+  getBranchSummary,
+  getMerchantAccess,
+  getTransferDetails,
+  type PublicBranchDto,
+} from "../merchants/service";
 import {
   type OrderActorType,
   orderEvents,
@@ -28,6 +55,7 @@ import {
   type OrderItemRow,
   type OrderRow,
   orders,
+  type TransferDetails,
 } from "./schema";
 
 // ---------------------------------------------------------------------------
@@ -61,6 +89,25 @@ export interface OrderDto {
   deliveryFeeMinor: number;
   totalMinor: number;
   events: Array<{ fromStatus: OrderStatus | null; toStatus: OrderStatus; actorType: OrderActorType; reason: string | null; createdAt: string }>;
+  /** Hasta cuándo el comercio puede aceptarlo (null en pedidos viejos). */
+  acceptDeadlineAt: string | null;
+  /** Cuándo el comercio lo vio por primera vez (null = la alarma sigue sonando). */
+  acknowledgedAt: string | null;
+  /** Pedido programado: inicio de la franja (null = lo antes posible). */
+  scheduledFor: string | null;
+  /** Datos para transferir (solo con pago por transferencia). */
+  transfer: TransferDetails | null;
+  /** Cuándo el comercio confirmó que cobró o que le llegó la transferencia. */
+  paymentConfirmedAt: string | null;
+  /** Comisión Pedilo congelada al crear (ADR 0012). Solo la ven el comercio y el admin. */
+  commission: {
+    amountMinor: number;
+    basisMinor: number;
+    plan: string;
+    pricingVersionId: string;
+    capMinor: number;
+    capApplied: boolean;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -115,6 +162,22 @@ function toOrderDto(
         reason: e.reason,
         createdAt: e.createdAt.toISOString(),
       })),
+    acceptDeadlineAt: o.acceptDeadlineAt?.toISOString() ?? null,
+    acknowledgedAt: o.acknowledgedAt?.toISOString() ?? null,
+    scheduledFor: o.scheduledFor?.toISOString() ?? null,
+    transfer: o.paymentMethod === PaymentMethod.TRANSFER ? o.transferDetails : null,
+    paymentConfirmedAt: o.paymentConfirmedAt?.toISOString() ?? null,
+    commission:
+      o.commissionMinor !== null && o.commissionBasisMinor !== null && o.commissionPlan && o.pricingVersionId
+        ? {
+            amountMinor: o.commissionMinor,
+            basisMinor: o.commissionBasisMinor,
+            plan: o.commissionPlan,
+            pricingVersionId: o.pricingVersionId,
+            capMinor: o.commissionDetail?.capMinor ?? 0,
+            capApplied: o.commissionDetail?.capApplied ?? false,
+          }
+        : null,
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
   };
@@ -155,6 +218,30 @@ function assertTrackingToken(secret: string, orderId: string, token: string | un
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) throw notFound("Pedido");
 }
 
+/** Plazo por defecto para que el comercio acepte un pedido (configurable con ORDER_ACCEPT_TIMEOUT_MINUTES). */
+export const DEFAULT_ACCEPT_TIMEOUT_MS = 15 * 60 * 1000;
+
+/** Programados: el comercio tiene hasta 30 min antes de la franja para aceptar (ADR 0011). */
+export const SCHEDULED_ACCEPT_MARGIN_MS = 30 * 60 * 1000;
+
+/**
+ * Plazo para aceptar. Inmediato: ahora + timeout. Programado: hasta 30 min antes de la franja,
+ * pero nunca menos que el timeout normal ni después del inicio de la franja.
+ */
+function acceptDeadline(now: Date, timeoutMs: number, scheduledFor: Date | null): Date {
+  const normal = now.getTime() + timeoutMs;
+  if (!scheduledFor) return new Date(normal);
+  const slot = scheduledFor.getTime();
+  return new Date(Math.min(slot, Math.max(normal, slot - SCHEDULED_ACCEPT_MARGIN_MS)));
+}
+
+function branchRanges(b: Pick<PublicBranchDto, "hours">): OpeningRange[] {
+  return b.hours.map((h) => ({ weekday: h.weekday, opensAt: parseTime(h.opensAt) ?? 0, closesAt: parseTime(h.closesAt) ?? 0 }));
+}
+
+/** Estados que no ocupan cupo en una franja. */
+const RELEASES_SLOT: OrderStatus[] = [OrderStatus.REJECTED, OrderStatus.CANCELLED, OrderStatus.EXPIRED];
+
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 function orderCode(): string {
   let s = "";
@@ -174,6 +261,10 @@ export interface CreateOrderInput {
   deliveryAddress?: { line: string; notes?: string | null | undefined } | undefined;
   customer: { name: string; phone: string };
   notes?: string | null | undefined;
+  /** Efectivo por defecto. */
+  paymentMethod?: "CASH" | "TRANSFER" | undefined;
+  /** Inicio de la franja (ISO). Sin esto, lo antes posible. */
+  scheduledFor?: string | undefined;
   items: Array<{
     productId: string;
     variantId?: string | null | undefined;
@@ -192,23 +283,60 @@ export interface CreateOrderResult {
 
 /**
  * Crea el pedido recalculando todo en el servidor: el comercio tiene que estar aprobado, la
- * sucursal abierta, la forma de entrega disponible, cada producto válido según `priceSelection`
- * y, con envío, el subtotal tiene que alcanzar el pedido mínimo de la zona.
+ * sucursal abierta (o la franja programada válida y con cupo), la forma de entrega y el medio de
+ * pago disponibles, cada producto válido según `priceSelection` y, con envío, el subtotal tiene
+ * que alcanzar el pedido mínimo de la zona.
  */
 export async function createOrder(
   db: Db,
   input: CreateOrderInput,
   idempotencyKey: string,
-  opts: { secret: string; now?: Date; customerUserId?: string | null },
+  opts: {
+    secret: string;
+    now?: Date;
+    customerUserId?: string | null;
+    acceptTimeoutMs?: number;
+    limits?: Pick<OrderLimits, "maxActivePerPhone" | "maxDailyPerPhone">;
+  },
 ): Promise<CreateOrderResult> {
   const existing = await findByIdempotencyKey(db, idempotencyKey);
   if (existing) return { order: existing, trackingToken: trackingToken(opts.secret, existing.id), replayed: true };
 
   const merchant = await findApprovedMerchantBySlug(db, input.merchantSlug, opts.now ?? new Date());
   if (!merchant) throw notFound("Comercio");
+  if (opts.limits) await assertPhoneLimits(db, merchant.id, input.customer.phone, opts.limits, opts.now ?? new Date());
+  const now = opts.now ?? new Date();
   const branch = merchant.branches.find((b) => b.id === input.branchId);
   if (!branch) throw badRequest("Sucursal inválida", { field: "branchId" });
-  if (!branch.openNow) throw conflict("El comercio está cerrado en este momento", { reason: "BRANCH_CLOSED" });
+
+  let scheduledFor: Date | null = null;
+  if (input.scheduledFor) {
+    scheduledFor = new Date(input.scheduledFor);
+    if (!branch.scheduling.enabled) {
+      throw conflict("Este comercio no acepta pedidos programados", { reason: "SCHEDULING_DISABLED" });
+    }
+    if (
+      Number.isNaN(scheduledFor.getTime()) ||
+      !isSchedulableSlot(branchRanges(branch), branch.timezone, now, branch.scheduling, scheduledFor)
+    ) {
+      throw conflict("Ese horario ya no está disponible. Elegí otro.", { reason: "SLOT_UNAVAILABLE" });
+    }
+  } else if (!branch.openNow) {
+    throw conflict("El comercio está cerrado en este momento", {
+      reason: "BRANCH_CLOSED",
+      schedulingAvailable: branch.scheduling.enabled,
+    });
+  }
+
+  const paymentMethod = input.paymentMethod ?? PaymentMethod.CASH;
+  let transferDetails: TransferDetails | null = null;
+  if (paymentMethod === PaymentMethod.CASH && !merchant.payment.cash) {
+    throw conflict("Este comercio no acepta efectivo", { reason: "PAYMENT_METHOD_NOT_AVAILABLE" });
+  }
+  if (paymentMethod === PaymentMethod.TRANSFER) {
+    transferDetails = await getTransferDetails(db, merchant.id);
+    if (!transferDetails) throw conflict("Este comercio no acepta transferencias", { reason: "PAYMENT_METHOD_NOT_AVAILABLE" });
+  }
 
   let zone: (typeof branch.zones)[number] | undefined;
   if (input.fulfillmentType === FulfillmentType.PICKUP) {
@@ -264,8 +392,23 @@ export async function createOrder(
     });
   }
 
+  // Comisión con el plan y el pricing de este momento: queda congelada en el pedido.
+  const commission = await quoteOrderCommission(db, merchant, subtotalMinor, now);
+
   try {
     const orderId = await db.transaction(async (tx) => {
+      if (scheduledFor && branch.scheduling.slotCapacity !== null) {
+        // Un lock por franja: dos pedidos simultáneos no pueden pasarse del cupo.
+        const lockKey = `slot:${branch.id}:${scheduledFor.toISOString()}`;
+        await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${lockKey}))`);
+        const [taken] = await tx
+          .select({ n: count() })
+          .from(orders)
+          .where(and(eq(orders.branchId, branch.id), eq(orders.scheduledFor, scheduledFor), notInArray(orders.status, RELEASES_SLOT)));
+        if ((taken?.n ?? 0) >= branch.scheduling.slotCapacity) {
+          throw conflict("Ese horario se llenó. Elegí otro.", { reason: "SLOT_FULL" });
+        }
+      }
       const [row] = await tx
         .insert(orders)
         .values({
@@ -276,11 +419,19 @@ export async function createOrder(
           merchantSlug: merchant.slug,
           branchName: branch.name,
           branchAddress: branch.addressLine,
-          // Efectivo: el pedido va directo al comercio (no hay pago digital que esperar).
+          // Efectivo/transferencia: el pedido va directo al comercio (no hay pago digital que esperar).
           status: OrderStatus.PLACED,
           fulfillmentType: input.fulfillmentType,
-          paymentMethod: PaymentMethod.CASH,
+          paymentMethod,
           paymentStatus: PaymentStatus.PENDING,
+          transferDetails,
+          scheduledFor,
+          pricingVersionId: commission.pricingVersionId,
+          commissionPlan: commission.plan,
+          commissionCategory: commission.category,
+          commissionBasisMinor: commission.basisMinor,
+          commissionMinor: commission.result.commissionMinor,
+          commissionDetail: commission.result,
           customerName: input.customer.name,
           customerPhone: input.customer.phone,
           customerUserId: opts.customerUserId ?? null,
@@ -293,8 +444,9 @@ export async function createOrder(
           deliveryFeeMinor,
           totalMinor: subtotalMinor + deliveryFeeMinor,
           idempotencyKey,
+          acceptDeadlineAt: acceptDeadline(now, opts.acceptTimeoutMs ?? DEFAULT_ACCEPT_TIMEOUT_MS, scheduledFor),
         })
-        .returning({ id: orders.id });
+        .returning({ id: orders.id, code: orders.code });
       const id = row!.id;
 
       for (const [i, line] of lines.entries()) {
@@ -303,6 +455,17 @@ export async function createOrder(
         if (options.length) await tx.insert(orderItemOptions).values(options.map((o) => ({ orderItemId: item!.id, ...o })));
       }
       await tx.insert(orderEvents).values({ orderId: id, fromStatus: null, toStatus: OrderStatus.PLACED, actorType: "CUSTOMER", actorUserId: opts.customerUserId ?? null });
+      // Aviso push al comercio: misma transacción, se envía después (outbox, ADR 0009).
+      await enqueueOrderPlaced(tx, {
+        id,
+        code: row!.code,
+        merchantId: merchant.id,
+        customerName: input.customer.name,
+        fulfillmentType: input.fulfillmentType,
+        totalMinor: subtotalMinor + deliveryFeeMinor,
+        scheduledFor,
+        timezone: branch.timezone,
+      });
       return id;
     });
     return { order: await loadOrder(db, orderId), trackingToken: trackingToken(opts.secret, orderId), replayed: false };
@@ -313,6 +476,51 @@ export async function createOrder(
       if (winner) return { order: winner, trackingToken: trackingToken(opts.secret, winner.id), replayed: true };
     }
     throw err;
+  }
+}
+
+/** Solo los dígitos: "3491 555-123" y "3491555123" son el mismo teléfono. */
+const phoneDigits = (phone: string) => phone.replace(/\D/g, "");
+
+/**
+ * Anti-abuso por teléfono (ADR 0010), contado en la base para que valga con varias instancias y
+ * aunque cambie la IP: pedidos en curso en este comercio y pedidos de las últimas 24 h.
+ */
+async function assertPhoneLimits(
+  db: Db,
+  merchantId: string,
+  phone: string,
+  limits: Pick<OrderLimits, "maxActivePerPhone" | "maxDailyPerPhone">,
+  now: Date,
+) {
+  const digits = phoneDigits(phone);
+  const samePhone = sql`regexp_replace(${orders.customerPhone}, '[^0-9]', '', 'g') = ${digits}`;
+  const finals = Object.values(OrderStatus).filter(isOrderFinal);
+
+  if (limits.maxActivePerPhone > 0) {
+    const [row] = await db
+      .select({ n: count() })
+      .from(orders)
+      .where(and(eq(orders.merchantId, merchantId), notInArray(orders.status, finals), samePhone));
+    if ((row?.n ?? 0) >= limits.maxActivePerPhone) {
+      throw tooManyRequests("Ya tenés varios pedidos en curso en este comercio. Esperá a que avancen antes de hacer otro.", {
+        reason: "TOO_MANY_ACTIVE_ORDERS",
+        limit: limits.maxActivePerPhone,
+      });
+    }
+  }
+  if (limits.maxDailyPerPhone > 0) {
+    const since = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const [row] = await db
+      .select({ n: count() })
+      .from(orders)
+      .where(and(gte(orders.createdAt, since), samePhone));
+    if ((row?.n ?? 0) >= limits.maxDailyPerPhone) {
+      throw tooManyRequests("Llegaste al máximo de pedidos por día con este teléfono. Probá mañana o comunicate con el comercio.", {
+        reason: "DAILY_LIMIT",
+        limit: limits.maxDailyPerPhone,
+      });
+    }
   }
 }
 
@@ -364,7 +572,7 @@ export async function listMerchantOrders(
   merchantId: string,
   userId: string,
   scope: "active" | "done",
-): Promise<OrderDto[]> {
+): Promise<Array<OrderDto & { dispatch: DeliveryDto | null }>> {
   await getMerchantAccess(db, merchantId, userId);
   const finals = Object.values(OrderStatus).filter(isOrderFinal);
   const rows =
@@ -380,7 +588,8 @@ export async function listMerchantOrders(
           .where(and(eq(orders.merchantId, merchantId), inArray(orders.status, finals)))
           .orderBy(desc(orders.updatedAt))
           .limit(50);
-  return loadOrders(db, rows);
+  const [list, byOrder] = await Promise.all([loadOrders(db, rows), getDeliveriesForOrders(db, rows.map((r) => r.id))]);
+  return list.map((o) => ({ ...o, dispatch: byOrder.get(o.id) ?? null }));
 }
 
 /**
@@ -409,6 +618,21 @@ export async function transitionMerchantOrder(
       throw conflict("Ese cambio de estado no es válido ahora", { reason: "INVALID_TRANSITION", status: row.status, to });
     }
     if (action.needsReason && !reason?.trim()) throw badRequest("Indicá el motivo (lo ve el cliente)", { field: "reason" });
+    if (BY_COURIER.includes(to)) {
+      const delivery = (await getDeliveriesForOrders(tx, [row.id])).get(row.id);
+      if (delivery) {
+        throw conflict(
+          delivery.courier
+            ? "Este envío lo está haciendo un repartidor: el estado se actualiza desde su app"
+            : "Hay una búsqueda de repartidor en curso: cancelala antes de mandarlo por tu cuenta",
+          { reason: "DELIVERY_IN_PROGRESS" },
+        );
+      }
+    }
+    if (to === OrderStatus.CANCELLED || to === OrderStatus.REJECTED) await cancelDeliveriesForOrder(tx, row.id, reason?.trim() || null);
+
+    // Aceptar o rechazar también cuenta como "visto": apaga la alarma.
+    if (!row.acknowledgedAt) await tx.update(orders).set({ acknowledgedAt: new Date() }).where(eq(orders.id, row.id));
 
     const updated = await applyTransition(tx, row, to, { actorType: "MERCHANT", actorUserId, reason: reason?.trim() || null });
     if (to === OrderStatus.READY && row.fulfillmentType === FulfillmentType.PICKUP) {
@@ -426,9 +650,17 @@ async function applyTransition(
   offsetMs = 0,
 ): Promise<OrderRow> {
   const at = new Date(Date.now() + offsetMs);
+  // Efectivo sin cobrar en un pedido que no sigue: ya no se espera ese pago. La transferencia queda
+  // pendiente: puede haber llegado igual y el comercio tiene que poder registrarla (para devolverla).
+  const dropCash =
+    RELEASES_SLOT.includes(to) && row.paymentMethod === PaymentMethod.CASH && row.paymentStatus === PaymentStatus.PENDING;
   const [updated] = await tx
     .update(orders)
-    .set({ status: to, ...(actor.reason !== null && { statusReason: actor.reason }) })
+    .set({
+      status: to,
+      ...(actor.reason !== null && { statusReason: actor.reason }),
+      ...(dropCash && { paymentStatus: PaymentStatus.CANCELLED }),
+    })
     .where(eq(orders.id, row.id))
     .returning();
   await tx.insert(orderEvents).values({
@@ -440,5 +672,267 @@ async function applyTransition(
     reason: actor.reason,
     createdAt: at,
   });
+  // Venta concluida: se devenga la comisión en el ledger (SPEC §6.3), en la misma transacción.
+  if (to === OrderStatus.PICKED_UP || to === OrderStatus.DELIVERED) await accrueOrderCommission(tx, updated!);
   return updated!;
+}
+
+/** Estados del pedido que, con un repartidor de Pedilo, los mueve el reparto y no el comercio. */
+const BY_COURIER: OrderStatus[] = [OrderStatus.PICKED_UP_BY_COURIER, OrderStatus.DELIVERED, OrderStatus.DELIVERY_FAILED];
+
+// ---------------------------------------------------------------------------
+// Reparto (SPEC §9.0, ADR 0014): comandos hacia deliveries y traducción de sus eventos
+// ---------------------------------------------------------------------------
+
+/**
+ * El comercio pide un repartidor para un pedido con envío: se crea el delivery con los datos
+ * necesarios (snapshot) y se publica la oferta. Tarifa sugerida: el costo de envío del pedido.
+ */
+export async function requestOrderDelivery(
+  db: Db,
+  merchantId: string,
+  orderId: string,
+  input: { feeMinor?: number | undefined; offerMinutes?: number | undefined },
+  userId: string,
+): Promise<OrderDto & { dispatch: DeliveryDto | null }> {
+  await getMerchantAccess(db, merchantId, userId);
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.merchantId, merchantId)))
+      .for("update");
+    if (!row) throw notFound("Pedido");
+    if (row.fulfillmentType !== FulfillmentType.DELIVERY || !row.deliveryAddressLine) {
+      throw conflict("Solo los pedidos con envío necesitan repartidor", { reason: "NOT_DELIVERY" });
+    }
+    if (!REQUESTABLE.includes(row.status)) {
+      throw conflict("Pedí el repartidor después de aceptar el pedido y antes de que salga", { reason: "INVALID_STATUS", status: row.status });
+    }
+    const branch = await getBranchSummary(tx, row.branchId);
+    const items = await tx.select().from(orderItems).where(eq(orderItems.orderId, row.id)).orderBy(asc(orderItems.sortOrder));
+    const description = items.map((i) => `${i.quantity} × ${i.productName}`).join(", ");
+    await requestDelivery(
+      tx,
+      {
+        orderId: row.id,
+        reference: row.code,
+        merchantId,
+        branchId: row.branchId,
+        cityId: branch.cityId,
+        pickup: { name: row.merchantName, address: row.branchAddress, phone: branch.phone },
+        dropoff: { area: row.deliveryZoneName ?? "—", address: row.deliveryAddressLine, notes: row.deliveryAddressNotes },
+        recipient: { name: row.customerName, phone: row.customerPhone },
+        packageDescription: description.length > 300 ? `${description.slice(0, 297)}…` : description,
+        // Efectivo sin cobrar: lo cobra el repartidor al entregar y se lo debe al comercio (SPEC §8.3).
+        cashToCollectMinor:
+          row.paymentMethod === PaymentMethod.CASH && row.paymentStatus === PaymentStatus.PENDING ? row.totalMinor : 0,
+      },
+      { feeMinor: input.feeMinor ?? row.deliveryFeeMinor, offerMinutes: input.offerMinutes ?? DEFAULT_OFFER_MINUTES, actorUserId: userId },
+    );
+  });
+  const [dto] = await loadOrders(db, await db.select().from(orders).where(eq(orders.id, orderId)));
+  return { ...dto!, dispatch: (await getDeliveriesForOrders(db, [orderId])).get(orderId) ?? null };
+}
+
+const REQUESTABLE: OrderStatus[] = [OrderStatus.ACCEPTED, OrderStatus.PREPARING, OrderStatus.READY];
+
+/**
+ * Evento del reparto → estado del pedido (`orderStatusForDeliveryStatus`). Si el repartidor
+ * retira un pedido que el comercio todavía no marcó como listo, se lo marca listo primero: el
+ * paquete físico ya salió. Cambios que el pedido ya no admite (p. ej. cancelado) se ignoran.
+ */
+export async function applyDeliveryEvent(tx: Tx, event: DeliveryStatusEvent): Promise<void> {
+  if (!event.orderId) return;
+  const target = orderStatusForDeliveryStatus(event.to);
+  if (!target) return;
+  const [row] = await tx.select().from(orders).where(eq(orders.id, event.orderId)).for("update");
+  if (!row) return;
+  const system = { actorType: "SYSTEM" as const, actorUserId: null };
+  let current = row;
+  if (target === OrderStatus.PICKED_UP_BY_COURIER) {
+    for (const step of [OrderStatus.PREPARING, OrderStatus.READY]) {
+      if (canTransitionOrder(current.status, step, current.fulfillmentType)) {
+        current = await applyTransition(tx, current, step, { ...system, reason: null });
+      }
+    }
+  }
+  if (canTransitionOrder(current.status, target, current.fulfillmentType)) {
+    await applyTransition(tx, current, target, {
+      ...system,
+      reason: target === OrderStatus.DELIVERY_FAILED ? (event.reason ?? "El repartidor no pudo entregarlo") : null,
+    });
+  }
+}
+
+/**
+ * El comercio confirma que cobró el efectivo o que le llegó la transferencia (SPEC §8.3). Nunca
+ * se marca solo. Idempotente: confirmar dos veces no cambia nada.
+ */
+export async function confirmMerchantPayment(db: Db, merchantId: string, orderId: string, actor: Actor): Promise<OrderDto> {
+  await getMerchantAccess(db, merchantId, actor.userId);
+  await db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.id, orderId), eq(orders.merchantId, merchantId)))
+      .for("update");
+    if (!row) throw notFound("Pedido");
+    if (row.paymentStatus === PaymentStatus.APPROVED) return;
+    if (row.paymentMethod === PaymentMethod.MERCADO_PAGO) {
+      throw conflict("Los pagos digitales los confirma el procesador de pagos", { reason: "DIGITAL_PAYMENT" });
+    }
+    if (!paymentStateMachine.canTransition(row.paymentStatus, PaymentStatus.APPROVED)) {
+      throw conflict("Este pago ya no se puede confirmar", { reason: "INVALID_PAYMENT_STATUS", paymentStatus: row.paymentStatus });
+    }
+    const confirmedAt = new Date();
+    await tx
+      .update(orders)
+      .set({ paymentStatus: PaymentStatus.APPROVED, paymentConfirmedAt: confirmedAt, paymentConfirmedBy: actor.userId })
+      .where(eq(orders.id, row.id));
+    await recordAudit(tx, actor, {
+      action: "order.payment_confirmed",
+      entityType: "order",
+      entityId: row.id,
+      before: { paymentStatus: row.paymentStatus },
+      after: { paymentStatus: PaymentStatus.APPROVED, paymentMethod: row.paymentMethod, confirmedAt: confirmedAt.toISOString() },
+    });
+  });
+  return loadOrder(db, orderId);
+}
+
+// ---------------------------------------------------------------------------
+// Pedidos programados (ADR 0011)
+// ---------------------------------------------------------------------------
+
+export interface BranchSlotsDto {
+  timezone: string;
+  /** Franjas de 30 min dentro del horario, desde ahora + anticipación hasta el máximo de días. */
+  slots: Array<{ startsAt: string; available: boolean }>;
+}
+
+/** Franjas para programar un pedido. Vacío si la sucursal no acepta programados. */
+export async function listBranchSlots(db: Db, slug: string, branchId: string, now = new Date()): Promise<BranchSlotsDto> {
+  const merchant = await findApprovedMerchantBySlug(db, slug, now);
+  const branch = merchant?.branches.find((b) => b.id === branchId);
+  if (!branch) throw notFound("Sucursal");
+  if (!branch.scheduling.enabled) return { timezone: branch.timezone, slots: [] };
+
+  const slots = scheduleSlots(branchRanges(branch), branch.timezone, now, branch.scheduling);
+  const capacity = branch.scheduling.slotCapacity;
+  const taken = new Map<number, number>();
+  if (capacity !== null && slots.length > 0) {
+    const rows = await db
+      .select({ at: orders.scheduledFor, n: count() })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.branchId, branch.id),
+          gte(orders.scheduledFor, slots[0]!),
+          lte(orders.scheduledFor, slots.at(-1)!),
+          notInArray(orders.status, RELEASES_SLOT),
+        ),
+      )
+      .groupBy(orders.scheduledFor);
+    for (const r of rows) if (r.at) taken.set(r.at.getTime(), r.n);
+  }
+  return {
+    timezone: branch.timezone,
+    slots: slots.map((s) => ({
+      startsAt: s.toISOString(),
+      available: capacity === null || (taken.get(s.getTime()) ?? 0) < capacity,
+    })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Avisos al comercio (SPEC §10)
+// ---------------------------------------------------------------------------
+
+/**
+ * Marca pedidos como vistos por el comercio (apaga la alarma). Solo afecta pedidos del comercio
+ * que todavía no estaban vistos; repetir la llamada no cambia nada. Devuelve cuántos marcó.
+ */
+export async function acknowledgeMerchantOrders(
+  db: Db,
+  merchantId: string,
+  userId: string,
+  orderIds: string[],
+): Promise<{ acknowledged: number }> {
+  await getMerchantAccess(db, merchantId, userId);
+  if (orderIds.length === 0) return { acknowledged: 0 };
+  const rows = await db
+    .update(orders)
+    .set({ acknowledgedAt: new Date() })
+    .where(and(eq(orders.merchantId, merchantId), inArray(orders.id, orderIds), isNull(orders.acknowledgedAt)))
+    .returning({ id: orders.id });
+  return { acknowledged: rows.length };
+}
+
+export interface MerchantOrdersPulse {
+  /** Cambia cada vez que cambia algún pedido del comercio: si es distinto al anterior, hay que recargar. */
+  version: string;
+  activeCount: number;
+  /** Pedidos esperando confirmación, del más antiguo al más nuevo. */
+  waiting: Array<{ id: string; code: string; createdAt: string; acceptDeadlineAt: string | null; acknowledged: boolean }>;
+}
+
+/**
+ * Resumen liviano para consultar seguido (cada pocos segundos) sin traer los pedidos completos.
+ * El tablero recarga solo cuando cambia `version` y hace sonar la alarma mientras haya pedidos sin ver.
+ */
+export async function getMerchantOrdersPulse(db: Db, merchantId: string, userId: string): Promise<MerchantOrdersPulse> {
+  await getMerchantAccess(db, merchantId, userId);
+  const finals = Object.values(OrderStatus).filter(isOrderFinal);
+  const [[stats], waiting, deliveriesVersion] = await Promise.all([
+    db
+      .select({
+        lastUpdate: max(orders.updatedAt),
+        total: count(),
+        active: sql<number>`count(*) filter (where ${notInArray(orders.status, finals)})`.mapWith(Number),
+      })
+      .from(orders)
+      .where(eq(orders.merchantId, merchantId)),
+    db
+      .select({ id: orders.id, code: orders.code, createdAt: orders.createdAt, acceptDeadlineAt: orders.acceptDeadlineAt, acknowledgedAt: orders.acknowledgedAt })
+      .from(orders)
+      .where(and(eq(orders.merchantId, merchantId), eq(orders.status, OrderStatus.PLACED)))
+      .orderBy(asc(orders.createdAt)),
+    // Un repartidor que acepta o avanza no cambia el pedido, pero el tablero tiene que enterarse.
+    lastDeliveryChange(db, merchantId),
+  ]);
+  return {
+    version: `${stats?.lastUpdate?.toISOString() ?? "0"}:${stats?.total ?? 0}|${deliveriesVersion}`,
+    activeCount: stats?.active ?? 0,
+    waiting: waiting.map((w) => ({
+      id: w.id,
+      code: w.code,
+      createdAt: w.createdAt.toISOString(),
+      acceptDeadlineAt: w.acceptDeadlineAt?.toISOString() ?? null,
+      acknowledged: w.acknowledgedAt !== null,
+    })),
+  };
+}
+
+export const EXPIRED_REASON = "El comercio no respondió a tiempo";
+
+/**
+ * Vence los pedidos que siguen esperando confirmación pasado su plazo (SPEC §7.1 paso 7).
+ * Idempotente y seguro con varias instancias: toma las filas con SKIP LOCKED y revalida el estado
+ * dentro de la transacción. Devuelve cuántos venció.
+ */
+export async function expireOverdueOrders(db: Db, now = new Date(), batchSize = 50): Promise<number> {
+  return db.transaction(async (tx) => {
+    const due = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.status, OrderStatus.PLACED), lte(orders.acceptDeadlineAt, now)))
+      .orderBy(asc(orders.acceptDeadlineAt))
+      .limit(batchSize)
+      .for("update", { skipLocked: true });
+    for (const row of due) {
+      await applyTransition(tx, row, OrderStatus.EXPIRED, { actorType: "SYSTEM", actorUserId: null, reason: EXPIRED_REASON });
+    }
+    return due.length;
+  });
 }

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import cors from "@fastify/cors";
+import rateLimit from "@fastify/rate-limit";
 import helmet from "@fastify/helmet";
 import swagger from "@fastify/swagger";
 import swaggerUi from "@fastify/swagger-ui";
@@ -18,18 +19,25 @@ import { z } from "zod";
 
 import type { Config } from "./config";
 import type { Db } from "./db/client";
-import { AppError, ErrorCode } from "./lib/errors";
+import { AppError, ErrorCode, tooManyRequests } from "./lib/errors";
+import { billingRoutes } from "./modules/billing/routes";
 import { catalogRoutes } from "./modules/catalog/routes";
+import { deliveryRoutes } from "./modules/deliveries/routes";
+import { onDeliveryStatusChange } from "./modules/deliveries/service";
+import { applyDeliveryEvent } from "./modules/orders/service";
 import { geographyRoutes } from "./modules/geography/routes";
 import { authPlugin } from "./modules/identity/auth-plugin";
 import { identityRoutes } from "./modules/identity/routes";
 import { menuRoutes } from "./modules/menu/routes";
 import { merchantRoutes } from "./modules/merchants/routes";
+import { notificationRoutes } from "./modules/notifications/routes";
 import { orderRoutes } from "./modules/orders/routes";
 import type { TokenVerifier } from "./modules/identity/token-verifier";
 
 export interface AppDeps {
-  config: Pick<Config, "env" | "logLevel" | "corsOrigins" | "orderTokenSecret">;
+  /** `limits` ausente = sin límites anti-abuso (tests); `server.ts` siempre los pasa. */
+  config: Pick<Config, "env" | "logLevel" | "corsOrigins" | "orderTokenSecret"> &
+    Partial<Pick<Config, "orders" | "push" | "trustProxyHops" | "limits" | "settlement">>;
   db: Db;
   tokenVerifier: TokenVerifier;
 }
@@ -46,6 +54,8 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
     // Correlation ID: se respeta el x-request-id entrante o se genera uno (SPEC §16).
     requestIdHeader: "x-request-id",
     genReqId: () => randomUUID(),
+    // Solo detrás de un proxy conocido: si no, cualquiera falsea su IP con x-forwarded-for.
+    trustProxy: config.trustProxyHops ? (_address: string, hop: number) => hop < config.trustProxyHops! : false,
   }).withTypeProvider<ZodTypeProvider>();
 
   app.setValidatorCompiler(validatorCompiler);
@@ -57,6 +67,15 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
 
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: config.corsOrigins, credentials: false });
+  // Límites por IP en memoria (ADR 0010): se activan por ruta con `config.rateLimit`.
+  await app.register(rateLimit, {
+    global: false,
+    errorResponseBuilder: (_req, ctx) =>
+      tooManyRequests("Hiciste demasiados pedidos seguidos. Esperá unos minutos y probá de nuevo.", {
+        reason: "IP_RATE_LIMIT",
+        retryAfterSeconds: Math.ceil(ctx.ttl / 1000),
+      }),
+  });
 
   await app.register(swagger, {
     openapi: {
@@ -102,7 +121,18 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
   await app.register(catalogRoutes, { prefix: "/v1", db });
   await app.register(merchantRoutes, { prefix: "/v1", db });
   await app.register(menuRoutes, { prefix: "/v1", db });
-  await app.register(orderRoutes, { prefix: "/v1", db, orderTokenSecret: config.orderTokenSecret });
+  // Reparto → pedidos: eventos en la misma transacción (SPEC §9.0, ADR 0014).
+  onDeliveryStatusChange(applyDeliveryEvent);
+  await app.register(deliveryRoutes, { prefix: "/v1", db });
+  await app.register(billingRoutes, { prefix: "/v1", db, settlement: config.settlement });
+  await app.register(orderRoutes, {
+    prefix: "/v1",
+    db,
+    orderTokenSecret: config.orderTokenSecret,
+    acceptTimeoutMs: config.orders?.acceptTimeoutMs,
+    limits: config.limits,
+  });
+  await app.register(notificationRoutes, { prefix: "/v1", db, vapidPublicKey: config.push?.vapid?.publicKey ?? null });
 
   return app;
 }

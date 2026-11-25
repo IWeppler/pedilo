@@ -49,6 +49,19 @@ const dateTimeFormat = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
 });
 
+/** Franja de un pedido programado: "vie 28/11, 20:30" en la zona de la sucursal. */
+export function formatSlot(iso: string, timeZone = "America/Argentina/Buenos_Aires"): string {
+  return new Intl.DateTimeFormat("es-AR", {
+    timeZone,
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(new Date(iso));
+}
+
 /** ISO → "23/11/26, 14:05" (hora de Argentina). */
 export function formatDateTime(iso: string | null | undefined): string {
   return iso ? dateTimeFormat.format(new Date(iso)) : "—";

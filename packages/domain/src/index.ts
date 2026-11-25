@@ -9,3 +9,4 @@ export * from "./merchants";
 export * from "./schedule";
 export * from "./cuit";
 export * from "./menu";
+export * from "./settlements";

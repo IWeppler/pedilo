@@ -6,7 +6,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import type { FastifyInstance } from "fastify";
 
-import { buildApp } from "../src/app";
+import { type AppDeps, buildApp } from "../src/app";
 import type { Db } from "../src/db/client";
 import { MIGRATIONS_FOLDER } from "../src/db/paths";
 import * as schema from "../src/db/schema";
@@ -27,14 +27,14 @@ export interface TestContext {
  * Postgres real en memoria (PGlite) con las migraciones del repo aplicadas,
  * y la app construida con un verificador de tokens local.
  */
-export async function createTestContext(): Promise<TestContext> {
+export async function createTestContext(configOverrides: Partial<AppDeps["config"]> = {}): Promise<TestContext> {
   const client = new PGlite();
   const db = drizzle(client, { schema }) as unknown as Db;
   await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER });
 
   const keys = await generateDevKeyPair();
   const app = await buildApp({
-    config: { env: "test", logLevel: "silent", corsOrigins: [], orderTokenSecret: "test-order-token-secret" },
+    config: { env: "test", logLevel: "silent", corsOrigins: [], orderTokenSecret: "test-order-token-secret", ...configOverrides },
     db,
     tokenVerifier: createLocalVerifier(keys.publicKey),
   });
