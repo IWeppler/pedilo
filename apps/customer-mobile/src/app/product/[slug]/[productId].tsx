@@ -5,6 +5,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
@@ -129,11 +130,18 @@ function ProductDetail({
     <View style={[styles.screen, { backgroundColor: t.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          {/* Imagen (sin fotos todavía: ícono del rubro) */}
+          {/* Foto del producto o, si no tiene, el ícono del rubro */}
           <View style={[styles.hero, { backgroundColor: t.primarySoft, paddingTop: topGap }]}>
-            <View style={[styles.heroArt, { backgroundColor: t.card }]}>
-              <Icon name={icon} size={64} color={t.primary} />
-            </View>
+            <Photo
+              url={product.imageUrl}
+              style={StyleSheet.absoluteFill}
+              accessibilityLabel={product.name}
+              fallback={
+                <View style={[styles.heroArt, { backgroundColor: t.card }]}>
+                  <Icon name={icon} size={64} color={t.primary} />
+                </View>
+              }
+            />
           </View>
 
           <View style={[styles.sheet, { backgroundColor: t.background }]}>

@@ -43,6 +43,9 @@ export const merchants = pgTable(
     transferAlias: text("transfer_alias"),
     transferCbu: text("transfer_cbu"),
     transferHolder: text("transfer_holder"),
+    /** Logo y portada (rutas en el almacenamiento, ADR 0017). */
+    logoPath: text("logo_path"),
+    coverPath: text("cover_path"),
     status: text("status").$type<MerchantStatus>().notNull().default("DRAFT"),
     rejectionReason: text("rejection_reason"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),

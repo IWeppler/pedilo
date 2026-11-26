@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { Db } from "../../db/client";
 import { errorResponses } from "../../lib/errors";
+import { readUpload, uploadDescription } from "../../lib/uploads";
 import { nameSchema, nonEmptyPatch } from "../../lib/schemas";
 import { authOf, requireAuth } from "../identity/auth-plugin";
 import {
@@ -13,6 +14,7 @@ import {
   getPublicMerchantMenu,
   replaceProduct,
   setProductAvailability,
+  setProductImage,
   updateSection,
 } from "./service";
 
@@ -49,6 +51,7 @@ const productFields = {
   priceMinor: z.number().int(),
   fromPriceMinor: z.number().int().describe("Precio desde: variante disponible más barata o precio del producto"),
   available: z.boolean().describe("false = pausado: se ve pero no se puede pedir"),
+  imageUrl: z.string().nullable().describe("Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local"),
   variants: z.array(variantSchema),
   modifierGroups: z.array(modifierGroupSchema),
 };
@@ -70,6 +73,8 @@ const publicMenuSchema = z.object({
     displayName: z.string(),
     categoryId: z.uuid(),
     payment: z.object({ cash: z.boolean(), transfer: z.boolean() }).describe("Medios de pago que acepta"),
+    logoUrl: z.string().nullable(),
+    coverUrl: z.string().nullable(),
     branches: z.array(
       z.object({
         id: z.uuid(),
@@ -263,6 +268,39 @@ export const menuRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
     },
     (request) =>
       replaceProduct(db, request.params.merchantId, request.params.productId, request.body, actorOf(request)),
+  );
+
+  app.put(
+    "/merchants/:merchantId/menu/products/:productId/image",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["menu"],
+        summary: "Subir o reemplazar la foto del producto",
+        description: uploadDescription,
+        consumes: ["multipart/form-data"],
+        security,
+        params: productParams,
+        response: { 200: productSchema, ...errorResponses },
+      },
+    },
+    async (request) =>
+      setProductImage(db, request.params.merchantId, request.params.productId, await readUpload(request), actorOf(request)),
+  );
+
+  app.delete(
+    "/merchants/:merchantId/menu/products/:productId/image",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["menu"],
+        summary: "Quitar la foto del producto",
+        security,
+        params: productParams,
+        response: { 200: productSchema, ...errorResponses },
+      },
+    },
+    (request) => setProductImage(db, request.params.merchantId, request.params.productId, null, actorOf(request)),
   );
 
   app.patch(

@@ -28,13 +28,23 @@ async function Menu({ params }: { params: Props["params"] }) {
   const { merchantId } = await params;
   const [merchant, menu] = await Promise.all([
     getMyMerchant(merchantId),
-    merchantCall((api) => api.GET("/v1/merchants/{merchantId}/menu", { params: { path: { merchantId } } })),
+    merchantCall((api) =>
+      api.GET("/v1/merchants/{merchantId}/menu", {
+        params: { path: { merchantId } },
+      }),
+    ),
   ]);
   const base = `/m/${merchantId}/menu`;
   const suspended = merchant.status === "SUSPENDED";
   const groups = [
-    ...menu.sections.map((s) => ({ section: s, products: menu.products.filter((p) => p.sectionId === s.id) })),
-    { section: null, products: menu.products.filter((p) => p.sectionId === null) },
+    ...menu.sections.map((s) => ({
+      section: s,
+      products: menu.products.filter((p) => p.sectionId === s.id),
+    })),
+    {
+      section: null,
+      products: menu.products.filter((p) => p.sectionId === null),
+    },
   ].filter((g) => g.section !== null || g.products.length > 0);
 
   return (
@@ -44,7 +54,10 @@ async function Menu({ params }: { params: Props["params"] }) {
         description={merchant.displayName}
         actions={
           <>
-            <Link href={`/m/${merchantId}`} className={buttonVariants({ variant: "outline" })}>
+            <Link
+              href={`/m/${merchantId}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
               Volver
             </Link>
             {!suspended && (
@@ -58,13 +71,16 @@ async function Menu({ params }: { params: Props["params"] }) {
 
       {suspended ? (
         <Alert variant="destructive">
-          <AlertDescription>Tu comercio está suspendido: el catálogo no se puede modificar.</AlertDescription>
+          <AlertDescription>
+            Tu comercio está suspendido: el catálogo no se puede modificar.
+          </AlertDescription>
         </Alert>
       ) : (
         merchant.status !== "APPROVED" && (
           <Alert>
             <AlertDescription>
-              Podés ir armando el catálogo. Los clientes lo van a ver cuando tu comercio esté aprobado.
+              Podés ir armando el catálogo. Los clientes lo van a ver cuando tu
+              comercio esté aprobado.
             </AlertDescription>
           </Alert>
         )
@@ -74,7 +90,8 @@ async function Menu({ params }: { params: Props["params"] }) {
 
       {menu.products.length === 0 && menu.sections.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          Empezá creando secciones (Pizzas, Empanadas, Bebidas…) y después los productos.
+          Empezá creando secciones (Pizzas, Empanadas, Bebidas…) y después los
+          productos.
         </p>
       )}
 
@@ -83,23 +100,38 @@ async function Menu({ params }: { params: Props["params"] }) {
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle className="flex items-center gap-2">
               {section ? section.name : "Sin sección («Otros»)"}
-              {section && !section.active && <Badge variant="outline">Oculta</Badge>}
+              {section && !section.active && (
+                <Badge variant="outline">Oculta</Badge>
+              )}
             </CardTitle>
             {section && !suspended && (
               <div className="flex gap-1">
-                <Link href={`${base}/products/new?sectionId=${section.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                <Link
+                  href={`${base}/products/new?sectionId=${section.id}`}
+                  className={buttonVariants({ variant: "ghost", size: "sm" })}
+                >
                   + Producto
                 </Link>
-                <Link href={`${base}/sections/${section.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                <Link
+                  href={`${base}/sections/${section.id}`}
+                  className={buttonVariants({ variant: "ghost", size: "sm" })}
+                >
                   Editar sección
                 </Link>
               </div>
             )}
           </CardHeader>
           <CardContent className="grid gap-2">
-            {products.length === 0 && <p className="text-sm text-muted-foreground">Sin productos.</p>}
+            {products.length === 0 && (
+              <p className="text-sm text-muted-foreground">Sin productos.</p>
+            )}
             {products.map((p) => (
-              <ProductRow key={p.id} product={p} merchantId={merchantId} editable={!suspended} />
+              <ProductRow
+                key={p.id}
+                product={p}
+                merchantId={merchantId}
+                editable={!suspended}
+              />
             ))}
           </CardContent>
         </Card>
@@ -108,21 +140,46 @@ async function Menu({ params }: { params: Props["params"] }) {
   );
 }
 
-function ProductRow({ product: p, merchantId, editable }: { product: MenuProduct; merchantId: string; editable: boolean }) {
+function ProductRow({
+  product: p,
+  merchantId,
+  editable,
+}: {
+  product: MenuProduct;
+  merchantId: string;
+  editable: boolean;
+}) {
   const toggle = setAvailability.bind(null, merchantId, p.id, !p.available);
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3 text-sm">
-      <div className="grid gap-0.5">
-        <span className="flex flex-wrap items-center gap-2 font-medium">
-          {p.name}
-          {!p.active && <Badge variant="outline">Archivado</Badge>}
-          {p.active && !p.available && <Badge variant="destructive">Pausado</Badge>}
-        </span>
-        <span className="text-muted-foreground">
-          {p.variants.length > 0 ? `desde ${formatARS(p.fromPriceMinor)}` : formatARS(p.priceMinor)}
-          {p.variants.length > 0 && ` · ${p.variants.length} variantes`}
-          {p.modifierGroups.length > 0 && ` · ${p.modifierGroups.length} grupos de opciones`}
-        </span>
+      <div className="flex items-center gap-3">
+        {p.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- ya viene optimizada (WebP) desde la API
+          <img
+            src={p.imageUrl}
+            alt=""
+            className="size-12 shrink-0 rounded-md object-cover"
+          />
+        ) : (
+          <div className="size-12 shrink-0 rounded-md bg-muted" aria-hidden />
+        )}
+        <div className="grid gap-0.5">
+          <span className="flex flex-wrap items-center gap-2 font-medium">
+            {p.name}
+            {!p.active && <Badge variant="outline">Archivado</Badge>}
+            {p.active && !p.available && (
+              <Badge variant="destructive">Pausado</Badge>
+            )}
+          </span>
+          <span className="text-muted-foreground">
+            {p.variants.length > 0
+              ? `desde ${formatARS(p.fromPriceMinor)}`
+              : formatARS(p.priceMinor)}
+            {p.variants.length > 0 && ` · ${p.variants.length} variantes`}
+            {p.modifierGroups.length > 0 &&
+              ` · ${p.modifierGroups.length} grupos de opciones`}
+          </span>
+        </div>
       </div>
       {editable && (
         <div className="flex gap-1">
@@ -133,7 +190,10 @@ function ProductRow({ product: p, merchantId, editable }: { product: MenuProduct
               </Button>
             </form>
           )}
-          <Link href={`/m/${merchantId}/menu/products/${p.id}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+          <Link
+            href={`/m/${merchantId}/menu/products/${p.id}`}
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
             Editar
           </Link>
         </div>

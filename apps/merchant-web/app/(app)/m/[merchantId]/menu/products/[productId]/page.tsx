@@ -1,12 +1,13 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import { ImageUpload } from "@/components/image-upload";
 import { PageHeader } from "@/components/page-header";
 import { ProductEditor } from "@/components/product-editor";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { merchantCall } from "@/lib/api";
 
-import { saveProduct } from "../../actions";
+import { removeProductImage, saveProduct, uploadProductImage } from "../../actions";
 
 type Props = PageProps<"/m/[merchantId]/menu/products/[productId]">;
 
@@ -30,11 +31,20 @@ async function EditProduct({ params }: { params: Props["params"] }) {
   const product = menu.products.find((p) => p.id === productId);
   if (!product) notFound();
   return (
-    <ProductEditor
+    <>
+      <ImageUpload
+        label="Foto"
+        hint="Sacala de cerca y con buena luz. Podés subir la foto del celular: la achicamos nosotros."
+        currentUrl={product.imageUrl}
+        upload={uploadProductImage.bind(null, merchantId, product.id)}
+        remove={removeProductImage.bind(null, merchantId, product.id)}
+      />
+      <ProductEditor
       action={saveProduct.bind(null, merchantId, product.id)}
       sections={menu.sections}
       product={product}
       cancelHref={`/m/${merchantId}/menu`}
-    />
+      />
+    </>
   );
 }

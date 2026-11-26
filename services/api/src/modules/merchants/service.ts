@@ -17,6 +17,7 @@ import { and, asc, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
 
 import type { Db, DbOrTx } from "../../db/client";
 import { AppError, badRequest, conflict, ErrorCode, forbidden, notFound } from "../../lib/errors";
+import { media, mediaPath, mediaUrl, processImage } from "../../lib/media";
 import { slugify } from "../../lib/slug";
 import { type Actor, recordAudit } from "../audit/service";
 import { getCategory } from "../catalog/service";
@@ -49,6 +50,9 @@ export interface MerchantDto {
   contactEmail: string | null;
   /** Medios de pago (ADR 0011). */
   payment: PaymentSettingsDto;
+  /** Logo y portada (ADR 0017). Relativas a la API en modo local. */
+  logoUrl: string | null;
+  coverUrl: string | null;
   status: MerchantStatus;
   rejectionReason: string | null;
   submittedAt: string | null;
@@ -143,6 +147,8 @@ export function toMerchantDto(row: MerchantRow): MerchantDto {
           ? { alias: row.transferAlias, cbu: row.transferCbu, holder: row.transferHolder }
           : null,
     },
+    logoUrl: mediaUrl(row.logoPath),
+    coverUrl: mediaUrl(row.coverPath),
     status: row.status,
     rejectionReason: row.rejectionReason,
     submittedAt: iso(row.submittedAt),
@@ -513,6 +519,46 @@ export async function updatePaymentSettings(
   });
 }
 
+/**
+ * Logo o portada (ADR 0017). Solo el dueño, salvo comercio en revisión o suspendido.
+ * `bytes = null` lo quita. El archivo anterior se borra después de confirmar en la base.
+ */
+export async function setMerchantImage(
+  db: Db,
+  merchantId: string,
+  kind: "logo" | "cover",
+  bytes: Buffer | null,
+  actor: Actor,
+): Promise<MerchantDetailDto> {
+  const image = bytes ? await processImage(bytes, kind) : null;
+  const path = image ? mediaPath(merchantId, kind) : null;
+  if (image && path) await media.put(path, image, "image/webp");
+  const column = kind === "logo" ? "logoPath" : "coverPath";
+
+  let previous: string | null = null;
+  try {
+    const dto = await db.transaction(async (tx) => {
+      const { merchant } = await loadOwnership(tx, merchantId, actor.userId);
+      assertOperationsEditable(merchant.status);
+      previous = merchant[column];
+      const [row] = await tx.update(merchants).set({ [column]: path }).where(eq(merchants.id, merchantId)).returning();
+      await recordAudit(tx, actor, {
+        action: `merchant.${kind}${path ? "" : "_remove"}`,
+        entityType: "merchant",
+        entityId: merchantId,
+        before: { [column]: previous },
+        after: { [column]: path },
+      });
+      return loadDetail(tx, row!);
+    });
+    if (previous && previous !== path) await media.remove(previous).catch(() => undefined);
+    return dto;
+  } catch (err) {
+    if (path) await media.remove(path).catch(() => undefined);
+    throw err;
+  }
+}
+
 /** Datos de transferencia vigentes de un comercio (para copiarlos al pedido). Null si no acepta transferencias. */
 export async function getTransferDetails(
   db: DbOrTx,
@@ -847,6 +893,8 @@ export interface PublicMerchantDto {
   categoryId: string;
   /** Medios de pago que acepta. Los datos de transferencia se ven recién en el pedido. */
   payment: { cash: boolean; transfer: boolean };
+  logoUrl: string | null;
+  coverUrl: string | null;
   branches: PublicBranchDto[];
 }
 
@@ -900,6 +948,8 @@ export async function findApprovedMerchantBySlug(
     displayName: row.displayName,
     categoryId: row.categoryId,
     payment: { cash: row.acceptsCash, transfer: row.acceptsTransfer },
+    logoUrl: mediaUrl(row.logoPath),
+    coverUrl: mediaUrl(row.coverPath),
     branches: detail.branches.filter((b) => b.active).map((b) => toPublicBranch(b, now)),
   };
 }
@@ -916,6 +966,8 @@ export interface CityMerchantDto {
   acceptsDelivery: boolean;
   /** Envío más barato entre sus zonas activas (centavos), o null si no hace envíos. */
   minDeliveryFeeMinor: number | null;
+  logoUrl: string | null;
+  coverUrl: string | null;
 }
 
 /**
@@ -956,6 +1008,8 @@ export async function listApprovedMerchantsInCity(
       acceptsPickup: here.some((b) => b.acceptsPickup),
       acceptsDelivery: fees.length > 0,
       minDeliveryFeeMinor: fees.length ? Math.min(...fees) : null,
+      logoUrl: mediaUrl(merchant.logoPath),
+      coverUrl: mediaUrl(merchant.coverPath),
     });
   }
   return result.sort((a, b) => Number(b.openNow) - Number(a.openNow) || a.displayName.localeCompare(b.displayName, "es"));

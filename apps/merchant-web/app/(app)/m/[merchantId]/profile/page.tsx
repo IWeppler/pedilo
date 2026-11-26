@@ -3,12 +3,13 @@ import { Suspense } from "react";
 import { MerchantForm } from "@/components/merchant-form";
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { ImageUpload } from "@/components/image-upload";
 import { PaymentSettingsForm } from "@/components/payment-settings-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getMyMerchant, getReferenceData, operationsLocked } from "@/lib/api";
 
-import { savePaymentSettings, updateProfile } from "../actions";
+import { removeMerchantImage, savePaymentSettings, updateProfile, uploadMerchantImage } from "../actions";
 
 export default function ProfilePage({ params }: PageProps<"/m/[merchantId]/profile">) {
   return (
@@ -40,6 +41,30 @@ async function Profile({ params }: { params: PageProps<"/m/[merchantId]/profile"
         merchant={merchant}
         cancelHref={`/m/${merchant.id}`}
       />
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo y portada</CardTitle>
+          <CardDescription>Se ven en la app, en la lista de comercios y arriba de tu menú.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          <ImageUpload
+            label="Logo"
+            hint="Cuadrado, se recorta al centro."
+            currentUrl={merchant.logoUrl}
+            upload={uploadMerchantImage.bind(null, merchant.id, "logo")}
+            remove={removeMerchantImage.bind(null, merchant.id, "logo")}
+          />
+          <ImageUpload
+            label="Portada"
+            hint="Horizontal (por ejemplo, el local o un plato). Se recorta a 1600 × 640."
+            currentUrl={merchant.coverUrl}
+            upload={uploadMerchantImage.bind(null, merchant.id, "cover")}
+            remove={removeMerchantImage.bind(null, merchant.id, "cover")}
+            aspect="wide"
+          />
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Medios de pago</CardTitle>

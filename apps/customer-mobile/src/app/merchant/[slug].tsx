@@ -17,6 +17,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CartBar } from "@/components/cart-bar";
+import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Centered, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
@@ -132,11 +133,17 @@ export default function MerchantScreen() {
         onScrollToIndexFailed={() => {}}
         ListHeaderComponent={
           <View onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-            {/* Portada (sin fotos todavía: ícono del rubro sobre el naranja de marca) */}
+            {/* Portada: la foto del comercio o, si no tiene, el ícono del rubro sobre el naranja de marca */}
             <View style={[styles.cover, { backgroundColor: t.primary, paddingTop: insets.top }]}>
-              <View style={styles.coverArt}>
-                <Icon name={icon} size={72} color="#ffffff" />
-              </View>
+              <Photo
+                url={merchant.coverUrl}
+                style={StyleSheet.absoluteFill}
+                fallback={
+                  <View style={styles.coverArt}>
+                    <Icon name={icon} size={72} color="#ffffff" />
+                  </View>
+                }
+              />
             </View>
 
             {/* Datos del comercio */}
@@ -322,7 +329,11 @@ function ProductCard({ product: p, icon, onPress }: { product: PublicProduct; ic
         </View>
       </View>
       <View style={[styles.thumb, { backgroundColor: t.primarySoft }]}>
-        <Icon name={icon} size={34} color={t.primary} />
+        <Photo
+          url={p.imageUrl}
+          style={[StyleSheet.absoluteFill, { borderRadius: radius.md, opacity: p.available ? 1 : 0.5 }]}
+          fallback={<Icon name={icon} size={34} color={t.primary} />}
+        />
         {p.available && (
           <View style={[styles.addButton, { backgroundColor: t.primary, borderColor: t.card }]}>
             <Icon name="add" size={18} color={t.primaryText} />

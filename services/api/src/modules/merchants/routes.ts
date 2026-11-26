@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import type { Db } from "../../db/client";
 import { errorResponses, notFound } from "../../lib/errors";
+import { readUpload, uploadDescription } from "../../lib/uploads";
 import { idParamsSchema, nameSchema, nonEmptyPatch } from "../../lib/schemas";
 import { authOf, requireAdmin, requireAuth } from "../identity/auth-plugin";
 import {
@@ -21,6 +22,7 @@ import {
   submitMerchant,
   updateBranch,
   updateMerchantProfile,
+  setMerchantImage,
   updatePaymentSettings,
   updateZone,
 } from "./service";
@@ -41,6 +43,8 @@ const merchantSchema = z.object({
   categoryId: z.uuid(),
   contactPhone: z.string(),
   contactEmail: z.string().nullable(),
+  logoUrl: z.string().nullable().describe("Relativa a la API (`/media/...`) en modo local"),
+  coverUrl: z.string().nullable(),
   payment: z.object({
     acceptsCash: z.boolean(),
     acceptsTransfer: z.boolean(),
@@ -264,6 +268,39 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
     (request) => updatePaymentSettings(db, request.params.merchantId, request.body, actorOf(request)),
   );
 
+  app.put(
+    "/merchants/:merchantId/images/:kind",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["merchants"],
+        summary: "Subir o reemplazar el logo o la portada",
+        description: `Solo el dueño. Logo: cuadrado 512 px. Portada: 1600 × 640. ${uploadDescription}`,
+        consumes: ["multipart/form-data"],
+        security,
+        params: merchantParams.extend({ kind: z.enum(["logo", "cover"]) }),
+        response: { 200: merchantDetailSchema, ...errorResponses },
+      },
+    },
+    async (request) =>
+      setMerchantImage(db, request.params.merchantId, request.params.kind, await readUpload(request), actorOf(request)),
+  );
+
+  app.delete(
+    "/merchants/:merchantId/images/:kind",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["merchants"],
+        summary: "Quitar el logo o la portada",
+        security,
+        params: merchantParams.extend({ kind: z.enum(["logo", "cover"]) }),
+        response: { 200: merchantDetailSchema, ...errorResponses },
+      },
+    },
+    (request) => setMerchantImage(db, request.params.merchantId, request.params.kind, null, actorOf(request)),
+  );
+
   app.post(
     "/merchants/:merchantId/submit",
     {
@@ -402,6 +439,8 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
               acceptsPickup: z.boolean(),
               acceptsDelivery: z.boolean(),
               minDeliveryFeeMinor: z.number().int().nullable(),
+              logoUrl: z.string().nullable(),
+              coverUrl: z.string().nullable(),
             }),
           ),
           404: errorResponses[404],

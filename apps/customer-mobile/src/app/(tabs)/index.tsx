@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { useCityMerchants, useMerchantCategories } from "@/lib/api";
@@ -410,7 +411,11 @@ function FeaturedCard({
       style={({ pressed }) => [styles.featured, cardShadow(t), { backgroundColor: t.card, opacity: pressed ? 0.8 : 1 }]}
     >
       <View style={[styles.featuredCover, { backgroundColor: t.primarySoft }]}>
-        <Icon name={categoryIcon(categorySlug)} size={48} color={t.primary} />
+        <Photo
+          url={m.coverUrl ?? m.logoUrl}
+          style={StyleSheet.absoluteFill}
+          fallback={<Icon name={categoryIcon(categorySlug)} size={48} color={t.primary} />}
+        />
         {m.acceptsDelivery && m.minDeliveryFeeMinor === 0 && (
           <View style={[styles.coverTag, { backgroundColor: t.success }]}>
             <Text style={styles.coverTagText}>Envío gratis</Text>
@@ -450,8 +455,12 @@ function MerchantRow({
       accessibilityLabel={`${m.displayName}, ${m.openNow ? "abierto" : "cerrado"}`}
       style={({ pressed }) => [styles.row, cardShadow(t), { backgroundColor: t.card, opacity: pressed ? 0.75 : 1 }]}
     >
-      <View style={[styles.rowIcon, { backgroundColor: m.openNow ? t.primarySoft : t.surface }]}>
-        <Icon name={categoryIcon(categorySlug)} size={26} color={m.openNow ? t.primary : t.muted} />
+      <View style={[styles.rowIcon, { backgroundColor: m.openNow ? t.primarySoft : t.surface, overflow: "hidden" }]}>
+        <Photo
+          url={m.logoUrl}
+          style={[StyleSheet.absoluteFill, { opacity: m.openNow ? 1 : 0.5 }]}
+          fallback={<Icon name={categoryIcon(categorySlug)} size={26} color={m.openNow ? t.primary : t.muted} />}
+        />
       </View>
       <View style={styles.rowBody}>
         <View style={styles.rowTop}>

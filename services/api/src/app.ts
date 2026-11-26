@@ -20,6 +20,9 @@ import { z } from "zod";
 import type { Config } from "./config";
 import type { Db } from "./db/client";
 import { AppError, ErrorCode, tooManyRequests } from "./lib/errors";
+import multipart from "@fastify/multipart";
+
+import { configureMedia, createLocalStorage, createSupabaseStorage, MAX_UPLOAD_BYTES, media } from "./lib/media";
 import { billingRoutes } from "./modules/billing/routes";
 import { catalogRoutes } from "./modules/catalog/routes";
 import { deliveryRoutes } from "./modules/deliveries/routes";
@@ -37,7 +40,7 @@ import type { TokenVerifier } from "./modules/identity/token-verifier";
 export interface AppDeps {
   /** `limits` ausente = sin límites anti-abuso (tests); `server.ts` siempre los pasa. */
   config: Pick<Config, "env" | "logLevel" | "corsOrigins" | "orderTokenSecret"> &
-    Partial<Pick<Config, "orders" | "push" | "trustProxyHops" | "limits" | "settlement">>;
+    Partial<Pick<Config, "orders" | "push" | "trustProxyHops" | "limits" | "settlement" | "media">>;
   db: Db;
   tokenVerifier: TokenVerifier;
 }
@@ -77,6 +80,12 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
       }),
   });
 
+  // Fotos (ADR 0017): un archivo por request, con tope de tamaño.
+  await app.register(multipart, { limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 5 } });
+  if (config.media) {
+    configureMedia(config.media.driver === "supabase" ? createSupabaseStorage(config.media) : createLocalStorage(config.media.dir));
+  }
+
   await app.register(swagger, {
     openapi: {
       openapi: "3.1.0",
@@ -115,6 +124,20 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
       return { status: "ok" as const, version: API_VERSION };
     },
   );
+
+  // Almacenamiento local (desarrollo): la API sirve las fotos. Rutas inmutables → caché larga.
+  app.get("/media/*", { schema: { hide: true } }, async (request, reply) => {
+    if (!media.canServe()) return reply.code(404).send();
+    const path = (request.params as { "*": string })["*"];
+    const bytes = await media.read(path).catch(() => null);
+    if (!bytes) return reply.code(404).send();
+    return reply
+      .header("content-type", "image/webp")
+      .header("cache-control", "public, max-age=31536000, immutable")
+      // Helmet pone same-origin: el panel (:3001) y Expo web (:8081) no podrían mostrarlas.
+      .header("cross-origin-resource-policy", "cross-origin")
+      .send(bytes);
+  });
 
   await app.register(identityRoutes, { prefix: "/v1" });
   await app.register(geographyRoutes, { prefix: "/v1", db });

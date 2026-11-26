@@ -42,6 +42,8 @@ export const products = pgTable(
     /** Archivado = no aparece en el menú público. Los productos no se borran. */
     active: boolean("active").notNull().default(true),
     sortOrder: integer("sort_order").notNull().default(0),
+    /** Foto (ruta en el almacenamiento, ADR 0017). */
+    imagePath: text("image_path"),
     ...timestamps,
   },
   (t) => [

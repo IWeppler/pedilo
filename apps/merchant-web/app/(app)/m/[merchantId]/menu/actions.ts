@@ -13,9 +13,42 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { merchantCall } from "@/lib/api";
+import { merchantCall, merchantUpload } from "@/lib/api";
 
 const menuPath = (merchantId: string) => `/m/${merchantId}/menu`;
+
+// --- Fotos (ADR 0017) ---
+
+function fileFrom(formData: FormData): File | null {
+  const file = formData.get("file");
+  return file instanceof File && file.size > 0 ? file : null;
+}
+
+export async function uploadProductImage(merchantId: string, productId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const file = fileFrom(formData);
+  if (!file) return { message: "Elegí una imagen." };
+  try {
+    await merchantUpload(`/v1/merchants/${merchantId}/menu/products/${productId}/image`, file);
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(menuPath(merchantId));
+  revalidatePath(`${menuPath(merchantId)}/products/${productId}`);
+  return { saved: true };
+}
+
+export async function removeProductImage(merchantId: string, productId: string): Promise<FormState> {
+  try {
+    await merchantCall((api) =>
+      api.DELETE("/v1/merchants/{merchantId}/menu/products/{productId}/image", { params: { path: { merchantId, productId } } }),
+    );
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(menuPath(merchantId));
+  revalidatePath(`${menuPath(merchantId)}/products/${productId}`);
+  return { saved: true };
+}
 
 // --- Secciones ---
 

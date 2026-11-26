@@ -1240,6 +1240,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -1444,6 +1447,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -1529,6 +1535,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -1748,6 +1757,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -1968,6 +1980,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -2139,6 +2154,417 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/merchants/{merchantId}/images/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Subir o reemplazar el logo o la portada
+         * @description Solo el dueño. Logo: cuadrado 512 px. Portada: 1600 × 640. Body `multipart/form-data` con la imagen en el campo `file` (JPG, PNG o WebP, hasta 8 MB, mínimo 200 × 200). Se reprocesa a WebP y se descartan los metadatos (ADR 0017).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    kind: "logo" | "cover";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            legalName: string;
+                            taxId: string;
+                            slug: string;
+                            /** Format: uuid */
+                            categoryId: string;
+                            contactPhone: string;
+                            contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            rejectionReason: string | null;
+                            submittedAt: string | null;
+                            reviewedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            branches: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                cityId: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                                lat: number | null;
+                                lng: number | null;
+                                phone: string | null;
+                                timezone: string;
+                                acceptsPickup: boolean;
+                                acceptsDelivery: boolean;
+                                active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
+                                hours: {
+                                    /** @description 0 = domingo … 6 = sábado */
+                                    weekday: number;
+                                    opensAt: string;
+                                    /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                    closesAt: string;
+                                }[];
+                                zones: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    description: string | null;
+                                    /** @description Tarifa de envío en centavos */
+                                    feeMinor: number;
+                                    /** @description Pedido mínimo en centavos */
+                                    minOrderMinor: number;
+                                    active: boolean;
+                                }[];
+                            }[];
+                            onboarding: {
+                                ready: boolean;
+                                problems: {
+                                    /** @enum {string} */
+                                    issue: "NO_ACTIVE_BRANCH" | "BRANCH_WITHOUT_HOURS" | "BRANCH_WITHOUT_FULFILLMENT";
+                                    /** Format: uuid */
+                                    branchId?: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Quitar el logo o la portada */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    kind: "logo" | "cover";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            legalName: string;
+                            taxId: string;
+                            slug: string;
+                            /** Format: uuid */
+                            categoryId: string;
+                            contactPhone: string;
+                            contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            rejectionReason: string | null;
+                            submittedAt: string | null;
+                            reviewedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            branches: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                cityId: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                                lat: number | null;
+                                lng: number | null;
+                                phone: string | null;
+                                timezone: string;
+                                acceptsPickup: boolean;
+                                acceptsDelivery: boolean;
+                                active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
+                                hours: {
+                                    /** @description 0 = domingo … 6 = sábado */
+                                    weekday: number;
+                                    opensAt: string;
+                                    /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                    closesAt: string;
+                                }[];
+                                zones: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    description: string | null;
+                                    /** @description Tarifa de envío en centavos */
+                                    feeMinor: number;
+                                    /** @description Pedido mínimo en centavos */
+                                    minOrderMinor: number;
+                                    active: boolean;
+                                }[];
+                            }[];
+                            onboarding: {
+                                ready: boolean;
+                                problems: {
+                                    /** @enum {string} */
+                                    issue: "NO_ACTIVE_BRANCH" | "BRANCH_WITHOUT_HOURS" | "BRANCH_WITHOUT_FULFILLMENT";
+                                    /** Format: uuid */
+                                    branchId?: string;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/merchants/{merchantId}/submit": {
         parameters: {
             query?: never;
@@ -2180,6 +2606,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -3272,6 +3701,8 @@ export interface paths {
                             acceptsPickup: boolean;
                             acceptsDelivery: boolean;
                             minDeliveryFeeMinor: number | null;
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                         }[];
                     };
                 };
@@ -3339,6 +3770,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -3441,6 +3875,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -3657,6 +4094,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -3877,6 +4317,9 @@ export interface paths {
                             categoryId: string;
                             contactPhone: string;
                             contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
                             payment: {
                                 acceptsCash: boolean;
                                 acceptsTransfer: boolean;
@@ -4094,6 +4537,8 @@ export interface paths {
                                     cash: boolean;
                                     transfer: boolean;
                                 };
+                                logoUrl: string | null;
+                                coverUrl: string | null;
                                 branches: {
                                     /** Format: uuid */
                                     id: string;
@@ -4145,6 +4590,8 @@ export interface paths {
                                     fromPriceMinor: number;
                                     /** @description false = pausado: se ve pero no se puede pedir */
                                     available: boolean;
+                                    /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                                    imageUrl: string | null;
                                     variants: {
                                         /** Format: uuid */
                                         id: string;
@@ -4242,6 +4689,8 @@ export interface paths {
                                 fromPriceMinor: number;
                                 /** @description false = pausado: se ve pero no se puede pedir */
                                 available: boolean;
+                                /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                                imageUrl: string | null;
                                 variants: {
                                     /** Format: uuid */
                                     id: string;
@@ -4739,6 +5188,8 @@ export interface paths {
                             fromPriceMinor: number;
                             /** @description false = pausado: se ve pero no se puede pedir */
                             available: boolean;
+                            /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                            imageUrl: string | null;
                             variants: {
                                 /** Format: uuid */
                                 id: string;
@@ -4948,6 +5399,8 @@ export interface paths {
                             fromPriceMinor: number;
                             /** @description false = pausado: se ve pero no se puede pedir */
                             available: boolean;
+                            /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                            imageUrl: string | null;
                             variants: {
                                 /** Format: uuid */
                                 id: string;
@@ -5077,6 +5530,333 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/merchants/{merchantId}/menu/products/{productId}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Subir o reemplazar la foto del producto
+         * @description Body `multipart/form-data` con la imagen en el campo `file` (JPG, PNG o WebP, hasta 8 MB, mínimo 200 × 200). Se reprocesa a WebP y se descartan los metadatos (ADR 0017).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            sectionId: string | null;
+                            categoryId: string | null;
+                            name: string;
+                            description: string | null;
+                            priceMinor: number;
+                            /** @description Precio desde: variante disponible más barata o precio del producto */
+                            fromPriceMinor: number;
+                            /** @description false = pausado: se ve pero no se puede pedir */
+                            available: boolean;
+                            /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                            imageUrl: string | null;
+                            variants: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                priceMinor: number;
+                                available: boolean;
+                            }[];
+                            modifierGroups: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                minSelect: number;
+                                maxSelect: number;
+                                modifiers: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    priceDeltaMinor: number;
+                                    maxQuantity: number;
+                                    available: boolean;
+                                }[];
+                            }[];
+                            /** @description false = archivado: no aparece en el menú público */
+                            active: boolean;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Quitar la foto del producto */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            sectionId: string | null;
+                            categoryId: string | null;
+                            name: string;
+                            description: string | null;
+                            priceMinor: number;
+                            /** @description Precio desde: variante disponible más barata o precio del producto */
+                            fromPriceMinor: number;
+                            /** @description false = pausado: se ve pero no se puede pedir */
+                            available: boolean;
+                            /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                            imageUrl: string | null;
+                            variants: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                priceMinor: number;
+                                available: boolean;
+                            }[];
+                            modifierGroups: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                minSelect: number;
+                                maxSelect: number;
+                                modifiers: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    priceDeltaMinor: number;
+                                    maxQuantity: number;
+                                    available: boolean;
+                                }[];
+                            }[];
+                            /** @description false = archivado: no aparece en el menú público */
+                            active: boolean;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/merchants/{merchantId}/menu/products/{productId}/availability": {
         parameters: {
             query?: never;
@@ -5127,6 +5907,8 @@ export interface paths {
                             fromPriceMinor: number;
                             /** @description false = pausado: se ve pero no se puede pedir */
                             available: boolean;
+                            /** @description Foto (ADR 0017). Relativa a la API (`/media/...`) en modo local */
+                            imageUrl: string | null;
                             variants: {
                                 /** Format: uuid */
                                 id: string;

@@ -22,7 +22,7 @@ Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ⛔ bloqueado.
 - ⬜ Revisión legal y fiscal puntual (términos, privacidad, rol del marketplace, reclamos, repartidores).
 - ⬜ Entrevistas con 3–5 comercios y repartidores de Tostado; simulación de pricing por rubro.
 - ✅ ADRs técnicos iniciales: [0001](adr/0001-monorepo-npm-workspaces.md)–[0007](adr/0007-pedidos-invitado-sin-dinero.md).
-- ⬜ ADRs pendientes: hosting de la API, storage de imágenes (realtime por SSE cuando se decida el hosting).
+- ⬜ ADRs pendientes: hosting de la API (realtime por SSE cuando se decida el hosting).
 
 ## Fase 1 — Plataforma y catálogo (E1, E2)
 
@@ -39,7 +39,7 @@ Falta:
 - ✅ Supabase como base: migraciones `0000`–`0004` aplicadas (18 tablas, RLS activado sin políticas para cerrar la Data API), `DATABASE_URL` por el session pooler (`aws-1-us-west-2`) y seed base cargado (Tostado + 5 rubros).
 - 🟡 Supabase Auth en los paneles de comercio y admin: login con link al email (PKCE), sesión refrescada en `proxy.ts`, API verificando tokens por JWKS (`SUPABASE_URL` activa). Sin las variables de Supabase los paneles siguen con token de desarrollo. Falta probarlo de punta a punta con un email real y cargar las Redirect URLs en Supabase.
 - ⬜ CI (lint, typecheck, tests y build en cada cambio).
-- ⬜ Fotos de productos y logos (requiere ADR de storage).
+- ✅ Fotos de productos, logo y portada: subida desde el panel, reprocesadas a WebP sin metadatos, disco local en desarrollo y Supabase Storage en producción ([ADR 0017](adr/0017-fotos-y-almacenamiento.md)). Falta crear el bucket en Supabase.
 - ⬜ Cierres excepcionales (feriados), invitar operadores al comercio, suspender comercio desde el admin.
 - ⬜ Asignar categoría global a productos desde el panel (la API ya lo soporta).
 

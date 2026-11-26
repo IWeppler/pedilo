@@ -16,7 +16,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { merchantCall } from "@/lib/api";
+import { merchantCall, merchantUpload } from "@/lib/api";
 
 /** Campo opcional que el usuario puede vaciar: ausente → no se toca; vacío → null. */
 function nullableText(formData: FormData, key: string): string | null | undefined {
@@ -149,6 +149,30 @@ export async function saveScheduling(
     return errorToFormState(err, values);
   }
   revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  return { saved: true };
+}
+
+// --- Logo y portada (ADR 0017) ---
+
+export async function uploadMerchantImage(merchantId: string, kind: "logo" | "cover", _prev: FormState, formData: FormData): Promise<FormState> {
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { message: "Elegí una imagen." };
+  try {
+    await merchantUpload(`/v1/merchants/${merchantId}/images/${kind}`, file);
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(`${home(merchantId)}/profile`);
+  return { saved: true };
+}
+
+export async function removeMerchantImage(merchantId: string, kind: "logo" | "cover"): Promise<FormState> {
+  try {
+    await merchantCall((api) => api.DELETE("/v1/merchants/{merchantId}/images/{kind}", { params: { path: { merchantId, kind } } }));
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(`${home(merchantId)}/profile`);
   return { saved: true };
 }
 

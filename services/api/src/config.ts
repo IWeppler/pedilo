@@ -39,6 +39,12 @@ const envSchema = z
     SETTLEMENT_DUE_DAYS: z.coerce.number().int().min(1).max(60).default(7),
     /** Cada cuántos minutos el worker intenta cerrar la semana. 0 lo apaga. */
     SETTLEMENT_SWEEP_MINUTES: z.coerce.number().int().min(0).max(1440).default(60),
+    /** Fotos (ADR 0017): disco local en desarrollo, Supabase Storage en producción. */
+    MEDIA_STORAGE: z.enum(["local", "supabase"]).default("local"),
+    MEDIA_LOCAL_DIR: z.string().default(".media"),
+    /** Clave secreta de Supabase (solo servidor) y bucket público para las fotos. */
+    SUPABASE_SECRET_KEY: z.string().min(20).optional(),
+    SUPABASE_STORAGE_BUCKET: z.string().min(1).default("media"),
     // 8081/8082: Expo en modo web durante el desarrollo.
     CORS_ORIGINS: z.string().default("http://localhost:3000,http://localhost:3001,http://localhost:8081,http://localhost:8082"),
   })
@@ -55,6 +61,12 @@ const envSchema = z
     }
     if (env.NODE_ENV === "production" && env.VAPID_PUBLIC_KEY && !env.VAPID_SUBJECT) {
       ctx.addIssue({ code: "custom", path: ["VAPID_SUBJECT"], message: "En producción VAPID_SUBJECT es obligatorio" });
+    }
+    if (env.MEDIA_STORAGE === "supabase" && (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY)) {
+      ctx.addIssue({ code: "custom", path: ["SUPABASE_SECRET_KEY"], message: "MEDIA_STORAGE=supabase necesita SUPABASE_URL y SUPABASE_SECRET_KEY" });
+    }
+    if (env.NODE_ENV === "production" && env.MEDIA_STORAGE === "local") {
+      ctx.addIssue({ code: "custom", path: ["MEDIA_STORAGE"], message: "En producción las fotos van a Supabase Storage (MEDIA_STORAGE=supabase)" });
     }
     if (env.NODE_ENV === "production" && !env.ORDER_TOKEN_SECRET) {
       ctx.addIssue({ code: "custom", path: ["ORDER_TOKEN_SECRET"], message: "En producción ORDER_TOKEN_SECRET es obligatorio" });
@@ -75,6 +87,7 @@ export interface Config {
   trustProxyHops: number;
   limits: OrderLimits;
   settlement: { timeZone: string; dueDays: number; sweepMs: number };
+  media: { driver: "local"; dir: string } | { driver: "supabase"; url: string; secretKey: string; bucket: string };
 }
 
 /** Límites anti-abuso de pedidos anónimos (ADR 0010). 0 = desactivado. */
@@ -123,6 +136,10 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       dueDays: env.SETTLEMENT_DUE_DAYS,
       sweepMs: env.SETTLEMENT_SWEEP_MINUTES * 60 * 1000,
     },
+    media:
+      env.MEDIA_STORAGE === "supabase"
+        ? { driver: "supabase", url: env.SUPABASE_URL!.replace(/\/+$/, ""), secretKey: env.SUPABASE_SECRET_KEY!, bucket: env.SUPABASE_STORAGE_BUCKET }
+        : { driver: "local", dir: env.MEDIA_LOCAL_DIR },
     corsOrigins: env.CORS_ORIGINS.split(",")
       .map((o) => o.trim())
       .filter(Boolean),

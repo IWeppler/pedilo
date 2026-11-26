@@ -57,3 +57,6 @@ ios/
 
 # claves locales de desarrollo de la API (ADR 0004)
 .dev-keys/
+
+# Fotos subidas en desarrollo (almacenamiento local, ADR 0017)
+.media/

@@ -41,6 +41,23 @@ export async function merchantCall<T>(call: Call<T>, opts: { notFoundOn404?: boo
   throw new Error("inalcanzable");
 }
 
+/**
+ * Subida de una foto (multipart) a la API, con la misma sesión que `merchantCall`. openapi-fetch
+ * no arma multipart, por eso va con fetch directo. Devuelve el JSON de la respuesta.
+ */
+export async function merchantUpload<T>(path: string, file: File): Promise<T> {
+  await connection();
+  const token = await getToken();
+  if (!token) redirect("/login");
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch(`${API_URL}${path}`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body });
+  if (res.status === 401) redirect("/login?reason=expired");
+  const json = (await res.json().catch(() => null)) as { error?: { code: string; message: string; details?: unknown } } | null;
+  if (!res.ok) throw new ApiError(res.status, json?.error?.code ?? "HTTP_ERROR", json?.error?.message ?? `HTTP ${res.status}`, json?.error?.details);
+  return json as T;
+}
+
 export async function getCurrentUser(): Promise<Me> {
   return merchantCall((api) => api.GET("/v1/me"));
 }

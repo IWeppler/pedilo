@@ -3,6 +3,7 @@ import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
 
 import type { Db, DbOrTx, Tx } from "../../db/client";
 import { AppError, badRequest, conflict, ErrorCode, notFound } from "../../lib/errors";
+import { media, mediaPath, mediaUrl, processImage } from "../../lib/media";
 import { type Actor, recordAudit } from "../audit/service";
 import { getCategory } from "../catalog/service";
 import { findApprovedMerchantBySlug, getMerchantAccess, type PublicMerchantDto } from "../merchants/service";
@@ -65,6 +66,8 @@ export interface ProductDto {
   available: boolean;
   active: boolean;
   sortOrder: number;
+  /** Foto del producto (ADR 0017). Relativa a la API en modo local. */
+  imageUrl: string | null;
   variants: VariantDto[];
   modifierGroups: ModifierGroupDto[];
   createdAt: string;
@@ -137,6 +140,7 @@ function assemble(
       available: p.available,
       active: p.active,
       sortOrder: p.sortOrder,
+      imageUrl: mediaUrl(p.imagePath),
       variants: vs,
       modifierGroups: gs,
       createdAt: p.createdAt.toISOString(),
@@ -545,6 +549,51 @@ export async function replaceProduct(
     await recordAudit(tx, actor, { action: "menu.product.update", entityType: "product", entityId: productId, before, after: dto });
     return dto;
   });
+}
+
+/**
+ * Foto del producto (ADR 0017): se procesa, se guarda con ruta nueva y se borra la anterior.
+ * `bytes = null` la quita. Borrar el archivo viejo es best-effort (después de confirmar en la base).
+ */
+export async function setProductImage(
+  db: Db,
+  merchantId: string,
+  productId: string,
+  bytes: Buffer | null,
+  actor: Actor,
+): Promise<ProductDto> {
+  const image = bytes ? await processImage(bytes, "product") : null;
+  const path = image ? mediaPath(merchantId, `product-${productId}`) : null;
+  if (image && path) await media.put(path, image, "image/webp");
+
+  let previous: string | null = null;
+  try {
+    const dto = await db.transaction(async (tx) => {
+      await editAccess(tx, merchantId, actor.userId);
+      const [current] = await tx
+        .select({ imagePath: products.imagePath })
+        .from(products)
+        .where(and(eq(products.id, productId), eq(products.merchantId, merchantId)))
+        .for("update");
+      if (!current) throw notFound("Producto");
+      previous = current.imagePath;
+      await tx.update(products).set({ imagePath: path }).where(eq(products.id, productId));
+      await recordAudit(tx, actor, {
+        action: path ? "menu.product.image" : "menu.product.image_remove",
+        entityType: "product",
+        entityId: productId,
+        before: { imagePath: previous },
+        after: { imagePath: path },
+      });
+      return loadProduct(tx, merchantId, productId);
+    });
+    if (previous && previous !== path) await media.remove(previous).catch(() => undefined);
+    return dto;
+  } catch (err) {
+    // No quedó asociada: no dejar el archivo huérfano.
+    if (path) await media.remove(path).catch(() => undefined);
+    throw err;
+  }
 }
 
 /** Pausar / reanudar rápido, sin reenviar el producto completo (US-203). */
