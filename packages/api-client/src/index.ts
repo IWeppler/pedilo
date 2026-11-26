@@ -105,6 +105,7 @@ export type MerchantBilling = JsonOf<paths["/v1/merchants/{merchantId}/billing"]
 export type PricingVersionDoc = MerchantBilling["pricing"];
 export type PlanCode = MerchantBilling["plan"]["code"];
 export type Settlement = MerchantBilling["settlements"][number];
+export type Claim = JsonOf<paths["/v1/merchants/{merchantId}/claims/{claimId}"]["get"]["responses"][200]>;
 export type SettlementStatus = Settlement["status"];
 export type SettlementDetail = JsonOf<paths["/v1/admin/settlements/{settlementId}"]["get"]["responses"][200]>;
 

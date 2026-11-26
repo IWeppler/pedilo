@@ -7,6 +7,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "@/components/icon";
+import { ClaimSection } from "@/components/claim-section";
 import { describeSlot } from "@/components/slot-picker";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { api, useOrder } from "@/lib/api";
@@ -280,6 +281,7 @@ export default function OrderScreen() {
             </Pressable>
           ))}
         {cancelError && <Text style={{ color: t.danger, textAlign: "center" }}>{cancelError}</Text>}
+        <ClaimSection orderId={o.id} token={token} orderStatus={o.status} />
         {final && <Button label="Hacer otro pedido" onPress={() => router.replace("/")} style={{ marginTop: space.sm }} />}
       </ScrollView>
     </SafeAreaView>

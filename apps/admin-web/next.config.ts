@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
     agentFeedback: true,
   },
   cacheComponents: true,
+  // Fotos en almacenamiento local (ADR 0017): se sirven reenviando a la API.
+  rewrites: async () => [
+    { source: "/media/:path*", destination: `${process.env.API_URL ?? "http://localhost:4000"}/media/:path*` },
+  ],
   partialPrefetching: true,
   turbopack: {
     rules: {

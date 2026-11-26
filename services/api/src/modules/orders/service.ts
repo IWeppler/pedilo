@@ -536,6 +536,72 @@ async function findByIdempotencyKey(db: DbOrTx, key: string): Promise<OrderDto |
 // Cliente (con token de seguimiento)
 // ---------------------------------------------------------------------------
 
+/** Lo que necesita un reclamo de su pedido (ADR 0019). */
+export interface OrderClaimSummary {
+  id: string;
+  code: string;
+  merchantId: string;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  subtotalMinor: number;
+  totalMinor: number;
+  /** Cuándo llegó a su estado final (null si sigue en curso). */
+  finishedAt: Date | null;
+  commission: {
+    pricingVersionId: string;
+    plan: string;
+    category: string;
+    basisMinor: number;
+    amountMinor: number;
+  } | null;
+}
+
+async function claimSummary(db: DbOrTx, row: OrderRow): Promise<OrderClaimSummary> {
+  const [last] = isOrderFinal(row.status)
+    ? await db
+        .select({ at: orderEvents.createdAt })
+        .from(orderEvents)
+        .where(and(eq(orderEvents.orderId, row.id), eq(orderEvents.toStatus, row.status)))
+        .orderBy(desc(orderEvents.createdAt))
+        .limit(1)
+    : [];
+  return {
+    id: row.id,
+    code: row.code,
+    merchantId: row.merchantId,
+    status: row.status,
+    paymentMethod: row.paymentMethod,
+    subtotalMinor: row.subtotalMinor,
+    totalMinor: row.totalMinor,
+    finishedAt: last?.at ?? null,
+    commission:
+      row.pricingVersionId && row.commissionPlan && row.commissionCategory && row.commissionBasisMinor !== null && row.commissionMinor !== null
+        ? {
+            pricingVersionId: row.pricingVersionId,
+            plan: row.commissionPlan,
+            category: row.commissionCategory,
+            basisMinor: row.commissionBasisMinor,
+            amountMinor: row.commissionMinor,
+          }
+        : null,
+  };
+}
+
+/** Resumen para reclamos, verificando el token de seguimiento del cliente. */
+export async function getOrderClaimSummaryForCustomer(db: DbOrTx, orderId: string, token: string | undefined, secret: string) {
+  assertTrackingToken(secret, orderId, token);
+  const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
+  if (!row) throw notFound("Pedido");
+  return claimSummary(db, row);
+}
+
+/** Resumen para reclamos, del lado del comercio o del admin (sin token). */
+export async function getOrderClaimSummary(db: DbOrTx, orderId: string) {
+  const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
+  if (!row) throw notFound("Pedido");
+  return claimSummary(db, row);
+}
+
 export async function getOrderForCustomer(db: Db, orderId: string, token: string | undefined, secret: string) {
   assertTrackingToken(secret, orderId, token);
   const [order, tracking] = await Promise.all([loadOrder(db, orderId), getCustomerDeliveryInfo(db, orderId)]);

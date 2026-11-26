@@ -223,6 +223,49 @@ export async function accrueOrderCommission(
 // Ajustes y estado de cuenta
 // ---------------------------------------------------------------------------
 
+/**
+ * Devolución acordada en un reclamo (SPEC §8.2.7): asiento compensatorio para que la comisión
+ * quede calculada sobre lo que finalmente se vendió. Solo si la comisión ya se había devengado.
+ * Se recalcula con la misma versión de pricing, plan y rubro del pedido (nunca con los vigentes).
+ */
+export async function adjustCommissionForRefund(
+  tx: DbOrTx,
+  order: {
+    id: string;
+    code: string;
+    merchantId: string;
+    commission: { pricingVersionId: string; plan: string; category: string; basisMinor: number; amountMinor: number } | null;
+  },
+  refundMinor: number,
+): Promise<number> {
+  const c = order.commission;
+  if (!c || refundMinor <= 0) return 0;
+  const [accrued] = await tx
+    .select({ id: commissionEntries.id })
+    .from(commissionEntries)
+    .where(and(eq(commissionEntries.orderId, order.id), eq(commissionEntries.kind, "ACCRUED")));
+  if (!accrued) return 0;
+  const [pricing] = await tx.select().from(pricingVersions).where(eq(pricingVersions.id, c.pricingVersionId));
+  if (!pricing) return 0;
+  const basis = Math.max(0, c.basisMinor - Math.min(refundMinor, c.basisMinor));
+  const recalculated = calculateCommission({
+    basisMinor: basis,
+    baseRateBps: pricing.plans[c.plan as PlanCode].baseRateBps,
+    category: c.category as MerchantCategory,
+    pricing: toPricingDto(pricing),
+  }).commissionMinor;
+  const delta = recalculated - c.amountMinor;
+  if (delta === 0) return 0;
+  await tx.insert(commissionEntries).values({
+    merchantId: order.merchantId,
+    orderId: order.id,
+    kind: "ADJUSTMENT",
+    amountMinor: delta,
+    description: `Devolución por reclamo ${order.code}`,
+  });
+  return delta;
+}
+
 /** Corrección manual del admin: asiento compensatorio con motivo (nunca se editan asientos). */
 export async function createAdjustment(
   db: Db,

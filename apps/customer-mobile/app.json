@@ -43,6 +43,14 @@
           "locationAlwaysPermission": false,
           "isAndroidBackgroundLocationEnabled": false
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pedilo usa tus fotos solo para adjuntarlas a un reclamo.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

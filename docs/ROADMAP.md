@@ -74,7 +74,8 @@ Falta:
 
 ## Fase 4 — Piloto Tostado (E8, E9, E10, E11)
 
-- ⬜ Chat por pedido y reclamos.
+- ✅ Reclamos: el comercio propone, el cliente acepta o no, Pedilo interviene si se escala o vence el plazo; devolución registrada con ajuste de comisión ([ADR 0019](adr/0019-reclamos.md)).
+- ⬜ Chat por pedido (SPEC §11.1).
 - ✅ Comisión por tramos aplicada a pedidos + simulador para el comercio (ADR 0012).
 - ⬜ Cupones básicos.
 - ⬜ Operación: monitoreo, backups probados, soporte → puerta **G4** (5–10 comercios piloto).

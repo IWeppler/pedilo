@@ -14113,6 +14113,2638 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/orders/{orderId}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Ver el reclamo del pedido */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            claim: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                orderId: string;
+                                orderCode: string;
+                                merchant: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                };
+                                /** @enum {string} */
+                                reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                                description: string;
+                                /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                                sensitive: boolean;
+                                /** @enum {string} */
+                                status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                                /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                                merchantDueAt: string;
+                                proposal: {
+                                    /** @enum {string} */
+                                    type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                    amountMinor: number | null;
+                                    note: string | null;
+                                    proposedAt: string;
+                                } | null;
+                                refundedMinor: number | null;
+                                resolutionNote: string | null;
+                                orderTotalMinor: number;
+                                /** @description URLs de las fotos (relativas a la API en modo local) */
+                                evidence: string[];
+                                events: {
+                                    /** @enum {string} */
+                                    actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                    kind: string;
+                                    body: string | null;
+                                    amountMinor: number | null;
+                                    createdAt: string;
+                                }[];
+                                createdAt: string;
+                                updatedAt: string;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Abrir un reclamo
+         * @description Hasta 48 h después de entregado o retirado; uno por pedido. `sensitive` (salud o seguridad) lo escala directo a Pedilo. 409 NOT_CLAIMABLE, CLAIM_WINDOW_CLOSED o CLAIM_EXISTS.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                        description: string;
+                        sensitive?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/orders/{orderId}/claim/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Agregar una foto al reclamo (hasta 3)
+         * @description Body `multipart/form-data` con la imagen en el campo `file` (JPG, PNG o WebP, hasta 8 MB, mínimo 200 × 200). Se reprocesa a WebP y se descartan los metadatos (ADR 0017).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/orders/{orderId}/claim/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aceptar o rechazar la propuesta del comercio */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        accept: boolean;
+                        comment?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/orders/{orderId}/claim/escalate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pedir que intervenga Pedilo */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        comment: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/orders/{orderId}/claim/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mensaje del cliente en el reclamo */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reclamos del comercio */
+        get: {
+            parameters: {
+                query?: {
+                    scope?: "open" | "all";
+                };
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/claims/{claimId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un reclamo */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/claims/{claimId}/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proponer una solución
+         * @description REFUND_FULL (total del pedido), REFUND_PARTIAL (con monto), RESEND, REPLACE o REJECT (con nota). Se puede volver a proponer si el cliente rechazó.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                        amountMinor?: number | null;
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/claims/{claimId}/refunded": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar que se hizo la devolución acordada
+         * @description Efectivo o transferencia. Resuelve el reclamo y corrige la comisión de Pedilo con un asiento compensatorio.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        note?: string | null;
+                    } | null;
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/claims/{claimId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mensaje del comercio */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/claims": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Reclamos (sensibles primero) */
+        get: {
+            parameters: {
+                query?: {
+                    status?: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/claims/{claimId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalle de un reclamo */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/claims/{claimId}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolver o cerrar un reclamo
+         * @description Con nota (la ven el cliente y el comercio). No mueve dinero.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        to: "RESOLVED" | "CLOSED";
+                        note: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/claims/{claimId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mensaje de Pedilo */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    claimId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            orderId: string;
+                            orderCode: string;
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            /** @enum {string} */
+                            reason: "MISSING_ITEM" | "WRONG_ITEM" | "QUALITY" | "DELAY" | "NOT_DELIVERED" | "WRONG_CHARGE";
+                            description: string;
+                            /** @description Salud o seguridad: lo gestiona Pedilo directamente */
+                            sensitive: boolean;
+                            /** @enum {string} */
+                            status: "OPEN" | "MERCHANT_REVIEW" | "AGREED_REFUND" | "PAYMENT_REFUND_PENDING" | "RESOLVED" | "DISPUTED" | "ESCALATED" | "CLOSED";
+                            /** @description Hasta cuándo el comercio puede proponer; después se escala solo */
+                            merchantDueAt: string;
+                            proposal: {
+                                /** @enum {string} */
+                                type: "REFUND_FULL" | "REFUND_PARTIAL" | "RESEND" | "REPLACE" | "REJECT";
+                                amountMinor: number | null;
+                                note: string | null;
+                                proposedAt: string;
+                            } | null;
+                            refundedMinor: number | null;
+                            resolutionNote: string | null;
+                            orderTotalMinor: number;
+                            /** @description URLs de las fotos (relativas a la API en modo local) */
+                            evidence: string[];
+                            events: {
+                                /** @enum {string} */
+                                actor: "CUSTOMER" | "MERCHANT" | "ADMIN" | "SYSTEM";
+                                kind: string;
+                                body: string | null;
+                                amountMinor: number | null;
+                                createdAt: string;
+                            }[];
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/push/public-key": {
         parameters: {
             query?: never;

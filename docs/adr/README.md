@@ -22,6 +22,7 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0016](0016-pin-de-entrega-y-cuenta-con-repartidores.md) | PIN de entrega y cuenta comercio ↔ repartidor | Aceptada |
 | [0017](0017-fotos-y-almacenamiento.md) | Fotos y almacenamiento de imágenes | Aceptada |
 | [0018](0018-cierres-excepcionales.md) | Cierres excepcionales (feriados y vacaciones) | Aceptada |
+| [0019](0019-reclamos.md) | Reclamos | Aceptada |
 
 Pendientes (SPEC §17): realtime (SSE), hosting de `services/api`, storage de imágenes.
 

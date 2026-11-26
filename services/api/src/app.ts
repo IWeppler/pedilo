@@ -25,6 +25,7 @@ import multipart from "@fastify/multipart";
 import { configureMedia, createLocalStorage, createSupabaseStorage, MAX_UPLOAD_BYTES, media } from "./lib/media";
 import { billingRoutes } from "./modules/billing/routes";
 import { catalogRoutes } from "./modules/catalog/routes";
+import { claimRoutes } from "./modules/claims/routes";
 import { deliveryRoutes } from "./modules/deliveries/routes";
 import { onDeliveryStatusChange } from "./modules/deliveries/service";
 import { applyDeliveryEvent } from "./modules/orders/service";
@@ -155,6 +156,7 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
     acceptTimeoutMs: config.orders?.acceptTimeoutMs,
     limits: config.limits,
   });
+  await app.register(claimRoutes, { prefix: "/v1", db, orderTokenSecret: config.orderTokenSecret });
   await app.register(notificationRoutes, { prefix: "/v1", db, vapidPublicKey: config.push?.vapid?.publicKey ?? null });
 
   return app;

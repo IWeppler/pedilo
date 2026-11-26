@@ -6,6 +6,7 @@ import { startIntervalWorker } from "./lib/interval-worker";
 import { processOutbox } from "./modules/notifications/service";
 import { createWebPushSender } from "./modules/notifications/web-push-sender";
 import { closeSettlementWeek } from "./modules/billing/settlements";
+import { escalateOverdueClaims } from "./modules/claims/service";
 import { expireOffers } from "./modules/deliveries/service";
 import { expireOverdueOrders } from "./modules/orders/service";
 
@@ -25,6 +26,8 @@ const workers = [
   startIntervalWorker({ name: "order-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOverdueOrders(db) }),
   startIntervalWorker({ name: "push-outbox", intervalMs: config.push.outboxSweepMs, log: app.log, run: () => processOutbox(db, pushSender) }),
   startIntervalWorker({ name: "offer-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOffers(db) }),
+  // Reclamos sin respuesta del comercio a tiempo → Pedilo (ADR 0019).
+  startIntervalWorker({ name: "claim-escalation", intervalMs: 5 * 60 * 1000, log: app.log, run: () => escalateOverdueClaims(db) }),
   // Liquidación semanal (ADR 0013): idempotente, así que alcanza con intentarlo cada tanto.
   startIntervalWorker({
     name: "settlement-close",
