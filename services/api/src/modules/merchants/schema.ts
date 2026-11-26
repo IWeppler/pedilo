@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   index,
   integer,
@@ -159,6 +160,29 @@ export const businessHours = pgTable(
 );
 
 /**
+ * Cierres excepcionales (SPEC §15 special_hours, ADR 0018): días completos de cierre en la fecha
+ * local de la sucursal (feriados, vacaciones). Ganan al horario semanal.
+ */
+export const branchClosures = pgTable(
+  "branch_closures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    branchId: uuid("branch_id")
+      .notNull()
+      .references(() => branches.id, { onDelete: "cascade" }),
+    startsOn: date("starts_on", { mode: "string" }).notNull(),
+    endsOn: date("ends_on", { mode: "string" }).notNull(),
+    /** Lo ve el cliente ("Feriado", "Vacaciones"). */
+    reason: text("reason").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("branch_closures_branch_idx").on(t.branchId, t.endsOn),
+    check("branch_closures_range_check", sql`${t.endsOn} >= ${t.startsOn}`),
+  ],
+);
+
+/**
  * Zonas de envío simples: nombre + descripción (barrios incluidos), tarifa fija y pedido mínimo.
  * Polígonos/radios quedan como decisión abierta (SPEC §17).
  */
@@ -186,3 +210,4 @@ export type MerchantRow = typeof merchants.$inferSelect;
 export type BranchRow = typeof branches.$inferSelect;
 export type BusinessHoursRow = typeof businessHours.$inferSelect;
 export type DeliveryZoneRow = typeof deliveryZones.$inferSelect;
+export type BranchClosureRow = typeof branchClosures.$inferSelect;

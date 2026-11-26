@@ -10,6 +10,8 @@ import { authOf, requireAdmin, requireAuth } from "../identity/auth-plugin";
 import {
   approveMerchant,
   createBranch,
+  createBranchClosure,
+  deleteBranchClosure,
   createZone,
   getMerchantForAdmin,
   getMerchantForMember,
@@ -100,6 +102,9 @@ const branchSchema = z.object({
   scheduling: schedulingSchema,
   hours: z.array(openingRangeSchema),
   zones: z.array(zoneSchema),
+  closures: z
+    .array(z.object({ id: z.uuid(), startsOn: z.string(), endsOn: z.string(), reason: z.string() }))
+    .describe("Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"),
 });
 
 const onboardingSchema = z.object({
@@ -350,6 +355,46 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
     },
     (request) =>
       updateBranch(db, request.params.merchantId, request.params.branchId, request.body, actorOf(request)),
+  );
+
+  app.post(
+    "/merchants/:merchantId/branches/:branchId/closures",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["merchants"],
+        summary: "Agregar un cierre excepcional (feriado, vacaciones)",
+        description: "Días completos, inclusive, en la fecha local de la sucursal. Hasta 60 días; no en el pasado.",
+        security,
+        params: branchParams,
+        body: z.object({
+          startsOn: z.iso.date().describe("YYYY-MM-DD"),
+          endsOn: z.iso.date().describe("YYYY-MM-DD, igual o posterior"),
+          reason: z.string().trim().min(2).max(80).describe("Lo ve el cliente: «Feriado», «Vacaciones»"),
+        }),
+        response: { 201: branchSchema, ...errorResponses },
+      },
+    },
+    async (request, reply) =>
+      reply
+        .code(201)
+        .send(await createBranchClosure(db, request.params.merchantId, request.params.branchId, request.body, actorOf(request))),
+  );
+
+  app.delete(
+    "/merchants/:merchantId/branches/:branchId/closures/:closureId",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["merchants"],
+        summary: "Quitar un cierre excepcional",
+        security,
+        params: branchParams.extend({ closureId: z.uuid() }),
+        response: { 200: branchSchema, ...errorResponses },
+      },
+    },
+    (request) =>
+      deleteBranchClosure(db, request.params.merchantId, request.params.branchId, request.params.closureId, actorOf(request)),
   );
 
   app.put(

@@ -318,7 +318,7 @@ export async function createOrder(
     }
     if (
       Number.isNaN(scheduledFor.getTime()) ||
-      !isSchedulableSlot(branchRanges(branch), branch.timezone, now, branch.scheduling, scheduledFor)
+      !isSchedulableSlot(branchRanges(branch), branch.timezone, now, { ...branch.scheduling, closures: branch.closures }, scheduledFor)
     ) {
       throw conflict("Ese horario ya no está disponible. Elegí otro.", { reason: "SLOT_UNAVAILABLE" });
     }
@@ -825,7 +825,7 @@ export async function listBranchSlots(db: Db, slug: string, branchId: string, no
   if (!branch) throw notFound("Sucursal");
   if (!branch.scheduling.enabled) return { timezone: branch.timezone, slots: [] };
 
-  const slots = scheduleSlots(branchRanges(branch), branch.timezone, now, branch.scheduling);
+  const slots = scheduleSlots(branchRanges(branch), branch.timezone, now, { ...branch.scheduling, closures: branch.closures });
   const capacity = branch.scheduling.slotCapacity;
   const taken = new Map<number, number>();
   if (capacity !== null && slots.length > 0) {

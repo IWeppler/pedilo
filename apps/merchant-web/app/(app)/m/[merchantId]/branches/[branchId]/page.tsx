@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import { BranchForm } from "@/components/branch-form";
+import { ClosuresEditor } from "@/components/closures-editor";
 import { HoursEditor } from "@/components/hours-editor";
 import { PageHeader } from "@/components/page-header";
 import { SchedulingForm } from "@/components/scheduling-form";
@@ -13,7 +14,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getMyMerchant, getReferenceData, operationsLocked } from "@/lib/api";
 
-import { saveHours, saveScheduling, updateBranch } from "../../actions";
+import { addClosure, removeClosure, saveHours, saveScheduling, updateBranch } from "../../actions";
 
 type Props = PageProps<"/m/[merchantId]/branches/[branchId]">;
 
@@ -61,6 +62,21 @@ async function BranchDetail({ params }: { params: Props["params"] }) {
           <HoursEditor
             action={saveHours.bind(null, merchant.id, branch.id)}
             hours={branch.hours}
+            disabled={locked !== null}
+          />
+        </CardContent>
+      </Card>
+
+      <Card id="cierres">
+        <CardHeader>
+          <CardTitle>Cierres excepcionales</CardTitle>
+          <CardDescription>Feriados, vacaciones o días que no abrís: ganan al horario semanal y no se toman pedidos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ClosuresEditor
+            closures={branch.closures}
+            add={addClosure.bind(null, merchant.id, branch.id)}
+            remove={removeClosure.bind(null, merchant.id, branch.id)}
             disabled={locked !== null}
           />
         </CardContent>

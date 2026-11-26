@@ -127,6 +127,8 @@ export interface SchedulingRules {
   leadMinutes: number;
   /** Hasta cuántos días adelante se puede programar. */
   maxDays: number;
+  /** Cierres excepcionales: esos días no hay franjas. */
+  closures?: readonly ClosurePeriod[];
 }
 
 /**
@@ -150,7 +152,11 @@ export function scheduleSlots(
   for (let t = first; t <= last; t += SLOT_MINUTES * minuteMs) {
     const start = localWeekdayMinute(new Date(t), timeZone);
     const end = localWeekdayMinute(new Date(t + (SLOT_MINUTES - 1) * minuteMs), timeZone);
-    if (isOpenAt(ranges, start.weekday, start.minute) && isOpenAt(ranges, end.weekday, end.minute)) {
+    const closed =
+      rules.closures?.length &&
+      (closureOn(rules.closures, localDateKey(new Date(t), timeZone)) ||
+        closureOn(rules.closures, localDateKey(new Date(t + (SLOT_MINUTES - 1) * minuteMs), timeZone)));
+    if (!closed && isOpenAt(ranges, start.weekday, start.minute) && isOpenAt(ranges, end.weekday, end.minute)) {
       slots.push(new Date(t));
     }
   }
@@ -166,4 +172,68 @@ export function isSchedulableSlot(
   slot: Date,
 ): boolean {
   return scheduleSlots(ranges, timeZone, now, rules).some((s) => s.getTime() === slot.getTime());
+}
+
+// ---------------------------------------------------------------------------
+// Cierres excepcionales (SPEC §15 special_hours, ADR 0018)
+// ---------------------------------------------------------------------------
+
+/** Días completos de cierre (feriados, vacaciones), en la fecha LOCAL de la sucursal. Inclusive. */
+export interface ClosurePeriod {
+  /** "YYYY-MM-DD" */
+  startsOn: string;
+  /** "YYYY-MM-DD", igual o posterior a startsOn. */
+  endsOn: string;
+}
+
+/** Máximo de días de un cierre (para no cerrar un comercio "para siempre" por error). */
+export const MAX_CLOSURE_DAYS = 60;
+
+const dateKeyFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** Fecha local "YYYY-MM-DD" de un instante en una zona horaria IANA. */
+export function localDateKey(date: Date, timeZone: string): string {
+  let format = dateKeyFormats.get(timeZone);
+  if (!format) {
+    format = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    dateKeyFormats.set(timeZone, format);
+  }
+  return format.format(date);
+}
+
+/** El cierre que cubre esa fecha local, si hay. Las fechas "YYYY-MM-DD" se comparan como texto. */
+export function closureOn<C extends ClosurePeriod>(closures: readonly C[], dateKey: string): C | undefined {
+  return closures.find((c) => c.startsOn <= dateKey && dateKey <= c.endsOn);
+}
+
+/** ¿Está abierta en este instante, contando el horario semanal y los cierres excepcionales? */
+export function isOpenAtInstant(
+  ranges: readonly OpeningRange[],
+  closures: readonly ClosurePeriod[],
+  timeZone: string,
+  date: Date,
+): boolean {
+  if (closureOn(closures, localDateKey(date, timeZone))) return false;
+  const { weekday, minute } = localWeekdayMinute(date, timeZone);
+  return isOpenAt(ranges, weekday, minute);
+}
+
+export const ClosureError = {
+  INVALID_DATE: "INVALID_DATE",
+  ENDS_BEFORE_START: "ENDS_BEFORE_START",
+  TOO_LONG: "TOO_LONG",
+  IN_THE_PAST: "IN_THE_PAST",
+} as const;
+export type ClosureError = (typeof ClosureError)[keyof typeof ClosureError];
+
+/** Valida un cierre nuevo respecto de "hoy" (fecha local). */
+export function validateClosure(c: ClosurePeriod, todayKey: string): ClosureError | null {
+  const re = /^\d{4}-\d{2}-\d{2}$/;
+  const valid = (s: string) => re.test(s) && !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && new Date(`${s}T00:00:00Z`).toISOString().startsWith(s);
+  if (!valid(c.startsOn) || !valid(c.endsOn)) return ClosureError.INVALID_DATE;
+  if (c.endsOn < c.startsOn) return ClosureError.ENDS_BEFORE_START;
+  if (c.endsOn < todayKey) return ClosureError.IN_THE_PAST;
+  const days = (Date.parse(`${c.endsOn}T00:00:00Z`) - Date.parse(`${c.startsOn}T00:00:00Z`)) / 86_400_000 + 1;
+  if (days > MAX_CLOSURE_DAYS) return ClosureError.TOO_LONG;
+  return null;
 }

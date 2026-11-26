@@ -150,7 +150,12 @@ export default function MerchantScreen() {
             <View style={[styles.info, cardShadow(t), { backgroundColor: t.card }]}>
               <Text style={[styles.title, { color: t.text }]}>{merchant.displayName}</Text>
               <View style={styles.badges}>
-                {branch && <Badge label={branch.openNow ? "Abierto ahora" : "Cerrado ahora"} tone={branch.openNow ? "success" : "neutral"} />}
+                {branch && (
+                  <Badge
+                    label={branch.openNow ? "Abierto ahora" : branch.closedToday ? `Cerrado hoy · ${branch.closedToday.reason}` : "Cerrado ahora"}
+                    tone={branch.openNow ? "success" : branch.closedToday ? "danger" : "neutral"}
+                  />
+                )}
                 {category && <Text style={[styles.meta, { color: t.muted }]}>{category.name}</Text>}
               </View>
               {branch && (

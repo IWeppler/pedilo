@@ -201,6 +201,38 @@ export async function savePaymentSettings(merchantId: string, _prev: FormState, 
   return { saved: true };
 }
 
+// --- Cierres excepcionales (ADR 0018) ---
+
+export async function addClosure(merchantId: string, branchId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const values = formValues(formData);
+  try {
+    await merchantCall((api) =>
+      api.POST("/v1/merchants/{merchantId}/branches/{branchId}/closures", {
+        params: { path: { merchantId, branchId } },
+        body: { startsOn: text(formData, "startsOn"), endsOn: text(formData, "endsOn"), reason: text(formData, "reason") },
+      }),
+    );
+  } catch (err) {
+    return errorToFormState(err, values);
+  }
+  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  return { saved: true };
+}
+
+export async function removeClosure(merchantId: string, branchId: string, closureId: string): Promise<FormState> {
+  try {
+    await merchantCall((api) =>
+      api.DELETE("/v1/merchants/{merchantId}/branches/{branchId}/closures/{closureId}", {
+        params: { path: { merchantId, branchId, closureId } },
+      }),
+    );
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  return { saved: true };
+}
+
 // --- Horarios ---
 
 const SCHEDULE_ERRORS: Record<string, string> = {

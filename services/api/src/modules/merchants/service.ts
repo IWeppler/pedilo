@@ -1,7 +1,9 @@
 import {
   canEditFullProfile,
-  isOpenAt,
-  localWeekdayMinute,
+  closureOn,
+  isOpenAtInstant,
+  localDateKey,
+  validateClosure,
   formatTime,
   merchantStateMachine,
   MerchantRole,
@@ -13,7 +15,7 @@ import {
   parseTime,
   validateSchedule,
 } from "@pedilo/domain";
-import { and, asc, desc, eq, inArray, like, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, like, or, type SQL } from "drizzle-orm";
 
 import type { Db, DbOrTx } from "../../db/client";
 import { AppError, badRequest, conflict, ErrorCode, forbidden, notFound } from "../../lib/errors";
@@ -24,6 +26,8 @@ import { getCategory } from "../catalog/service";
 import { findActiveCityBySlug, getCity } from "../geography/service";
 import { getUserSummaries } from "../identity/service";
 import {
+  branchClosures,
+  type BranchClosureRow,
   branches,
   type BranchRow,
   businessHours,
@@ -107,6 +111,15 @@ export interface BranchDto {
   scheduling: SchedulingDto;
   hours: OpeningRangeDto[];
   zones: DeliveryZoneDto[];
+  /** Cierres excepcionales vigentes o futuros (ADR 0018). */
+  closures: BranchClosureDto[];
+}
+
+export interface BranchClosureDto {
+  id: string;
+  startsOn: string;
+  endsOn: string;
+  reason: string;
 }
 
 export interface MerchantDetailDto extends MerchantDto {
@@ -169,7 +182,7 @@ function toZoneDto(z: DeliveryZoneRow): DeliveryZoneDto {
   };
 }
 
-function toBranchDto(b: BranchRow, hours: BusinessHoursRow[], zones: DeliveryZoneRow[]): BranchDto {
+function toBranchDto(b: BranchRow, hours: BusinessHoursRow[], zones: DeliveryZoneRow[], closures: BranchClosureRow[] = []): BranchDto {
   return {
     id: b.id,
     name: b.name,
@@ -197,6 +210,9 @@ function toBranchDto(b: BranchRow, hours: BusinessHoursRow[], zones: DeliveryZon
       .filter((z) => z.branchId === b.id)
       .sort((a, c) => a.name.localeCompare(c.name))
       .map(toZoneDto),
+    closures: closures
+      .filter((c) => c.branchId === b.id)
+      .map((c) => ({ id: c.id, startsOn: c.startsOn, endsOn: c.endsOn, reason: c.reason })),
   };
 }
 
@@ -354,14 +370,15 @@ async function loadDetail(db: DbOrTx, merchant: MerchantRow): Promise<MerchantDe
     .where(eq(branches.merchantId, merchant.id))
     .orderBy(asc(branches.createdAt));
   const ids = branchRows.map((b) => b.id);
-  const [hours, zones] = ids.length
+  const [hours, zones, closures] = ids.length
     ? await Promise.all([
         db.select().from(businessHours).where(inArray(businessHours.branchId, ids)),
         db.select().from(deliveryZones).where(inArray(deliveryZones.branchId, ids)),
+        currentClosures(db, ids),
       ])
-    : [[], []];
+    : [[], [], []];
 
-  const branchDtos = branchRows.map((b) => toBranchDto(b, hours, zones));
+  const branchDtos = branchRows.map((b) => toBranchDto(b, hours, zones, closures));
   const problems = onboardingProblems(
     branchDtos.map((b) => ({
       id: b.id,
@@ -660,11 +677,76 @@ function schedulingColumns(s: Partial<SchedulingDto> | undefined) {
 }
 
 async function branchDto(db: DbOrTx, row: BranchRow): Promise<BranchDto> {
-  const [hours, zones] = await Promise.all([
+  const [hours, zones, closures] = await Promise.all([
     db.select().from(businessHours).where(eq(businessHours.branchId, row.id)),
     db.select().from(deliveryZones).where(eq(deliveryZones.branchId, row.id)),
+    currentClosures(db, [row.id]),
   ]);
-  return toBranchDto(row, hours, zones);
+  return toBranchDto(row, hours, zones, closures);
+}
+
+/**
+ * Cierres que todavía no terminaron. Con un día de margen sobre la fecha UTC: la fecha local de
+ * la sucursal puede ir atrás de la UTC; los ya terminados se descartan al usarlos.
+ */
+function currentClosures(db: DbOrTx, branchIds: string[]) {
+  const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+  return db
+    .select()
+    .from(branchClosures)
+    .where(and(inArray(branchClosures.branchId, branchIds), gte(branchClosures.endsOn, yesterday)))
+    .orderBy(asc(branchClosures.startsOn));
+}
+
+const CLOSURE_ERRORS: Record<string, string> = {
+  INVALID_DATE: "Fecha inválida",
+  ENDS_BEFORE_START: "La fecha de fin es anterior a la de inicio",
+  IN_THE_PAST: "Ese cierre ya pasó",
+  TOO_LONG: "Un cierre puede durar hasta 60 días",
+};
+
+/** Cierre excepcional de una sucursal (feriado, vacaciones). Fechas en la zona de la sucursal. */
+export async function createBranchClosure(
+  db: Db,
+  merchantId: string,
+  branchId: string,
+  input: { startsOn: string; endsOn: string; reason: string },
+  actor: Actor,
+): Promise<BranchDto> {
+  return db.transaction(async (tx) => {
+    const { merchant } = await loadOwnership(tx, merchantId, actor.userId);
+    assertOperationsEditable(merchant.status);
+    const branch = await loadBranchOf(tx, merchantId, branchId);
+    const problem = validateClosure(input, localDateKey(new Date(), branch.timezone));
+    if (problem) throw badRequest(CLOSURE_ERRORS[problem] ?? problem, { field: problem === "ENDS_BEFORE_START" ? "endsOn" : "startsOn", reason: problem });
+    const [row] = await tx
+      .insert(branchClosures)
+      .values({ branchId, startsOn: input.startsOn, endsOn: input.endsOn, reason: input.reason.trim() })
+      .returning();
+    await recordAudit(tx, actor, { action: "branch.closure.create", entityType: "branch", entityId: branchId, after: row });
+    return branchDto(tx, branch);
+  });
+}
+
+export async function deleteBranchClosure(
+  db: Db,
+  merchantId: string,
+  branchId: string,
+  closureId: string,
+  actor: Actor,
+): Promise<BranchDto> {
+  return db.transaction(async (tx) => {
+    const { merchant } = await loadOwnership(tx, merchantId, actor.userId);
+    assertOperationsEditable(merchant.status);
+    const branch = await loadBranchOf(tx, merchantId, branchId);
+    const [row] = await tx
+      .delete(branchClosures)
+      .where(and(eq(branchClosures.id, closureId), eq(branchClosures.branchId, branchId)))
+      .returning();
+    if (!row) throw notFound("Cierre");
+    await recordAudit(tx, actor, { action: "branch.closure.delete", entityType: "branch", entityId: branchId, before: row });
+    return branchDto(tx, branch);
+  });
 }
 
 export async function updateBranch(
@@ -879,8 +961,12 @@ export interface PublicBranchDto {
   acceptsDelivery: boolean;
   timezone: string;
   hours: OpeningRangeDto[];
-  /** Abierta en este momento, según su horario y su zona horaria. */
+  /** Abierta en este momento, según su horario, sus cierres y su zona horaria. */
   openNow: boolean;
+  /** Cerrada hoy por un cierre excepcional (feriado, vacaciones). */
+  closedToday: { reason: string; endsOn: string } | null;
+  /** Cierres vigentes o próximos (para programar pedidos). */
+  closures: Array<{ startsOn: string; endsOn: string; reason: string }>;
   /** Pedidos programados. Las franjas disponibles salen de GET .../slots. */
   scheduling: SchedulingDto;
   zones: Array<Pick<DeliveryZoneDto, "id" | "name" | "description" | "feeMinor" | "minOrderMinor">>;
@@ -899,13 +985,17 @@ export interface PublicMerchantDto {
 }
 
 function branchOpenAt(b: BranchDto, now: Date): boolean {
-  const { weekday, minute } = localWeekdayMinute(now, b.timezone);
   const ranges = b.hours.map((h) => ({
     weekday: h.weekday,
     opensAt: parseTime(h.opensAt) ?? 0,
     closesAt: parseTime(h.closesAt) ?? 0,
   }));
-  return isOpenAt(ranges, weekday, minute);
+  return isOpenAtInstant(ranges, b.closures, b.timezone, now);
+}
+
+function closedToday(b: BranchDto, now: Date): { reason: string; endsOn: string } | null {
+  const c = closureOn(b.closures, localDateKey(now, b.timezone));
+  return c ? { reason: c.reason, endsOn: c.endsOn } : null;
 }
 
 function toPublicBranch(b: BranchDto, now: Date): PublicBranchDto {
@@ -920,6 +1010,8 @@ function toPublicBranch(b: BranchDto, now: Date): PublicBranchDto {
     timezone: b.timezone,
     hours: b.hours,
     openNow: branchOpenAt(b, now),
+    closedToday: closedToday(b, now),
+    closures: b.closures.filter((c) => c.endsOn >= localDateKey(now, b.timezone)).map(({ startsOn, endsOn, reason }) => ({ startsOn, endsOn, reason })),
     scheduling: b.scheduling,
     zones: b.zones
       .filter((z) => z.active)

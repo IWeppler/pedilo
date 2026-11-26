@@ -1302,6 +1302,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -1597,6 +1605,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -1818,6 +1834,14 @@ export interface paths {
                                     /** @description Pedido mínimo en centavos */
                                     minOrderMinor: number;
                                     active: boolean;
+                                }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
                                 }[];
                             }[];
                             onboarding: {
@@ -2042,6 +2066,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -2257,6 +2289,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -2454,6 +2494,14 @@ export interface paths {
                                     /** @description Pedido mínimo en centavos */
                                     minOrderMinor: number;
                                     active: boolean;
+                                }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
                                 }[];
                             }[];
                             onboarding: {
@@ -2668,6 +2716,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -2875,6 +2931,14 @@ export interface paths {
                                 minOrderMinor: number;
                                 active: boolean;
                             }[];
+                            /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                            closures: {
+                                /** Format: uuid */
+                                id: string;
+                                startsOn: string;
+                                endsOn: string;
+                                reason: string;
+                            }[];
                         };
                     };
                 };
@@ -3077,6 +3141,14 @@ export interface paths {
                                 minOrderMinor: number;
                                 active: boolean;
                             }[];
+                            /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                            closures: {
+                                /** Format: uuid */
+                                id: string;
+                                startsOn: string;
+                                endsOn: string;
+                                reason: string;
+                            }[];
                         };
                     };
                 };
@@ -3174,6 +3246,387 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/merchants/{merchantId}/branches/{branchId}/closures": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agregar un cierre excepcional (feriado, vacaciones)
+         * @description Días completos, inclusive, en la fecha local de la sucursal. Hasta 60 días; no en el pasado.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    branchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: date
+                         * @description YYYY-MM-DD
+                         */
+                        startsOn: string;
+                        /**
+                         * Format: date
+                         * @description YYYY-MM-DD, igual o posterior
+                         */
+                        endsOn: string;
+                        /** @description Lo ve el cliente: «Feriado», «Vacaciones» */
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            cityId: string;
+                            addressLine: string;
+                            addressNotes: string | null;
+                            lat: number | null;
+                            lng: number | null;
+                            phone: string | null;
+                            timezone: string;
+                            acceptsPickup: boolean;
+                            acceptsDelivery: boolean;
+                            active: boolean;
+                            scheduling: {
+                                /** @description Acepta pedidos programados */
+                                enabled: boolean;
+                                /** @description Anticipación mínima en minutos */
+                                leadMinutes: number;
+                                /** @description Hasta cuántos días adelante */
+                                maxDays: number;
+                                /** @description Pedidos por franja de 30 min; null = sin límite */
+                                slotCapacity: number | null;
+                            };
+                            hours: {
+                                /** @description 0 = domingo … 6 = sábado */
+                                weekday: number;
+                                opensAt: string;
+                                /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                closesAt: string;
+                            }[];
+                            zones: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                description: string | null;
+                                /** @description Tarifa de envío en centavos */
+                                feeMinor: number;
+                                /** @description Pedido mínimo en centavos */
+                                minOrderMinor: number;
+                                active: boolean;
+                            }[];
+                            /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                            closures: {
+                                /** Format: uuid */
+                                id: string;
+                                startsOn: string;
+                                endsOn: string;
+                                reason: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/branches/{branchId}/closures/{closureId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Quitar un cierre excepcional */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    branchId: string;
+                    closureId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            name: string;
+                            /** Format: uuid */
+                            cityId: string;
+                            addressLine: string;
+                            addressNotes: string | null;
+                            lat: number | null;
+                            lng: number | null;
+                            phone: string | null;
+                            timezone: string;
+                            acceptsPickup: boolean;
+                            acceptsDelivery: boolean;
+                            active: boolean;
+                            scheduling: {
+                                /** @description Acepta pedidos programados */
+                                enabled: boolean;
+                                /** @description Anticipación mínima en minutos */
+                                leadMinutes: number;
+                                /** @description Hasta cuántos días adelante */
+                                maxDays: number;
+                                /** @description Pedidos por franja de 30 min; null = sin límite */
+                                slotCapacity: number | null;
+                            };
+                            hours: {
+                                /** @description 0 = domingo … 6 = sábado */
+                                weekday: number;
+                                opensAt: string;
+                                /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                closesAt: string;
+                            }[];
+                            zones: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                description: string | null;
+                                /** @description Tarifa de envío en centavos */
+                                feeMinor: number;
+                                /** @description Pedido mínimo en centavos */
+                                minOrderMinor: number;
+                                active: boolean;
+                            }[];
+                            /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                            closures: {
+                                /** Format: uuid */
+                                id: string;
+                                startsOn: string;
+                                endsOn: string;
+                                reason: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/merchants/{merchantId}/branches/{branchId}/hours": {
         parameters: {
             query?: never;
@@ -3255,6 +3708,14 @@ export interface paths {
                                 /** @description Pedido mínimo en centavos */
                                 minOrderMinor: number;
                                 active: boolean;
+                            }[];
+                            /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                            closures: {
+                                /** Format: uuid */
+                                id: string;
+                                startsOn: string;
+                                endsOn: string;
+                                reason: string;
                             }[];
                         };
                     };
@@ -3937,6 +4398,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -4155,6 +4624,14 @@ export interface paths {
                                     /** @description Pedido mínimo en centavos */
                                     minOrderMinor: number;
                                     active: boolean;
+                                }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
                                 }[];
                             }[];
                             onboarding: {
@@ -4382,6 +4859,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -4598,6 +5083,14 @@ export interface paths {
                                     /** @description Pedido mínimo en centavos */
                                     minOrderMinor: number;
                                     active: boolean;
+                                }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
                                 }[];
                             }[];
                             onboarding: {
@@ -4822,6 +5315,14 @@ export interface paths {
                                     minOrderMinor: number;
                                     active: boolean;
                                 }[];
+                                /** @description Cierres excepcionales vigentes o futuros (fecha local de la sucursal) */
+                                closures: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    startsOn: string;
+                                    endsOn: string;
+                                    reason: string;
+                                }[];
                             }[];
                             onboarding: {
                                 ready: boolean;
@@ -4998,8 +5499,18 @@ export interface paths {
                                         opensAt: string;
                                         closesAt: string;
                                     }[];
-                                    /** @description Abierta ahora según su horario y zona horaria */
+                                    /** @description Abierta ahora según su horario, sus cierres y su zona horaria */
                                     openNow: boolean;
+                                    /** @description Cerrada hoy por feriado o vacaciones */
+                                    closedToday: {
+                                        reason: string;
+                                        endsOn: string;
+                                    } | null;
+                                    closures: {
+                                        startsOn: string;
+                                        endsOn: string;
+                                        reason: string;
+                                    }[];
                                     /** @description Pedidos programados; las franjas libres salen de GET /public/merchants/{slug}/branches/{branchId}/slots */
                                     scheduling: {
                                         enabled: boolean;

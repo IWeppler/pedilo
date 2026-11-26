@@ -40,7 +40,8 @@ Falta:
 - 🟡 Supabase Auth en los paneles de comercio y admin: login con link al email (PKCE), sesión refrescada en `proxy.ts`, API verificando tokens por JWKS (`SUPABASE_URL` activa). Sin las variables de Supabase los paneles siguen con token de desarrollo. Falta probarlo de punta a punta con un email real y cargar las Redirect URLs en Supabase.
 - ✅ CI en GitHub Actions (`.github/workflows/ci.yml`): typecheck, lint, contrato de la API al día, tests y build de los paneles en cada push a main y cada PR.
 - ✅ Fotos de productos, logo y portada: subida desde el panel, reprocesadas a WebP sin metadatos, disco local en desarrollo y Supabase Storage en producción ([ADR 0017](adr/0017-fotos-y-almacenamiento.md)). Falta crear el bucket en Supabase.
-- ⬜ Cierres excepcionales (feriados), invitar operadores al comercio, suspender comercio desde el admin.
+- ✅ Cierres excepcionales por sucursal: feriados y vacaciones ([ADR 0018](adr/0018-cierres-excepcionales.md)). ✅ Suspender y reactivar comercios desde el admin.
+- ⬜ Invitar operadores al comercio.
 - ⬜ Asignar categoría global a productos desde el panel (la API ya lo soporta).
 
 ## Fase 2 — Primer pedido real (E3, E4, E5, E7)

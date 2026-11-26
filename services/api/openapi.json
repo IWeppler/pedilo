@@ -3011,6 +3011,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -3028,7 +3058,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -3863,6 +3894,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -3880,7 +3941,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -4547,6 +4609,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -4564,7 +4656,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -5245,6 +5338,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -5262,7 +5385,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -5886,6 +6010,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -5903,7 +6057,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -6524,6 +6679,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -6541,7 +6726,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -7153,6 +7339,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -7170,7 +7386,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -7767,6 +7984,36 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "closures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "startsOn": {
+                            "type": "string"
+                          },
+                          "endsOn": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "startsOn",
+                          "endsOn",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                     }
                   },
                   "required": [
@@ -7784,7 +8031,8 @@
                     "active",
                     "scheduling",
                     "hours",
-                    "zones"
+                    "zones",
+                    "closures"
                   ],
                   "additionalProperties": false
                 }
@@ -8323,6 +8571,36 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "closures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "startsOn": {
+                            "type": "string"
+                          },
+                          "endsOn": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "startsOn",
+                          "endsOn",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                     }
                   },
                   "required": [
@@ -8340,7 +8618,994 @@
                     "active",
                     "scheduling",
                     "hours",
-                    "zones"
+                    "zones",
+                    "closures"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/branches/{branchId}/closures": {
+      "post": {
+        "summary": "Agregar un cierre excepcional (feriado, vacaciones)",
+        "tags": [
+          "merchants"
+        ],
+        "description": "Días completos, inclusive, en la fecha local de la sucursal. Hasta 60 días; no en el pasado.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "startsOn": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                    "description": "YYYY-MM-DD"
+                  },
+                  "endsOn": {
+                    "type": "string",
+                    "format": "date",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$",
+                    "description": "YYYY-MM-DD, igual o posterior"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 80,
+                    "description": "Lo ve el cliente: «Feriado», «Vacaciones»"
+                  }
+                },
+                "required": [
+                  "startsOn",
+                  "endsOn",
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "branchId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "cityId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "addressLine": {
+                      "type": "string"
+                    },
+                    "addressNotes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lat": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "lng": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "acceptsPickup": {
+                      "type": "boolean"
+                    },
+                    "acceptsDelivery": {
+                      "type": "boolean"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "scheduling": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Acepta pedidos programados"
+                        },
+                        "leadMinutes": {
+                          "type": "integer",
+                          "minimum": 15,
+                          "maximum": 2880,
+                          "description": "Anticipación mínima en minutos"
+                        },
+                        "maxDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 14,
+                          "description": "Hasta cuántos días adelante"
+                        },
+                        "slotCapacity": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Pedidos por franja de 30 min; null = sin límite"
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "leadMinutes",
+                        "maxDays",
+                        "slotCapacity"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "hours": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "weekday": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6,
+                            "description": "0 = domingo … 6 = sábado"
+                          },
+                          "opensAt": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$"
+                          },
+                          "closesAt": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                            "description": "Si es menor o igual que opensAt, el rango cruza la medianoche"
+                          }
+                        },
+                        "required": [
+                          "weekday",
+                          "opensAt",
+                          "closesAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "zones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "feeMinor": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Tarifa de envío en centavos"
+                          },
+                          "minOrderMinor": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Pedido mínimo en centavos"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "feeMinor",
+                          "minOrderMinor",
+                          "active"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "closures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "startsOn": {
+                            "type": "string"
+                          },
+                          "endsOn": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "startsOn",
+                          "endsOn",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "cityId",
+                    "addressLine",
+                    "addressNotes",
+                    "lat",
+                    "lng",
+                    "phone",
+                    "timezone",
+                    "acceptsPickup",
+                    "acceptsDelivery",
+                    "active",
+                    "scheduling",
+                    "hours",
+                    "zones",
+                    "closures"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/branches/{branchId}/closures/{closureId}": {
+      "delete": {
+        "summary": "Quitar un cierre excepcional",
+        "tags": [
+          "merchants"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "branchId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "closureId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "cityId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "addressLine": {
+                      "type": "string"
+                    },
+                    "addressNotes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "lat": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "lng": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "phone": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "timezone": {
+                      "type": "string"
+                    },
+                    "acceptsPickup": {
+                      "type": "boolean"
+                    },
+                    "acceptsDelivery": {
+                      "type": "boolean"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "scheduling": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Acepta pedidos programados"
+                        },
+                        "leadMinutes": {
+                          "type": "integer",
+                          "minimum": 15,
+                          "maximum": 2880,
+                          "description": "Anticipación mínima en minutos"
+                        },
+                        "maxDays": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 14,
+                          "description": "Hasta cuántos días adelante"
+                        },
+                        "slotCapacity": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 500
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Pedidos por franja de 30 min; null = sin límite"
+                        }
+                      },
+                      "required": [
+                        "enabled",
+                        "leadMinutes",
+                        "maxDays",
+                        "slotCapacity"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "hours": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "weekday": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 6,
+                            "description": "0 = domingo … 6 = sábado"
+                          },
+                          "opensAt": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$"
+                          },
+                          "closesAt": {
+                            "type": "string",
+                            "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                            "description": "Si es menor o igual que opensAt, el rango cruza la medianoche"
+                          }
+                        },
+                        "required": [
+                          "weekday",
+                          "opensAt",
+                          "closesAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "zones": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "feeMinor": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Tarifa de envío en centavos"
+                          },
+                          "minOrderMinor": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "Pedido mínimo en centavos"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "description",
+                          "feeMinor",
+                          "minOrderMinor",
+                          "active"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "closures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "startsOn": {
+                            "type": "string"
+                          },
+                          "endsOn": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "startsOn",
+                          "endsOn",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "cityId",
+                    "addressLine",
+                    "addressNotes",
+                    "lat",
+                    "lng",
+                    "phone",
+                    "timezone",
+                    "acceptsPickup",
+                    "acceptsDelivery",
+                    "active",
+                    "scheduling",
+                    "hours",
+                    "zones",
+                    "closures"
                   ],
                   "additionalProperties": false
                 }
@@ -8806,6 +10071,36 @@
                         ],
                         "additionalProperties": false
                       }
+                    },
+                    "closures": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "startsOn": {
+                            "type": "string"
+                          },
+                          "endsOn": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "startsOn",
+                          "endsOn",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                     }
                   },
                   "required": [
@@ -8823,7 +10118,8 @@
                     "active",
                     "scheduling",
                     "hours",
-                    "zones"
+                    "zones",
+                    "closures"
                   ],
                   "additionalProperties": false
                 }
@@ -10505,6 +11801,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -10522,7 +11848,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -11169,6 +12496,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -11186,7 +12543,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -11854,6 +13212,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -11871,7 +13259,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -12518,6 +13907,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -12535,7 +13954,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -13202,6 +14622,36 @@
                               ],
                               "additionalProperties": false
                             }
+                          },
+                          "closures": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "startsOn": {
+                                  "type": "string"
+                                },
+                                "endsOn": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "startsOn",
+                                "endsOn",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "description": "Cierres excepcionales vigentes o futuros (fecha local de la sucursal)"
                           }
                         },
                         "required": [
@@ -13219,7 +14669,8 @@
                           "active",
                           "scheduling",
                           "hours",
-                          "zones"
+                          "zones",
+                          "closures"
                         ],
                         "additionalProperties": false
                       }
@@ -13670,7 +15121,54 @@
                               },
                               "openNow": {
                                 "type": "boolean",
-                                "description": "Abierta ahora según su horario y zona horaria"
+                                "description": "Abierta ahora según su horario, sus cierres y su zona horaria"
+                              },
+                              "closedToday": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "reason": {
+                                        "type": "string"
+                                      },
+                                      "endsOn": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "reason",
+                                      "endsOn"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Cerrada hoy por feriado o vacaciones"
+                              },
+                              "closures": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "startsOn": {
+                                      "type": "string"
+                                    },
+                                    "endsOn": {
+                                      "type": "string"
+                                    },
+                                    "reason": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "startsOn",
+                                    "endsOn",
+                                    "reason"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               },
                               "scheduling": {
                                 "type": "object",
@@ -13762,6 +15260,8 @@
                               "timezone",
                               "hours",
                               "openNow",
+                              "closedToday",
+                              "closures",
                               "scheduling",
                               "zones"
                             ],

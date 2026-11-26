@@ -86,7 +86,9 @@ const publicMenuSchema = z.object({
         acceptsDelivery: z.boolean(),
         timezone: z.string(),
         hours: z.array(z.object({ weekday: z.number().int(), opensAt: z.string(), closesAt: z.string() })),
-        openNow: z.boolean().describe("Abierta ahora según su horario y zona horaria"),
+        openNow: z.boolean().describe("Abierta ahora según su horario, sus cierres y su zona horaria"),
+        closedToday: z.object({ reason: z.string(), endsOn: z.string() }).nullable().describe("Cerrada hoy por feriado o vacaciones"),
+        closures: z.array(z.object({ startsOn: z.string(), endsOn: z.string(), reason: z.string() })),
         scheduling: z
           .object({
             enabled: z.boolean(),
