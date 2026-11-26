@@ -4,6 +4,8 @@ import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { Db, DbOrTx } from "../../db/client";
 import { getMerchantAccess } from "../merchants/service";
 import {
+  customerPushTokens,
+  NotificationAudience,
   NotificationKind,
   notificationOutbox,
   type NotificationOutboxRow,
@@ -26,6 +28,11 @@ export type PushResult = { ok: true } | { ok: false; gone: boolean; error: strin
 
 export interface PushSender {
   send(subscription: Pick<PushSubscriptionRow, "endpoint" | "p256dh" | "auth">, payload: PushPayload): Promise<PushResult>;
+}
+
+/** Push a los celulares del cliente (Expo Push, ADR 0020). */
+export interface CustomerPushSender {
+  send(expoToken: string, payload: PushPayload): Promise<PushResult>;
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +102,25 @@ export async function unsubscribe(db: Db, merchantId: string, userId: string, en
 }
 
 /** Aviso de prueba a los dispositivos del comercio (botón «Probar» del panel). */
+/** Aviso genérico (reclamos, ADR 0020). Llamar dentro de la transacción del hecho. */
+export async function enqueueNotification(
+  tx: DbOrTx,
+  n: {
+    kind: NotificationKind;
+    audience: NotificationAudience;
+    merchantId: string;
+    orderId: string;
+    payload: PushPayload;
+  },
+): Promise<void> {
+  await tx.insert(notificationOutbox).values(n);
+}
+
+/** El cliente registra su celular para recibir avisos de un pedido (Expo Push). Idempotente. */
+export async function saveCustomerPushToken(db: DbOrTx, orderId: string, expoToken: string): Promise<void> {
+  await db.insert(customerPushTokens).values({ orderId, expoToken }).onConflictDoNothing();
+}
+
 export async function enqueueTest(db: Db, merchantId: string, userId: string) {
   await getMerchantAccess(db, merchantId, userId);
   await db.insert(notificationOutbox).values({
@@ -120,7 +146,13 @@ const backoffMs = (attempts: number) => Math.min(30_000 * 2 ** (attempts - 1), 1
  * - Llegó a algún dispositivo → SENT. Suscripciones vencidas (404/410) se borran.
  * - Solo errores transitorios → reintento con espera creciente; tras MAX_ATTEMPTS → FAILED.
  */
-export async function processOutbox(db: Db, sender: PushSender | null, now = new Date(), batchSize = 20): Promise<number> {
+export async function processOutbox(
+  db: Db,
+  sender: PushSender | null,
+  now = new Date(),
+  batchSize = 20,
+  customerSender: CustomerPushSender | null = null,
+): Promise<number> {
   const claimed: NotificationOutboxRow[] = await db.transaction(async (tx) => {
     const rows = await tx
       .select()
@@ -140,28 +172,45 @@ export async function processOutbox(db: Db, sender: PushSender | null, now = new
 
   for (const row of claimed) {
     const attempts = row.attempts + 1;
-    if (!sender) {
-      await finish(db, row.id, { status: OutboxStatus.SKIPPED, lastError: "Web Push no configurado (VAPID)" });
+    const customer = row.audience === NotificationAudience.CUSTOMER;
+    if (customer ? !customerSender : !sender) {
+      await finish(db, row.id, { status: OutboxStatus.SKIPPED, lastError: customer ? "Expo Push no configurado" : "Web Push no configurado (VAPID)" });
       continue;
     }
-    const subs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.merchantId, row.merchantId));
-    if (subs.length === 0) {
-      await finish(db, row.id, { status: OutboxStatus.SKIPPED, lastError: "El comercio no tiene dispositivos registrados" });
+
+    // Destinos: navegadores del comercio o celulares del cliente que sigue el pedido.
+    const targets: Array<{ id: string; send: () => Promise<PushResult> }> = customer
+      ? (await db.select().from(customerPushTokens).where(eq(customerPushTokens.orderId, row.orderId!))).map((t) => ({
+          id: t.id,
+          send: () => customerSender!.send(t.expoToken, row.payload),
+        }))
+      : (await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.merchantId, row.merchantId))).map((s) => ({
+          id: s.id,
+          send: () => sender!.send(s, row.payload),
+        }));
+    if (targets.length === 0) {
+      await finish(db, row.id, {
+        status: OutboxStatus.SKIPPED,
+        lastError: customer ? "El cliente no registró su celular" : "El comercio no tiene dispositivos registrados",
+      });
       continue;
     }
 
     let delivered = 0;
     const gone: string[] = [];
     const errors: string[] = [];
-    for (const sub of subs) {
-      const result = await sender.send(sub, row.payload);
+    for (const target of targets) {
+      const result = await target.send();
       if (result.ok) {
         delivered++;
-        await db.update(pushSubscriptions).set({ lastSuccessAt: now }).where(eq(pushSubscriptions.id, sub.id));
-      } else if (result.gone) gone.push(sub.id);
+        if (!customer) await db.update(pushSubscriptions).set({ lastSuccessAt: now }).where(eq(pushSubscriptions.id, target.id));
+      } else if (result.gone) gone.push(target.id);
       else errors.push(result.error);
     }
-    if (gone.length) await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
+    if (gone.length) {
+      if (customer) await db.delete(customerPushTokens).where(inArray(customerPushTokens.id, gone));
+      else await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
+    }
 
     if (delivered > 0 || errors.length === 0) {
       await finish(db, row.id, {

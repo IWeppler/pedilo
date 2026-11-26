@@ -45,6 +45,12 @@ const envSchema = z
     /** Clave secreta de Supabase (solo servidor) y bucket público para las fotos. */
     SUPABASE_SECRET_KEY: z.string().min(20).optional(),
     SUPABASE_STORAGE_BUCKET: z.string().min(1).default("media"),
+    /** Avisos al cliente por Expo Push (ADR 0020). El token de acceso es opcional. */
+    EXPO_PUSH_ENABLED: z
+      .enum(["true", "false"])
+      .default("true")
+      .transform((v) => v === "true"),
+    EXPO_ACCESS_TOKEN: z.string().min(10).optional(),
     // 8081/8082: Expo en modo web durante el desarrollo.
     CORS_ORIGINS: z.string().default("http://localhost:3000,http://localhost:3001,http://localhost:8081,http://localhost:8082"),
   })
@@ -87,6 +93,7 @@ export interface Config {
   trustProxyHops: number;
   limits: OrderLimits;
   settlement: { timeZone: string; dueDays: number; sweepMs: number };
+  expoPush: { enabled: boolean; accessToken?: string | undefined };
   media: { driver: "local"; dir: string } | { driver: "supabase"; url: string; secretKey: string; bucket: string };
 }
 
@@ -136,6 +143,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       dueDays: env.SETTLEMENT_DUE_DAYS,
       sweepMs: env.SETTLEMENT_SWEEP_MINUTES * 60 * 1000,
     },
+    expoPush: { enabled: env.EXPO_PUSH_ENABLED, ...(env.EXPO_ACCESS_TOKEN && { accessToken: env.EXPO_ACCESS_TOKEN }) },
     media:
       env.MEDIA_STORAGE === "supabase"
         ? { driver: "supabase", url: env.SUPABASE_URL!.replace(/\/+$/, ""), secretKey: env.SUPABASE_SECRET_KEY!, bucket: env.SUPABASE_STORAGE_BUCKET }

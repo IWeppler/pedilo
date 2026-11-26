@@ -1,13 +1,15 @@
 import type { ClaimStatus } from "@pedilo/domain";
 import { CLAIM_REASON_LABELS, CLAIM_STATUS_LABELS } from "@pedilo/domain";
-import { formatDateTime } from "@pedilo/web-utils";
+import { formatARS } from "@pedilo/domain";
+import { formatDateTime, formatMinutes } from "@pedilo/web-utils";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { adminCall } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -27,9 +29,58 @@ export default function ClaimsPage({ searchParams }: PageProps<"/claims">) {
 async function ClaimsSection({ searchParams }: { searchParams: PageProps<"/claims">["searchParams"] }) {
   const raw = (await searchParams).status;
   const status = TABS.includes(raw as ClaimStatus) ? (raw as ClaimStatus | "ALL") : "ESCALATED";
-  const list = await adminCall((api) => api.GET("/v1/admin/claims", { params: { query: status === "ALL" ? {} : { status } } }));
+  const [list, metrics] = await Promise.all([
+    adminCall((api) => api.GET("/v1/admin/claims", { params: { query: status === "ALL" ? {} : { status } } })),
+    adminCall((api) => api.GET("/v1/admin/claims/metrics", { params: { query: { days: 30 } } })),
+  ]);
+  const withClaims = metrics.filter((m) => m.claims > 0);
   return (
     <div className="grid gap-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Comercios, últimos 30 días</CardTitle>
+          <CardDescription>Mayor tasa de reclamos primero. «Sin respuesta» son los que el comercio dejó vencer.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {withClaims.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ningún comercio tuvo reclamos en el período.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Comercio</TableHead>
+                  <TableHead className="text-right">Reclamos</TableHead>
+                  <TableHead className="text-right">Cada 100 pedidos</TableHead>
+                  <TableHead className="text-right">Abiertos</TableHead>
+                  <TableHead className="text-right">Sin respuesta</TableHead>
+                  <TableHead className="text-right">A la propuesta</TableHead>
+                  <TableHead className="text-right">Devuelto</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {withClaims.map((m) => (
+                  <TableRow key={m.merchant.id}>
+                    <TableCell>
+                      <Link href={`/merchants/${m.merchant.id}`} className="font-medium underline-offset-2 hover:underline">
+                        {m.merchant.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {m.claims} / {m.completedOrders}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{m.claimRatePer100 ?? "—"}</TableCell>
+                    <TableCell className="text-right tabular-nums">{m.open}</TableCell>
+                    <TableCell className={cn("text-right tabular-nums", m.slaMissed > 0 && "font-semibold text-destructive")}>{m.slaMissed}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatMinutes(m.medianMinutesToProposal)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatARS(m.refundedMinor)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       <nav className="flex flex-wrap gap-1 rounded-lg bg-muted p-1 sm:w-fit" aria-label="Estado">
         {TABS.map((tab) => (
           <Link

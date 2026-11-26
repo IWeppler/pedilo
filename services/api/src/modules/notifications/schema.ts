@@ -4,6 +4,7 @@ import { check, index, jsonb, pgTable, smallint, text, timestamp, uniqueIndex, u
 import { timestamps } from "../../lib/timestamps";
 // Solo para FKs (excepción documentada en ARCHITECTURE §4).
 import { merchants } from "../merchants/schema";
+import { orders } from "../orders/schema";
 
 /**
  * Suscripciones Web Push de los navegadores del comercio (ADR 0009). Una por navegador/dispositivo
@@ -27,8 +28,18 @@ export const pushSubscriptions = pgTable(
   (t) => [uniqueIndex("push_subscriptions_endpoint_unique").on(t.endpoint), index("push_subscriptions_merchant_idx").on(t.merchantId)],
 );
 
-export const NotificationKind = { ORDER_PLACED: "ORDER_PLACED", TEST: "TEST" } as const;
+export const NotificationKind = {
+  ORDER_PLACED: "ORDER_PLACED",
+  TEST: "TEST",
+  /** Reclamos (ADR 0020): nuevo reclamo para el comercio; novedades para comercio o cliente. */
+  CLAIM_OPENED: "CLAIM_OPENED",
+  CLAIM_UPDATE: "CLAIM_UPDATE",
+} as const;
 export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind];
+
+/** A quién va el aviso: navegadores del comercio (Web Push) o celulares del cliente del pedido (Expo Push). */
+export const NotificationAudience = { MERCHANT: "MERCHANT", CUSTOMER: "CUSTOMER" } as const;
+export type NotificationAudience = (typeof NotificationAudience)[keyof typeof NotificationAudience];
 
 export const OutboxStatus = { PENDING: "PENDING", SENT: "SENT", FAILED: "FAILED", SKIPPED: "SKIPPED" } as const;
 export type OutboxStatus = (typeof OutboxStatus)[keyof typeof OutboxStatus];
@@ -42,6 +53,7 @@ export const notificationOutbox = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     kind: text("kind").$type<NotificationKind>().notNull(),
+    audience: text("audience").$type<NotificationAudience>().notNull().default("MERCHANT"),
     merchantId: uuid("merchant_id")
       .notNull()
       .references(() => merchants.id, { onDelete: "cascade" }),
@@ -60,17 +72,36 @@ export const notificationOutbox = pgTable(
   (t) => [
     index("notification_outbox_pending_idx").on(t.nextAttemptAt).where(sql`${t.status} = 'PENDING'`),
     check("notification_outbox_status_check", sql`${t.status} IN ('PENDING', 'SENT', 'FAILED', 'SKIPPED')`),
+    check("notification_outbox_audience_check", sql`${t.audience} <> 'CUSTOMER' OR ${t.orderId} IS NOT NULL`),
   ],
+);
+
+/**
+ * Celulares del cliente que siguen un pedido (Expo Push, ADR 0020). El cliente no tiene cuenta
+ * (ADR 0007): el token de push se asocia al pedido, registrado con el token de seguimiento.
+ */
+export const customerPushTokens = pgTable(
+  "customer_push_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    expoToken: text("expo_token").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("customer_push_tokens_unique").on(t.orderId, t.expoToken)],
 );
 
 export interface PushPayload {
   title: string;
   body: string;
-  /** Ruta del panel que abre al tocar la notificación. */
+  /** Ruta que abre al tocar la notificación (del panel, o de la app del cliente). */
   url: string;
   /** Notificaciones con el mismo tag se reemplazan (evita duplicados con el aviso de la página). */
   tag: string;
 }
 
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type CustomerPushTokenRow = typeof customerPushTokens.$inferSelect;
 export type NotificationOutboxRow = typeof notificationOutbox.$inferSelect;

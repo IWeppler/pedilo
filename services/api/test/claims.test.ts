@@ -5,7 +5,11 @@ import { join } from "node:path";
 import sharp from "sharp";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { eq } from "drizzle-orm";
+
+import { customerPushTokens, notificationOutbox } from "../src/db/schema";
 import { escalateOverdueClaims, openClaim } from "../src/modules/claims/service";
+import { type CustomerPushSender, processOutbox } from "../src/modules/notifications/service";
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
@@ -211,5 +215,77 @@ describe("evidencia", () => {
     await upload();
     await upload();
     expect((await upload()).json().error.details.reason).toBe("TOO_MANY_PHOTOS");
+  });
+});
+
+describe("avisos de reclamos (ADR 0020)", () => {
+  const outboxFor = (orderId: string) => ctx.db.select().from(notificationOutbox).where(eq(notificationOutbox.orderId, orderId));
+
+  it("reclamo nuevo → comercio; propuesta → cliente (a su celular registrado)", async () => {
+    const o = await completedOrder();
+    const token = "ExponentPushToken[abc123xyz]";
+    expect((await req("POST", `/v1/public/orders/${o.orderId}/push-token`, { headers: { "x-order-token": o.token }, payload: { expoToken: "basura" } })).statusCode).toBe(400);
+    expect((await req("POST", `/v1/public/orders/${o.orderId}/push-token`, { headers: { "x-order-token": "otro-token-cualquiera" }, payload: { expoToken: token } })).statusCode).toBe(404);
+    expect((await req("POST", `/v1/public/orders/${o.orderId}/push-token`, { headers: { "x-order-token": o.token }, payload: { expoToken: token } })).statusCode).toBe(204);
+    // Idempotente.
+    await req("POST", `/v1/public/orders/${o.orderId}/push-token`, { headers: { "x-order-token": o.token }, payload: { expoToken: token } });
+    expect(await ctx.db.select().from(customerPushTokens).where(eq(customerPushTokens.orderId, o.orderId))).toHaveLength(1);
+
+    const claimId = (await customer(o.orderId, o.token).open({ reason: "MISSING_ITEM", description: "Faltó la gaseosa grande" })).json().id;
+    await merchantPost(claimId, "propose", { type: "REFUND_PARTIAL", amountMinor: 150_000 });
+
+    const rows = (await outboxFor(o.orderId)).filter((r) => r.kind.startsWith("CLAIM_"));
+    expect(rows.map((r) => [r.kind, r.audience])).toEqual([
+      ["CLAIM_OPENED", "MERCHANT"],
+      ["CLAIM_UPDATE", "CUSTOMER"],
+    ]);
+    expect(rows[0]!.payload).toMatchObject({ url: `/m/${merchantId}/claims/${claimId}`, title: expect.stringMatching(/^Reclamo nuevo/) });
+    expect(rows[1]!.payload).toMatchObject({ url: `/order/${o.orderId}`, body: expect.stringContaining("devolución parcial de $ 1.500") });
+
+    // El worker manda el aviso del cliente a su celular; un token dado de baja se borra.
+    const sent: string[] = [];
+    const sender: CustomerPushSender = {
+      send: async (t, payload) => {
+        sent.push(`${t}|${payload.title}`);
+        return { ok: false, gone: true, error: "DeviceNotRegistered" };
+      },
+    };
+    await processOutbox(ctx.db, null, new Date(), 50, sender);
+    expect(sent).toEqual([`${token}|Respuesta a tu reclamo`]);
+    expect(await ctx.db.select().from(customerPushTokens).where(eq(customerPushTokens.orderId, o.orderId))).toHaveLength(0);
+    const after = (await outboxFor(o.orderId)).find((r) => r.audience === "CUSTOMER")!;
+    expect(after.status).toBe("SKIPPED");
+  });
+
+  it("sin celular registrado, el aviso al cliente se omite sin trabar la cola", async () => {
+    const o = await completedOrder();
+    const claimId = (await customer(o.orderId, o.token).open({ reason: "DELAY", description: "Tardó dos horas en llegar" })).json().id;
+    await merchantPost(claimId, "messages", { body: "Perdón, tuvimos un problema" });
+    await processOutbox(ctx.db, null, new Date(), 50, { send: async () => ({ ok: true }) });
+    const row = (await outboxFor(o.orderId)).find((r) => r.audience === "CUSTOMER")!;
+    expect(row).toMatchObject({ status: "SKIPPED", lastError: "El cliente no registró su celular" });
+  });
+});
+
+describe("métricas de reclamos (ADR 0020)", () => {
+  it("por comercio: tasa, escalados, vencidos, tiempo a la propuesta, devuelto y motivos", async () => {
+    const res = await req("GET", `/v1/merchants/${merchantId}/claims/metrics?days=30`, { token: owner });
+    expect(res.statusCode).toBe(200);
+    const m = res.json();
+    expect(m.merchant.id).toBe(merchantId);
+    expect(m.claims).toBeGreaterThanOrEqual(8);
+    expect(m.completedOrders).toBeGreaterThanOrEqual(m.claims);
+    expect(m.claimRatePer100).toBeCloseTo((m.claims / m.completedOrders) * 100, 0);
+    expect(m.refundedMinor).toBe(400_000); // la devolución parcial registrada
+    // Los dos que quedaron sin propuesta cuando corrió la escalada (el sensible no cuenta: no es demora del comercio).
+    expect(m.slaMissed).toBe(2);
+    expect(m.escalated).toBeGreaterThanOrEqual(3);
+    expect(m.byReason.MISSING_ITEM).toBeGreaterThanOrEqual(2);
+    expect(m.medianMinutesToProposal).toEqual(expect.any(Number));
+
+    expect((await req("GET", `/v1/merchants/${merchantId}/claims/metrics`, { token: stranger })).statusCode).not.toBe(200);
+    const all = (await req("GET", "/v1/admin/claims/metrics", { token: admin })).json();
+    expect(all.find((x: { merchant: { id: string } }) => x.merchant.id === merchantId).claims).toBe(m.claims);
+    expect((await req("GET", "/v1/admin/claims/metrics", { token: owner })).statusCode).toBe(403);
   });
 });

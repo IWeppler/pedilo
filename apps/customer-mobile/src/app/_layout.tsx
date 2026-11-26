@@ -1,11 +1,23 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
-import { useState } from "react";
+import * as Notifications from "expo-notifications";
+import { Stack, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 
 import { CartProvider } from "@/lib/cart";
 import { CityProvider } from "@/lib/city";
 import { MyOrdersProvider } from "@/lib/my-orders";
 import { useTheme } from "@/lib/theme";
+
+/** Tocar un aviso abre la pantalla que trae (p. ej. el seguimiento del pedido con el reclamo). */
+function NotificationRouter() {
+  const router = useRouter();
+  const response = Notifications.useLastNotificationResponse();
+  useEffect(() => {
+    const url = response?.notification.request.content.data?.url;
+    if (typeof url === "string" && url.startsWith("/order/")) router.push(url as never);
+  }, [response, router]);
+  return null;
+}
 
 export default function RootLayout() {
   const [queryClient] = useState(
@@ -18,6 +30,7 @@ export default function RootLayout() {
       <CityProvider>
         <CartProvider>
           <MyOrdersProvider>
+            <NotificationRouter />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.background } }}>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="city" options={{ presentation: "modal" }} />

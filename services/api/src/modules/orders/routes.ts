@@ -14,6 +14,7 @@ import {
   getMerchantOrdersPulse,
   getOrderForCustomer,
   listBranchSlots,
+  registerOrderPushToken,
   listMerchantOrders,
   requestOrderDelivery,
   transitionMerchantOrder,
@@ -255,6 +256,25 @@ export const orderRoutes: FastifyPluginAsyncZod<{
     },
     async (request) =>
       forCustomer(await getOrderForCustomer(db, request.params.orderId, request.headers["x-order-token"], orderTokenSecret)),
+  );
+
+  app.post(
+    "/public/orders/:orderId/push-token",
+    {
+      schema: {
+        tags: ["orders"],
+        summary: "Registrar el celular para recibir avisos del pedido",
+        description: "Token de Expo Push (ExponentPushToken[...]). Idempotente. Avisos de reclamos (ADR 0020).",
+        headers: tokenHeaders,
+        params: orderParams,
+        body: z.object({ expoToken: z.string().regex(/^Expo(nent)?PushToken\[[^\]]+\]$/, "Token de Expo inválido") }),
+        response: { 204: z.null(), ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      await registerOrderPushToken(db, request.params.orderId, request.headers["x-order-token"], orderTokenSecret, request.body.expoToken);
+      return reply.code(204).send(null);
+    },
   );
 
   app.post(

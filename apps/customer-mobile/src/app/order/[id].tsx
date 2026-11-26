@@ -2,7 +2,7 @@ import { ApiError, type Order, unwrap } from "@pedilo/api-client";
 import { customerCanCancel, formatARS, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -12,6 +12,7 @@ import { describeSlot } from "@/components/slot-picker";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { api, useOrder } from "@/lib/api";
 import { useMyOrders } from "@/lib/my-orders";
+import { registerOrderForPush } from "@/lib/push";
 import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 type Status = Order["status"];
@@ -43,6 +44,10 @@ export default function OrderScreen() {
   const { tokenFor } = useMyOrders();
   const token = tokenFor(id);
   const order = useOrder(id, token);
+  // Avisos de este pedido al celular (reclamos, ADR 0020). En Expo Go no hace nada.
+  useEffect(() => {
+    if (token) void registerOrderForPush(id, token);
+  }, [id, token]);
   const queryClient = useQueryClient();
   const [cancelError, setCancelError] = useState<string | null>(null);
   // Cancelar pide un segundo toque para confirmar (no se usan diálogos del sistema).

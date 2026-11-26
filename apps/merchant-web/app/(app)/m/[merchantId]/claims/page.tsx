@@ -1,5 +1,5 @@
-import { CLAIM_REASON_LABELS, CLAIM_STATUS_LABELS } from "@pedilo/domain";
-import { formatDateTime } from "@pedilo/web-utils";
+import { CLAIM_REASON_LABELS, CLAIM_STATUS_LABELS, type ClaimReason, formatARS } from "@pedilo/domain";
+import { formatDateTime, formatMinutes } from "@pedilo/web-utils";
 import Link from "next/link";
 import { Suspense } from "react";
 
@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { merchantCall } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -25,10 +25,13 @@ export default function ClaimsPage({ params, searchParams }: Props) {
 async function Claims({ params, searchParams }: Pick<Props, "params" | "searchParams">) {
   const [{ merchantId }, query] = await Promise.all([params, searchParams]);
   const scope = query.scope === "all" ? "all" : "open";
-  const list = await merchantCall(
-    (api) => api.GET("/v1/merchants/{merchantId}/claims", { params: { path: { merchantId }, query: { scope } } }),
-    { notFoundOn404: true },
-  );
+  const [list, metrics] = await Promise.all([
+    merchantCall((api) => api.GET("/v1/merchants/{merchantId}/claims", { params: { path: { merchantId }, query: { scope } } }), {
+      notFoundOn404: true,
+    }),
+    merchantCall((api) => api.GET("/v1/merchants/{merchantId}/claims/metrics", { params: { path: { merchantId }, query: { days: 30 } } })),
+  ]);
+  const topReasons = (Object.entries(metrics.byReason) as Array<[ClaimReason, number]>).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
 
   return (
     <>
@@ -41,6 +44,32 @@ async function Claims({ params, searchParams }: Pick<Props, "params" | "searchPa
           </Link>
         }
       />
+      <Card>
+        <CardHeader>
+          <CardTitle>Últimos 30 días</CardTitle>
+          <CardDescription>
+            {metrics.claims === 0
+              ? "Sin reclamos."
+              : `${metrics.claims} reclamos en ${metrics.completedOrders} pedidos completados${metrics.claimRatePer100 !== null ? ` (${metrics.claimRatePer100} cada 100)` : ""}.`}
+          </CardDescription>
+        </CardHeader>
+        {metrics.claims > 0 && (
+          <CardContent>
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <Stat label="Tiempo hasta tu propuesta" value={formatMinutes(metrics.medianMinutesToProposal)} hint="mediana" />
+              <Stat label="Sin respuesta a tiempo" value={String(metrics.slaMissed)} hint="pasaron a Pedilo" />
+              <Stat label="Resueltos" value={`${metrics.resolved} de ${metrics.claims}`} />
+              <Stat label="Devuelto" value={formatARS(metrics.refundedMinor)} />
+            </dl>
+            {topReasons.length > 0 && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Motivos: {topReasons.map(([r, n]) => `${CLAIM_REASON_LABELS[r]} (${n})`).join(", ")}
+              </p>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
       <nav className="inline-flex w-fit rounded-lg bg-muted p-1" aria-label="Reclamos">
         {(
           [
@@ -81,5 +110,15 @@ async function Claims({ params, searchParams }: Pick<Props, "params" | "searchPa
         ))}
       </div>
     </>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="grid gap-0.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="text-lg font-semibold tabular-nums">{value}</dd>
+      {hint && <dd className="text-xs text-muted-foreground">{hint}</dd>}
+    </div>
   );
 }

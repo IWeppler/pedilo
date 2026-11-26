@@ -1,4 +1,7 @@
 import {
+  CLAIM_REASON_LABELS,
+  formatARS,
+  CLAIM_RESOLUTION_LABELS,
   CLAIM_WINDOW_HOURS,
   type ClaimReason,
   ClaimResolutionType,
@@ -9,15 +12,16 @@ import {
   MERCHANT_CLAIM_SLA_HOURS,
   OrderStatus,
 } from "@pedilo/domain";
-import { and, asc, count, desc, eq, inArray, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 
 import type { Db, DbOrTx, Tx } from "../../db/client";
 import { badRequest, conflict, isUniqueViolation, notFound } from "../../lib/errors";
 import { media, mediaPath, mediaUrl, processImage } from "../../lib/media";
 import { type Actor, recordAudit } from "../audit/service";
 import { adjustCommissionForRefund } from "../billing/service";
+import { enqueueNotification } from "../notifications/service";
 import { getMerchantAccess, getMerchantNames } from "../merchants/service";
-import { getOrderClaimSummary, getOrderClaimSummaryForCustomer, type OrderClaimSummary } from "../orders/service";
+import { countCompletedOrders, getOrderClaimSummary, getOrderClaimSummaryForCustomer, type OrderClaimSummary } from "../orders/service";
 import { type ClaimActor, claimEvents, type ClaimEventKind, claimEvidence, type ClaimRow, claims } from "./schema";
 
 /**
@@ -110,6 +114,25 @@ async function event(
   });
 }
 
+/**
+ * Aviso de novedad del reclamo (ADR 0020), en la misma transacción: al comercio por Web Push
+ * (abre el reclamo en el panel) o al cliente por Expo Push (abre el seguimiento del pedido).
+ */
+async function notify(tx: Tx, row: ClaimRow, to: "MERCHANT" | "CUSTOMER", title: string, body: string, opened = false) {
+  await enqueueNotification(tx, {
+    kind: opened ? "CLAIM_OPENED" : "CLAIM_UPDATE",
+    audience: to,
+    merchantId: row.merchantId,
+    orderId: row.orderId,
+    payload: {
+      title,
+      body,
+      url: to === "MERCHANT" ? `/m/${row.merchantId}/claims/${row.id}` : `/order/${row.orderId}`,
+      tag: `claim-${row.id}`,
+    },
+  });
+}
+
 async function move(tx: Tx, row: ClaimRow, to: ClaimStatus, set: Partial<typeof claims.$inferInsert> = {}): Promise<void> {
   if (!claimStateMachine.canTransition(row.status, to)) {
     throw conflict("Ese paso no es válido en el estado actual del reclamo", { reason: "INVALID_TRANSITION", status: row.status, to });
@@ -169,6 +192,17 @@ export async function openClaim(
         .returning({ id: claims.id });
       await event(tx, row!.id, "CUSTOMER", "OPENED", { body: input.description.trim() });
       if (sensitive) await event(tx, row!.id, "SYSTEM", "ESCALATED", { body: "Problema de salud o seguridad: lo revisa Pedilo" });
+      const [created] = await tx.select().from(claims).where(eq(claims.id, row!.id));
+      await notify(
+        tx,
+        created!,
+        "MERCHANT",
+        `Reclamo nuevo · ${order.code}`,
+        sensitive
+          ? `${CLAIM_REASON_LABELS[input.reason]} (salud o seguridad): lo revisa Pedilo.`
+          : `${CLAIM_REASON_LABELS[input.reason]}. Tenés ${MERCHANT_CLAIM_SLA_HOURS} h para proponer una solución.`,
+        true,
+      );
       return row!.id;
     });
     return claimDto(db, (await db.select().from(claims).where(eq(claims.id, id)))[0]!);
@@ -230,9 +264,19 @@ export async function respondToProposal(
     if (!input.accept) {
       await move(tx, row, ClaimStatus.DISPUTED);
       await event(tx, row.id, "CUSTOMER", "REJECTED", { body: comment });
+      await notify(tx, row, "MERCHANT", `Reclamo ${row.orderCode}`, "El cliente no aceptó tu propuesta. Podés proponer otra solución.");
       return;
     }
     await event(tx, row.id, "CUSTOMER", "ACCEPTED", { body: comment });
+    await notify(
+      tx,
+      row,
+      "MERCHANT",
+      `Reclamo ${row.orderCode}`,
+      isRefundResolution(row.proposalType)
+        ? "El cliente aceptó la devolución. Registrala cuando la hagas."
+        : "El cliente aceptó tu propuesta: reclamo resuelto.",
+    );
     // Devolución: queda acordada hasta que el comercio la registre. Reenvío, reemplazo o
     // rechazo aceptado: resuelto.
     if (isRefundResolution(row.proposalType)) await move(tx, row, ClaimStatus.AGREED_REFUND);
@@ -256,6 +300,7 @@ export async function escalateByCustomer(
     const row = await lockClaim(tx, eq(claims.id, found.id));
     await move(tx, row, ClaimStatus.ESCALATED, { escalatedAt: now });
     await event(tx, row.id, "CUSTOMER", "ESCALATED", { body: comment.trim() });
+    await notify(tx, row, "MERCHANT", `Reclamo ${row.orderCode}`, "El cliente pidió que intervenga Pedilo.");
   });
   return claimDto(db, (await db.select().from(claims).where(eq(claims.id, found.id)))[0]!);
 }
@@ -264,7 +309,10 @@ export async function customerMessage(db: Db, orderId: string, token: string | u
   const row = await customerClaim(db, orderId, token, secret);
   if (!row) throw notFound("Reclamo");
   if (!isClaimOpen(row.status)) throw conflict("El reclamo ya está cerrado", { reason: "CLAIM_CLOSED" });
-  await db.transaction((tx) => event(tx, row.id, "CUSTOMER", "MESSAGE", { body: body.trim() }));
+  await db.transaction(async (tx) => {
+    await event(tx, row.id, "CUSTOMER", "MESSAGE", { body: body.trim() });
+    await notify(tx, row, "MERCHANT", `Reclamo ${row.orderCode}`, `El cliente escribió: ${body.trim().slice(0, 120)}`);
+  });
   return claimDto(db, row);
 }
 
@@ -330,6 +378,13 @@ export async function proposeResolution(
       .set({ proposalType: input.type, proposalAmountMinor: amount, proposalNote: note, proposedAt: now })
       .where(eq(claims.id, row.id));
     await event(tx, row.id, "MERCHANT", "PROPOSAL", { userId: actor.userId, body: note, amountMinor: amount });
+    await notify(
+      tx,
+      row,
+      "CUSTOMER",
+      "Respuesta a tu reclamo",
+      `El comercio te propone: ${CLAIM_RESOLUTION_LABELS[input.type].toLowerCase()}${amount ? ` de ${formatARS(amount)}` : ""}. Entrá para aceptar o no.`,
+    );
     await recordAudit(tx, actor, { action: "claim.propose", entityType: "claim", entityId: row.id, after: { type: input.type, amount, note } });
   });
   return getMerchantClaim(db, merchantId, claimId, actor.userId);
@@ -362,6 +417,7 @@ export async function markRefunded(
       resolutionNote: note?.trim() || row.proposalNote,
     });
     await event(tx, row.id, "MERCHANT", "REFUNDED", { userId: actor.userId, body: note?.trim() || null, amountMinor: amount });
+    await notify(tx, row, "CUSTOMER", "Reclamo resuelto", "El comercio registró la devolución que acordaron.");
     const delta = await adjustCommissionForRefund(tx, order, amount);
     await recordAudit(tx, actor, {
       action: "claim.refunded",
@@ -379,6 +435,7 @@ export async function merchantMessage(db: Db, merchantId: string, claimId: strin
     const row = await merchantClaim(tx, merchantId, claimId);
     if (!isClaimOpen(row.status)) throw conflict("El reclamo ya está cerrado", { reason: "CLAIM_CLOSED" });
     await event(tx, row.id, "MERCHANT", "MESSAGE", { userId, body: body.trim() });
+    await notify(tx, row, "CUSTOMER", "Mensaje sobre tu reclamo", body.trim().slice(0, 140));
   });
   return getMerchantClaim(db, merchantId, claimId, userId);
 }
@@ -420,6 +477,9 @@ export async function resolveByAdmin(
     const row = await lockClaim(tx, eq(claims.id, claimId));
     await move(tx, row, input.to, { resolutionNote: input.note.trim(), ...(input.to === "RESOLVED" && { resolvedAt: now }) });
     await event(tx, row.id, "ADMIN", input.to === "RESOLVED" ? "RESOLVED" : "CLOSED", { userId: actor.userId, body: input.note.trim() });
+    for (const to of ["CUSTOMER", "MERCHANT"] as const) {
+      await notify(tx, row, to, `Reclamo ${row.orderCode}: Pedilo lo ${input.to === "RESOLVED" ? "resolvió" : "cerró"}`, input.note.trim().slice(0, 140));
+    }
     await recordAudit(tx, actor, { action: `claim.${input.to.toLowerCase()}`, entityType: "claim", entityId: row.id, after: { note: input.note } });
   });
   return getClaimForAdmin(db, claimId);
@@ -429,6 +489,7 @@ export async function adminMessage(db: Db, claimId: string, body: string, userId
   await db.transaction(async (tx) => {
     const row = await lockClaim(tx, eq(claims.id, claimId));
     await event(tx, row.id, "ADMIN", "MESSAGE", { userId, body: body.trim() });
+    for (const to of ["CUSTOMER", "MERCHANT"] as const) await notify(tx, row, to, `Reclamo ${row.orderCode}: mensaje de Pedilo`, body.trim().slice(0, 140));
   });
   return getClaimForAdmin(db, claimId);
 }
@@ -445,9 +506,97 @@ export async function escalateOverdueClaims(db: Db, now = new Date(), batch = 50
     for (const row of due) {
       await move(tx, row, ClaimStatus.ESCALATED, { escalatedAt: now });
       await event(tx, row.id, "SYSTEM", "ESCALATED", { body: `El comercio no respondió en ${MERCHANT_CLAIM_SLA_HOURS} horas` });
+      await notify(tx, row, "CUSTOMER", "Tu reclamo lo revisa Pedilo", "El comercio no respondió a tiempo: ahora lo revisamos nosotros.");
+      await notify(tx, row, "MERCHANT", `Reclamo ${row.orderCode} escalado`, `No respondiste en ${MERCHANT_CLAIM_SLA_HOURS} h: ahora lo revisa Pedilo.`);
     }
     return due.length;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Métricas (ADR 0020)
+// ---------------------------------------------------------------------------
+
+export interface ClaimMetricsDto {
+  merchant: { id: string; name: string };
+  /** Pedidos completados en el período (entregados o retirados). */
+  completedOrders: number;
+  claims: number;
+  /** Reclamos cada 100 pedidos completados (null sin pedidos). */
+  claimRatePer100: number | null;
+  open: number;
+  /** Pasaron por Pedilo (por pedido del cliente, vencimiento o salud/seguridad). */
+  escalated: number;
+  /** Escalados porque el comercio no respondió en 24 h. */
+  slaMissed: number;
+  resolved: number;
+  /** Minutos hasta la primera propuesta del comercio (mediana). */
+  medianMinutesToProposal: number | null;
+  refundedMinor: number;
+  byReason: Record<ClaimReason, number>;
+}
+
+const median = (xs: number[]) => {
+  if (xs.length === 0) return null;
+  const s = [...xs].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return Math.round(s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2);
+};
+
+/**
+ * Métricas de reclamos por comercio en los últimos `days` días: cuántos, cada cuántos pedidos,
+ * cuántos llegaron a Pedilo, cuánto tarda el comercio en proponer y cuánto se devolvió.
+ * Comercios con reclamos o pedidos en el período, ordenados por tasa de reclamos.
+ */
+export async function claimMetrics(db: DbOrTx, days: number, merchantId?: string, now = new Date()): Promise<ClaimMetricsDto[]> {
+  const since = new Date(now.getTime() - days * 24 * HOUR);
+  const rows = await db
+    .select()
+    .from(claims)
+    .where(and(gte(claims.createdAt, since), merchantId ? eq(claims.merchantId, merchantId) : undefined));
+  const ids = rows.map((r) => r.id);
+  const [events, completed] = await Promise.all([
+    ids.length ? db.select().from(claimEvents).where(inArray(claimEvents.claimId, ids)) : Promise.resolve([]),
+    countCompletedOrders(db, since, merchantId),
+  ]);
+  const merchantIds = [...new Set([...rows.map((r) => r.merchantId), ...completed.keys(), ...(merchantId ? [merchantId] : [])])];
+  const names = await getMerchantNames(db, merchantIds);
+
+  const emptyReasons = () =>
+    Object.fromEntries(["MISSING_ITEM", "WRONG_ITEM", "QUALITY", "DELAY", "NOT_DELIVERED", "WRONG_CHARGE"].map((r) => [r, 0])) as Record<ClaimReason, number>;
+
+  const result = merchantIds.map((id): ClaimMetricsDto => {
+    const mine = rows.filter((r) => r.merchantId === id);
+    const evs = events.filter((e) => mine.some((c) => c.id === e.claimId));
+    const byReason = emptyReasons();
+    for (const c of mine) byReason[c.reason]++;
+    const firstProposal = mine
+      .map((c) => {
+        const p = evs.filter((e) => e.claimId === c.id && e.kind === "PROPOSAL").sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
+        return p ? (p.createdAt.getTime() - c.createdAt.getTime()) / 60_000 : null;
+      })
+      .filter((x): x is number => x !== null);
+    const orders = completed.get(id) ?? 0;
+    return {
+      merchant: { id, name: names.get(id) ?? "—" },
+      completedOrders: orders,
+      claims: mine.length,
+      claimRatePer100: orders > 0 ? Math.round((mine.length / orders) * 1000) / 10 : null,
+      open: mine.filter((c) => isClaimOpen(c.status)).length,
+      escalated: mine.filter((c) => c.escalatedAt !== null).length,
+      slaMissed: evs.filter((e) => e.actor === "SYSTEM" && e.kind === "ESCALATED" && !mine.find((c) => c.id === e.claimId)?.sensitive).length,
+      resolved: mine.filter((c) => c.status === ClaimStatus.RESOLVED || c.status === ClaimStatus.CLOSED).length,
+      medianMinutesToProposal: median(firstProposal),
+      refundedMinor: mine.reduce((n, c) => n + (c.refundedMinor ?? 0), 0),
+      byReason,
+    };
+  });
+  return result.sort((a, b) => (b.claimRatePer100 ?? -1) - (a.claimRatePer100 ?? -1) || b.claims - a.claims);
+}
+
+export async function merchantClaimMetrics(db: Db, merchantId: string, userId: string, days: number): Promise<ClaimMetricsDto> {
+  await getMerchantAccess(db, merchantId, userId);
+  return (await claimMetrics(db, days, merchantId))[0]!;
 }
 
 export type { OrderClaimSummary };

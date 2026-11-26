@@ -26,7 +26,7 @@ import type { Db, DbOrTx, Tx } from "../../db/client";
 import type { OrderLimits } from "../../config";
 import { badRequest, conflict, isUniqueViolation, notFound, tooManyRequests } from "../../lib/errors";
 import { getProductsForOrder } from "../menu/service";
-import { enqueueOrderPlaced } from "../notifications/service";
+import { enqueueOrderPlaced, saveCustomerPushToken } from "../notifications/service";
 import { type Actor, recordAudit } from "../audit/service";
 import { accrueOrderCommission, quoteOrderCommission } from "../billing/service";
 import {
@@ -595,11 +595,33 @@ export async function getOrderClaimSummaryForCustomer(db: DbOrTx, orderId: strin
   return claimSummary(db, row);
 }
 
+/** Pedidos completados (entregados o retirados) por comercio desde `since` (para métricas de reclamos). */
+export async function countCompletedOrders(db: DbOrTx, since: Date, merchantId?: string): Promise<Map<string, number>> {
+  const rows = await db
+    .select({ merchantId: orders.merchantId, n: count() })
+    .from(orders)
+    .where(
+      and(
+        inArray(orders.status, [OrderStatus.DELIVERED, OrderStatus.PICKED_UP]),
+        gte(orders.createdAt, since),
+        merchantId ? eq(orders.merchantId, merchantId) : undefined,
+      ),
+    )
+    .groupBy(orders.merchantId);
+  return new Map(rows.map((r) => [r.merchantId, r.n]));
+}
+
 /** Resumen para reclamos, del lado del comercio o del admin (sin token). */
 export async function getOrderClaimSummary(db: DbOrTx, orderId: string) {
   const [row] = await db.select().from(orders).where(eq(orders.id, orderId));
   if (!row) throw notFound("Pedido");
   return claimSummary(db, row);
+}
+
+/** El cliente registra su celular para recibir avisos del pedido (Expo Push, ADR 0020). */
+export async function registerOrderPushToken(db: Db, orderId: string, token: string | undefined, secret: string, expoToken: string) {
+  assertTrackingToken(secret, orderId, token);
+  await saveCustomerPushToken(db, orderId, expoToken);
 }
 
 export async function getOrderForCustomer(db: Db, orderId: string, token: string | undefined, secret: string) {

@@ -14,9 +14,11 @@ import {
   getClaimForAdmin,
   getClaimForCustomer,
   getMerchantClaim,
+  claimMetrics,
   listClaimsForAdmin,
   listMerchantClaims,
   markRefunded,
+  merchantClaimMetrics,
   merchantMessage,
   openClaim,
   proposeResolution,
@@ -57,6 +59,21 @@ const claimSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
 });
+
+const metricsSchema = z.object({
+  merchant: z.object({ id: z.uuid(), name: z.string() }),
+  completedOrders: z.number().int(),
+  claims: z.number().int(),
+  claimRatePer100: z.number().nullable().describe("Reclamos cada 100 pedidos completados"),
+  open: z.number().int(),
+  escalated: z.number().int(),
+  slaMissed: z.number().int().describe("Escalados porque el comercio no respondió a tiempo"),
+  resolved: z.number().int(),
+  medianMinutesToProposal: z.number().int().nullable(),
+  refundedMinor: z.number().int(),
+  byReason: z.record(reasonSchema, z.number().int()),
+});
+const daysQuery = z.object({ days: z.coerce.number().int().min(1).max(365).default(30) });
 
 const tokenHeaders = z.object({ "x-order-token": z.string().min(10).max(200) });
 const orderParams = z.object({ orderId: z.uuid() });
@@ -186,6 +203,22 @@ export const claimRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
   );
 
   app.get(
+    "/merchants/:merchantId/claims/metrics",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["claims"],
+        summary: "Métricas de reclamos del comercio",
+        security,
+        params: z.object({ merchantId: z.uuid() }),
+        querystring: daysQuery,
+        response: { 200: metricsSchema, ...errorResponses },
+      },
+    },
+    (request) => merchantClaimMetrics(db, request.params.merchantId, authOf(request).userId, request.query.days),
+  );
+
+  app.get(
     "/merchants/:merchantId/claims/:claimId",
     {
       onRequest: requireAuth,
@@ -256,6 +289,21 @@ export const claimRoutes: FastifyPluginAsyncZod<{ db: Db; orderTokenSecret: stri
       },
     },
     (request) => listClaimsForAdmin(db, request.query.status),
+  );
+
+  app.get(
+    "/admin/claims/metrics",
+    {
+      onRequest: requireAdmin,
+      schema: {
+        tags: ["claims"],
+        summary: "Métricas de reclamos por comercio (mayor tasa primero)",
+        security,
+        querystring: daysQuery,
+        response: { 200: z.array(metricsSchema), ...errorResponses },
+      },
+    },
+    (request) => claimMetrics(db, request.query.days),
   );
 
   app.get(
