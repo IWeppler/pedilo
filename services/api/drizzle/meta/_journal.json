@@ -113,6 +113,13 @@
       "when": 1795726464511,
       "tag": "0015_claim_notifications",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1795728166614,
+      "tag": "0016_mercado_pago",
+      "breakpoints": true
     }
   ]
 }

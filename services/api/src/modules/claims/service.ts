@@ -20,6 +20,7 @@ import { media, mediaPath, mediaUrl, processImage } from "../../lib/media";
 import { type Actor, recordAudit } from "../audit/service";
 import { adjustCommissionForRefund } from "../billing/service";
 import { enqueueNotification } from "../notifications/service";
+import { type RefundSettledEvent, requestRefund } from "../payments/service";
 import { getMerchantAccess, getMerchantNames } from "../merchants/service";
 import { countCompletedOrders, getOrderClaimSummary, getOrderClaimSummaryForCustomer, type OrderClaimSummary } from "../orders/service";
 import { type ClaimActor, claimEvents, type ClaimEventKind, claimEvidence, type ClaimRow, claims } from "./schema";
@@ -410,6 +411,15 @@ export async function markRefunded(
     }
     const order = await getOrderClaimSummary(tx, row.orderId);
     const amount = row.proposalAmountMinor;
+    // Pago con tarjeta: la devolución la hace Mercado Pago. Queda en proceso hasta que confirme.
+    if (order.paymentMethod === "MERCADO_PAGO") {
+      await requestRefund(tx, { orderId: row.orderId, claimId: row.id, amountMinor: amount, reason: `Reclamo ${row.orderCode}` });
+      await move(tx, row, ClaimStatus.PAYMENT_REFUND_PENDING);
+      await event(tx, row.id, "MERCHANT", "REFUNDED", { userId: actor.userId, body: "Devolución pedida a Mercado Pago", amountMinor: amount });
+      await notify(tx, row, "CUSTOMER", "Devolución en proceso", "El comercio pidió la devolución a Mercado Pago. Te avisamos cuando se acredite.");
+      await recordAudit(tx, actor, { action: "claim.refund_requested", entityType: "claim", entityId: row.id, after: { amountMinor: amount } });
+      return;
+    }
     await move(tx, row, ClaimStatus.RESOLVED, {
       refundedMinor: amount,
       refundedAt: now,
@@ -427,6 +437,28 @@ export async function markRefunded(
     });
   });
   return getMerchantClaim(db, merchantId, claimId, actor.userId);
+}
+
+/**
+ * Mercado Pago confirmó (o rechazó) la devolución pedida por un reclamo. Confirmada → resuelto.
+ * Rechazada (p. ej. sin saldo del comercio) → a Pedilo, sin éxito falso (SPEC §8.2.6).
+ */
+export async function applyRefundToClaim(tx: Tx, e: RefundSettledEvent): Promise<void> {
+  if (!e.claimId) return;
+  const [row] = await tx.select().from(claims).where(eq(claims.id, e.claimId)).for("update");
+  if (!row || row.status !== ClaimStatus.PAYMENT_REFUND_PENDING) return;
+  const now = new Date();
+  if (e.ok) {
+    await move(tx, row, ClaimStatus.RESOLVED, { refundedMinor: e.amountMinor, refundedAt: now, resolvedAt: now, resolutionNote: row.proposalNote });
+    await event(tx, row.id, "SYSTEM", "RESOLVED", { body: "Mercado Pago acreditó la devolución", amountMinor: e.amountMinor });
+    await notify(tx, row, "CUSTOMER", "Devolución acreditada", "Mercado Pago confirmó la devolución de tu reclamo.");
+    await notify(tx, row, "MERCHANT", `Reclamo ${row.orderCode} resuelto`, "Mercado Pago confirmó la devolución.");
+  } else {
+    await move(tx, row, ClaimStatus.ESCALATED, { escalatedAt: now });
+    await event(tx, row.id, "SYSTEM", "ESCALATED", { body: `Mercado Pago no pudo hacer la devolución: ${e.error ?? "error"}` });
+    await notify(tx, row, "CUSTOMER", "Tu reclamo lo revisa Pedilo", "La devolución no se pudo completar; la revisamos nosotros.");
+    await notify(tx, row, "MERCHANT", `Reclamo ${row.orderCode}`, "Mercado Pago rechazó la devolución (¿saldo insuficiente?). Lo revisa Pedilo.");
+  }
 }
 
 export async function merchantMessage(db: Db, merchantId: string, claimId: string, body: string, userId: string): Promise<ClaimDto> {

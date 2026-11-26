@@ -15037,11 +15037,16 @@
                             },
                             "transfer": {
                               "type": "boolean"
+                            },
+                            "card": {
+                              "type": "boolean",
+                              "description": "Tarjeta con Mercado Pago"
                             }
                           },
                           "required": [
                             "cash",
-                            "transfer"
+                            "transfer",
+                            "card"
                           ],
                           "additionalProperties": false,
                           "description": "Medios de pago que acepta"
@@ -32846,11 +32851,12 @@
                     ]
                   },
                   "paymentMethod": {
-                    "description": "Efectivo por defecto",
+                    "description": "Efectivo por defecto. MERCADO_PAGO: el pedido queda esperando el pago con tarjeta (ADR 0021)",
                     "type": "string",
                     "enum": [
                       "CASH",
-                      "TRANSFER"
+                      "TRANSFER",
+                      "MERCADO_PAGO"
                     ]
                   },
                   "scheduledFor": {
@@ -47914,6 +47920,1574 @@
         "responses": {
           "202": {
             "description": "Default Response"
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/payments/config": {
+      "get": {
+        "summary": "Configuración pública del checkout",
+        "tags": [
+          "payments"
+        ],
+        "description": "Public key para inicializar el SDK de Mercado Pago en el navegador. Sin caché.",
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "publicKey": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "enabled",
+                    "publicKey"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/orders/{orderId}/payments": {
+      "post": {
+        "summary": "Pagar un pedido con tarjeta",
+        "tags": [
+          "payments"
+        ],
+        "description": "Recibe el token de la tarjeta del Card Payment Brick. Monto, comisión y comercio salen del pedido, nunca del navegador. `Idempotency-Key` por intento: reintentar con la misma clave no cobra dos veces. 409 NOT_PAYABLE, PAYMENT_IN_PROGRESS, PAYMENT_FAILED, MP_NOT_CONNECTED o MP_DISABLED.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 200
+                  },
+                  "paymentMethodId": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 40
+                  },
+                  "issuerId": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "payer": {
+                    "type": "object",
+                    "properties": {
+                      "email": {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                      },
+                      "identification": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "minLength": 2,
+                            "maxLength": 10
+                          },
+                          "number": {
+                            "type": "string",
+                            "minLength": 5,
+                            "maxLength": 20
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "number"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "email",
+                      "identification"
+                    ]
+                  }
+                },
+                "required": [
+                  "token",
+                  "paymentMethodId",
+                  "payer"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "orderId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 200
+            },
+            "in": "header",
+            "name": "x-order-token",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 100
+            },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "APPROVED",
+                        "REJECTED",
+                        "CANCELLED",
+                        "REFUND_PENDING",
+                        "PARTIALLY_REFUNDED",
+                        "REFUNDED",
+                        "REFUND_BLOCKED",
+                        "MANUAL_REVIEW",
+                        "CHARGEBACK"
+                      ]
+                    },
+                    "providerStatus": {
+                      "description": "Estado crudo de Mercado Pago (approved, in_process, rejected…)",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "statusDetail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "orderStatus": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "QUOTED",
+                        "PENDING_PAYMENT",
+                        "PLACED",
+                        "ACCEPTED",
+                        "PREPARING",
+                        "READY",
+                        "READY_FOR_PICKUP",
+                        "PICKED_UP",
+                        "PICKED_UP_BY_COURIER",
+                        "DELIVERED",
+                        "DELIVERY_FAILED",
+                        "REJECTED",
+                        "CANCELLED",
+                        "EXPIRED"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "providerStatus",
+                    "statusDetail",
+                    "orderStatus"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/orders/{orderId}/payment": {
+      "get": {
+        "summary": "Estado del pago del pedido",
+        "tags": [
+          "payments"
+        ],
+        "description": "Si el último intento sigue en curso, se consulta a Mercado Pago. null si todavía no se intentó pagar.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "orderId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 10,
+              "maxLength": 200
+            },
+            "in": "header",
+            "name": "x-order-token",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "payment": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "PENDING",
+                                "APPROVED",
+                                "REJECTED",
+                                "CANCELLED",
+                                "REFUND_PENDING",
+                                "PARTIALLY_REFUNDED",
+                                "REFUNDED",
+                                "REFUND_BLOCKED",
+                                "MANUAL_REVIEW",
+                                "CHARGEBACK"
+                              ]
+                            },
+                            "providerStatus": {
+                              "description": "Estado crudo de Mercado Pago (approved, in_process, rejected…)",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "statusDetail": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "orderStatus": {
+                              "type": "string",
+                              "enum": [
+                                "DRAFT",
+                                "QUOTED",
+                                "PENDING_PAYMENT",
+                                "PLACED",
+                                "ACCEPTED",
+                                "PREPARING",
+                                "READY",
+                                "READY_FOR_PICKUP",
+                                "PICKED_UP",
+                                "PICKED_UP_BY_COURIER",
+                                "DELIVERED",
+                                "DELIVERY_FAILED",
+                                "REJECTED",
+                                "CANCELLED",
+                                "EXPIRED"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "providerStatus",
+                            "statusDetail",
+                            "orderStatus"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "payment"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/mercadopago": {
+      "get": {
+        "summary": "Estado de la conexión con Mercado Pago",
+        "tags": [
+          "payments"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "CONNECTED",
+                            "NEEDS_REAUTH"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "mpUserId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "liveMode": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "connectedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "available": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "connected",
+                    "status",
+                    "mpUserId",
+                    "liveMode",
+                    "connectedAt",
+                    "available"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Desconectar Mercado Pago",
+        "tags": [
+          "payments"
+        ],
+        "description": "Solo el dueño. Deja de ofrecer tarjeta; los pagos ya hechos no cambian.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "connected": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "CONNECTED",
+                            "NEEDS_REAUTH"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "mpUserId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "liveMode": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ]
+                    },
+                    "connectedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "connected",
+                    "status",
+                    "mpUserId",
+                    "liveMode",
+                    "connectedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/mercadopago/connect": {
+      "post": {
+        "summary": "Empezar a conectar Mercado Pago",
+        "tags": [
+          "payments"
+        ],
+        "description": "Solo el dueño. Devuelve la URL de autorización de Mercado Pago (vence en 10 minutos).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
           },
           "400": {
             "description": "Error con forma estable (ADR 0005)",

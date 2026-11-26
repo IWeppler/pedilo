@@ -9,12 +9,32 @@ import { createWebPushSender } from "./modules/notifications/web-push-sender";
 import { closeSettlementWeek } from "./modules/billing/settlements";
 import { escalateOverdueClaims } from "./modules/claims/service";
 import { expireOffers } from "./modules/deliveries/service";
-import { expireOverdueOrders } from "./modules/orders/service";
+import { expireOverdueOrders, expireUnpaidOrders } from "./modules/orders/service";
+import { createMercadoPagoGateway } from "./modules/payments/gateway";
+import { type PaymentsContext, processRefunds } from "./modules/payments/service";
+import { createSecretBox } from "./lib/secret-box";
 
 const config = loadConfig();
 const { db, close } = createDb(config.databaseUrl);
 const tokenVerifier = await createTokenVerifier(config);
-const app = await buildApp({ config, db, tokenVerifier });
+const mp = config.mercadoPago;
+const paymentsCtx: PaymentsContext | null = mp
+  ? {
+      gateway: createMercadoPagoGateway({ appId: mp.appId, clientSecret: mp.clientSecret, redirectUri: mp.redirectUri, testMode: mp.testMode }),
+      box: createSecretBox(mp.encryptionKey),
+      publicKey: mp.publicKey,
+      notificationUrl: mp.notificationUrl,
+      acceptTimeoutMs: config.orders.acceptTimeoutMs,
+    }
+  : null;
+const app = await buildApp({
+  config,
+  db,
+  tokenVerifier,
+  payments: paymentsCtx && mp ? { ctx: paymentsCtx, webhookSecret: mp.webhookSecret, panelUrl: mp.panelUrl } : null,
+});
+if (!mp) app.log.warn("Mercado Pago sin configurar (MP_CLIENT_ID/MP_CLIENT_SECRET/MP_PUBLIC_KEY/MP_TOKEN_ENCRYPTION_KEY): sin pago con tarjeta.");
+else app.log.info({ testMode: mp.testMode, webhook: mp.notificationUrl !== null }, "Mercado Pago habilitado");
 
 if (config.auth.mode === "local") {
   app.log.warn("Auth en modo LOCAL: se aceptan tokens de `npm run dev:token`. Solo para desarrollo.");
@@ -32,6 +52,10 @@ const workers = [
     log: app.log,
     run: () => processOutbox(db, pushSender, new Date(), 20, customerPushSender),
   }),
+  startIntervalWorker({ name: "unpaid-expiry", intervalMs: 60_000, log: app.log, run: () => expireUnpaidOrders(db) }),
+  ...(paymentsCtx
+    ? [startIntervalWorker({ name: "refunds", intervalMs: 30_000, log: app.log, run: () => processRefunds(db, paymentsCtx) })]
+    : []),
   startIntervalWorker({ name: "offer-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOffers(db) }),
   // Reclamos sin respuesta del comercio a tiempo → Pedilo (ADR 0019).
   startIntervalWorker({ name: "claim-escalation", intervalMs: 5 * 60 * 1000, log: app.log, run: () => escalateOverdueClaims(db) }),

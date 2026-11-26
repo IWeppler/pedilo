@@ -60,3 +60,6 @@ ios/
 
 # Fotos subidas en desarrollo (almacenamiento local, ADR 0017)
 .media/
+
+# Estado del asistente de Mercado Pago
+.mp-integrate-progress.md

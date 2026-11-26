@@ -36,6 +36,10 @@ import { menuRoutes } from "./modules/menu/routes";
 import { merchantRoutes } from "./modules/merchants/routes";
 import { notificationRoutes } from "./modules/notifications/routes";
 import { orderRoutes } from "./modules/orders/routes";
+import { applyRefundToClaim } from "./modules/claims/service";
+import { onPaidOrderCancelled } from "./modules/orders/service";
+import { paymentRoutes } from "./modules/payments/routes";
+import { onRefundSettled, type PaymentsContext, refundCancelledOrder } from "./modules/payments/service";
 import type { TokenVerifier } from "./modules/identity/token-verifier";
 
 export interface AppDeps {
@@ -44,6 +48,8 @@ export interface AppDeps {
     Partial<Pick<Config, "orders" | "push" | "trustProxyHops" | "limits" | "settlement" | "media">>;
   db: Db;
   tokenVerifier: TokenVerifier;
+  /** Pagos con tarjeta (ADR 0021). Ausente = apagados. Los tests pasan un proveedor falso. */
+  payments?: { ctx: PaymentsContext; webhookSecret: string | null; panelUrl: string } | null;
 }
 
 export const API_VERSION = "0.1.0";
@@ -52,7 +58,7 @@ export const API_VERSION = "0.1.0";
  * Construye la app sin abrir puertos. `server.ts` la pone a escuchar;
  * los tests la usan con `app.inject()`.
  */
-export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<FastifyInstance> {
+export async function buildApp({ config, db, tokenVerifier, payments = null }: AppDeps): Promise<FastifyInstance> {
   const app = Fastify({
     logger: config.logLevel === "silent" ? false : { level: config.logLevel },
     // Correlation ID: se respeta el x-request-id entrante o se genera uno (SPEC §16).
@@ -158,6 +164,18 @@ export async function buildApp({ config, db, tokenVerifier }: AppDeps): Promise<
   });
   await app.register(claimRoutes, { prefix: "/v1", db, orderTokenSecret: config.orderTokenSecret });
   await app.register(notificationRoutes, { prefix: "/v1", db, vapidPublicKey: config.push?.vapid?.publicKey ?? null });
+  // Pedidos → pagos (pedido pagado que no sigue: devolución) y pagos → reclamos (devolución
+  // confirmada o rechazada). Listeners para no crear ciclos entre módulos (ADR 0021).
+  onPaidOrderCancelled(refundCancelledOrder);
+  onRefundSettled(applyRefundToClaim);
+  await app.register(paymentRoutes, {
+    prefix: "/v1",
+    db,
+    orderTokenSecret: config.orderTokenSecret,
+    ctx: payments?.ctx ?? null,
+    webhookSecret: payments?.webhookSecret ?? null,
+    panelUrl: payments?.panelUrl ?? "http://localhost:3000",
+  });
 
   return app;
 }

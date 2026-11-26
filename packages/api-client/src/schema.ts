@@ -5480,6 +5480,8 @@ export interface paths {
                                 payment: {
                                     cash: boolean;
                                     transfer: boolean;
+                                    /** @description Tarjeta con Mercado Pago */
+                                    card: boolean;
                                 };
                                 logoUrl: string | null;
                                 coverUrl: string | null;
@@ -12205,10 +12207,10 @@ export interface paths {
                         };
                         notes?: string | null;
                         /**
-                         * @description Efectivo por defecto
+                         * @description Efectivo por defecto. MERCADO_PAGO: el pedido queda esperando el pago con tarjeta (ADR 0021)
                          * @enum {string}
                          */
-                        paymentMethod?: "CASH" | "TRANSFER";
+                        paymentMethod?: "CASH" | "TRANSFER" | "MERCADO_PAGO";
                         /**
                          * Format: date-time
                          * @description Programar: inicio de una franja de GET .../slots. Sin esto, lo antes posible
@@ -17522,6 +17524,738 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/payments/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Configuración pública del checkout
+         * @description Public key para inicializar el SDK de Mercado Pago en el navegador. Sin caché.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            enabled: boolean;
+                            publicKey: string | null;
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/orders/{orderId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pagar un pedido con tarjeta
+         * @description Recibe el token de la tarjeta del Card Payment Brick. Monto, comisión y comercio salen del pedido, nunca del navegador. `Idempotency-Key` por intento: reintentar con la misma clave no cobra dos veces. 409 NOT_PAYABLE, PAYMENT_IN_PROGRESS, PAYMENT_FAILED, MP_NOT_CONNECTED o MP_DISABLED.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                    "idempotency-key": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        token: string;
+                        paymentMethodId: string;
+                        issuerId?: string | null;
+                        payer: {
+                            /** Format: email */
+                            email: string;
+                            identification: {
+                                type: string;
+                                number: string;
+                            };
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "REFUND_PENDING" | "PARTIALLY_REFUNDED" | "REFUNDED" | "REFUND_BLOCKED" | "MANUAL_REVIEW" | "CHARGEBACK";
+                            /** @description Estado crudo de Mercado Pago (approved, in_process, rejected…) */
+                            providerStatus: string | null;
+                            statusDetail: string | null;
+                            /** @enum {string} */
+                            orderStatus: "DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/orders/{orderId}/payment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado del pago del pedido
+         * @description Si el último intento sigue en curso, se consulta a Mercado Pago. null si todavía no se intentó pagar.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header: {
+                    "x-order-token": string;
+                };
+                path: {
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            payment: {
+                                /** @enum {string} */
+                                status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "REFUND_PENDING" | "PARTIALLY_REFUNDED" | "REFUNDED" | "REFUND_BLOCKED" | "MANUAL_REVIEW" | "CHARGEBACK";
+                                /** @description Estado crudo de Mercado Pago (approved, in_process, rejected…) */
+                                providerStatus: string | null;
+                                statusDetail: string | null;
+                                /** @enum {string} */
+                                orderStatus: "DRAFT" | "QUOTED" | "PENDING_PAYMENT" | "PLACED" | "ACCEPTED" | "PREPARING" | "READY" | "READY_FOR_PICKUP" | "PICKED_UP" | "PICKED_UP_BY_COURIER" | "DELIVERED" | "DELIVERY_FAILED" | "REJECTED" | "CANCELLED" | "EXPIRED";
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/mercadopago": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado de la conexión con Mercado Pago */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            connected: boolean;
+                            status: ("CONNECTED" | "NEEDS_REAUTH") | null;
+                            mpUserId: string | null;
+                            liveMode: boolean | null;
+                            connectedAt: string | null;
+                            available: boolean;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Desconectar Mercado Pago
+         * @description Solo el dueño. Deja de ofrecer tarjeta; los pagos ya hechos no cambian.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            connected: boolean;
+                            status: ("CONNECTED" | "NEEDS_REAUTH") | null;
+                            mpUserId: string | null;
+                            liveMode: boolean | null;
+                            connectedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/mercadopago/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Empezar a conectar Mercado Pago
+         * @description Solo el dueño. Devuelve la URL de autorización de Mercado Pago (vence en 10 minutos).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            url: string;
+                        };
+                    };
                 };
                 /** @description Error con forma estable (ADR 0005) */
                 400: {

@@ -72,7 +72,7 @@ const publicMenuSchema = z.object({
     slug: z.string(),
     displayName: z.string(),
     categoryId: z.uuid(),
-    payment: z.object({ cash: z.boolean(), transfer: z.boolean() }).describe("Medios de pago que acepta"),
+    payment: z.object({ cash: z.boolean(), transfer: z.boolean(), card: z.boolean().describe("Tarjeta con Mercado Pago") }).describe("Medios de pago que acepta"),
     logoUrl: z.string().nullable(),
     coverUrl: z.string().nullable(),
     branches: z.array(

@@ -148,7 +148,10 @@ const createOrderBody = z.object({
     .optional(),
   customer: z.object({ name: z.string().trim().min(2).max(80), phone: phoneSchema }),
   notes: z.string().trim().max(500).nullable().optional(),
-  paymentMethod: z.enum(["CASH", "TRANSFER"]).optional().describe("Efectivo por defecto"),
+  paymentMethod: z
+    .enum(["CASH", "TRANSFER", "MERCADO_PAGO"])
+    .optional()
+    .describe("Efectivo por defecto. MERCADO_PAGO: el pedido queda esperando el pago con tarjeta (ADR 0021)"),
   scheduledFor: z.iso
     .datetime({ offset: true })
     .optional()

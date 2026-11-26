@@ -40,6 +40,8 @@ export const merchants = pgTable(
     /** Medios de pago que acepta (ADR 0011). Siempre al menos uno. */
     acceptsCash: boolean("accepts_cash").notNull().default(true),
     acceptsTransfer: boolean("accepts_transfer").notNull().default(false),
+    /** Tarjeta con Mercado Pago: lo activa el módulo de pagos al conectar la cuenta por OAuth (ADR 0021). */
+    acceptsMercadoPago: boolean("accepts_mercado_pago").notNull().default(false),
     /** Datos para transferir: se copian al pedido (el cliente los ve solo después de pedir). */
     transferAlias: text("transfer_alias"),
     transferCbu: text("transfer_cbu"),

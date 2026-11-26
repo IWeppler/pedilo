@@ -13,3 +13,4 @@ export * from "../modules/notifications/schema";
 export * from "../modules/billing/schema";
 export * from "../modules/deliveries/schema";
 export * from "../modules/claims/schema";
+export * from "../modules/payments/schema";

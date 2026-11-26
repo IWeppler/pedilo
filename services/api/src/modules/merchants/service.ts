@@ -944,6 +944,11 @@ export async function getBranchSummary(db: DbOrTx, branchId: string): Promise<{ 
   return row;
 }
 
+/** Lo llama el módulo de pagos al conectar o desconectar Mercado Pago (ADR 0021). */
+export async function setAcceptsMercadoPago(db: DbOrTx, merchantId: string, enabled: boolean): Promise<void> {
+  await db.update(merchants).set({ acceptsMercadoPago: enabled }).where(eq(merchants.id, merchantId));
+}
+
 /** Rubro de un comercio (para el tope de comisión). 404 si no existe. */
 export async function getMerchantCategoryId(db: DbOrTx, merchantId: string): Promise<string> {
   const [row] = await db.select({ categoryId: merchants.categoryId }).from(merchants).where(eq(merchants.id, merchantId));
@@ -978,7 +983,7 @@ export interface PublicMerchantDto {
   displayName: string;
   categoryId: string;
   /** Medios de pago que acepta. Los datos de transferencia se ven recién en el pedido. */
-  payment: { cash: boolean; transfer: boolean };
+  payment: { cash: boolean; transfer: boolean; card: boolean };
   logoUrl: string | null;
   coverUrl: string | null;
   branches: PublicBranchDto[];
@@ -1039,7 +1044,7 @@ export async function findApprovedMerchantBySlug(
     slug: row.slug,
     displayName: row.displayName,
     categoryId: row.categoryId,
-    payment: { cash: row.acceptsCash, transfer: row.acceptsTransfer },
+    payment: { cash: row.acceptsCash, transfer: row.acceptsTransfer, card: row.acceptsMercadoPago },
     logoUrl: mediaUrl(row.logoPath),
     coverUrl: mediaUrl(row.coverPath),
     branches: detail.branches.filter((b) => b.active).map((b) => toPublicBranch(b, now)),

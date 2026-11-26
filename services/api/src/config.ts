@@ -51,6 +51,24 @@ const envSchema = z
       .default("true")
       .transform((v) => v === "true"),
     EXPO_ACCESS_TOKEN: z.string().min(10).optional(),
+    /**
+     * Mercado Pago (ADR 0021). Sin MP_CLIENT_ID/MP_CLIENT_SECRET/MP_PUBLIC_KEY/MP_TOKEN_ENCRYPTION_KEY
+     * los pagos con tarjeta quedan apagados (el resto funciona igual).
+     */
+    /** Client ID de la app de Pedilo (el mismo número que el App ID del panel). */
+    MP_CLIENT_ID: z.string().min(3).optional(),
+    MP_CLIENT_SECRET: z.string().min(8).optional(),
+    MP_PUBLIC_KEY: z.string().min(8).optional(),
+    MP_OAUTH_REDIRECT_URI: z.url().default("http://localhost:4000/v1/payments/mercadopago/oauth/callback"),
+    /** 32 bytes en base64 (`openssl rand -base64 32`): cifra los tokens de los comercios. */
+    MP_TOKEN_ENCRYPTION_KEY: z.string().min(40).optional(),
+    MP_WEBHOOK_SECRET: z.string().min(8).optional(),
+    /** Tokens de prueba del comercio conectado (cuentas de prueba). Apagarlo solo en producción. */
+    MP_TEST_MODE: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+    /** URL pública de la API (https) para el webhook. Sin esto, el estado se confirma consultando. */
+    API_PUBLIC_URL: z.url().optional(),
+    /** A dónde vuelve el comercio después de conectar Mercado Pago. */
+    MERCHANT_PANEL_URL: z.url().default("http://localhost:3000"),
     // 8081/8082: Expo en modo web durante el desarrollo.
     CORS_ORIGINS: z.string().default("http://localhost:3000,http://localhost:3001,http://localhost:8081,http://localhost:8082"),
   })
@@ -94,6 +112,17 @@ export interface Config {
   limits: OrderLimits;
   settlement: { timeZone: string; dueDays: number; sweepMs: number };
   expoPush: { enabled: boolean; accessToken?: string | undefined };
+  mercadoPago: {
+    appId: string;
+    clientSecret: string;
+    publicKey: string;
+    redirectUri: string;
+    encryptionKey: string;
+    webhookSecret: string | null;
+    testMode: boolean;
+    notificationUrl: string | null;
+    panelUrl: string;
+  } | null;
   media: { driver: "local"; dir: string } | { driver: "supabase"; url: string; secretKey: string; bucket: string };
 }
 
@@ -105,7 +134,9 @@ export interface OrderLimits {
 }
 
 export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
-  const parsed = envSchema.safeParse(source);
+  // Una variable de Mercado Pago vacía en .env (p. ej. el secreto que falta cargar) cuenta como ausente.
+  const cleaned = Object.fromEntries(Object.entries(source).filter(([k, v]) => !(k.startsWith("MP_") && v?.trim() === "")));
+  const parsed = envSchema.safeParse(cleaned);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `  - ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Configuración inválida:\n${issues}`);
@@ -143,6 +174,21 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
       dueDays: env.SETTLEMENT_DUE_DAYS,
       sweepMs: env.SETTLEMENT_SWEEP_MINUTES * 60 * 1000,
     },
+    mercadoPago:
+      env.MP_CLIENT_ID && env.MP_CLIENT_SECRET && env.MP_PUBLIC_KEY && env.MP_TOKEN_ENCRYPTION_KEY
+        ? {
+            appId: env.MP_CLIENT_ID,
+            clientSecret: env.MP_CLIENT_SECRET,
+            publicKey: env.MP_PUBLIC_KEY,
+            redirectUri: env.MP_OAUTH_REDIRECT_URI,
+            encryptionKey: env.MP_TOKEN_ENCRYPTION_KEY,
+            webhookSecret: env.MP_WEBHOOK_SECRET ?? null,
+            testMode: env.MP_TEST_MODE,
+            // Mercado Pago exige https para notification_url.
+            notificationUrl: env.API_PUBLIC_URL?.startsWith("https://") ? `${env.API_PUBLIC_URL.replace(/\/+$/, "")}/v1/webhooks/mercadopago` : null,
+            panelUrl: env.MERCHANT_PANEL_URL.replace(/\/+$/, ""),
+          }
+        : null,
     expoPush: { enabled: env.EXPO_PUSH_ENABLED, ...(env.EXPO_ACCESS_TOKEN && { accessToken: env.EXPO_ACCESS_TOKEN }) },
     media:
       env.MEDIA_STORAGE === "supabase"

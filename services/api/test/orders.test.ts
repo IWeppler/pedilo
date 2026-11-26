@@ -685,7 +685,7 @@ describe("pago por transferencia y confirmación de cobro (ADR 0011)", () => {
 
   it("el menú público dice qué medios acepta, sin los datos de la cuenta", async () => {
     const menu = (await req("GET", "/v1/public/merchants/pizzeria-don-pepe")).json();
-    expect(menu.merchant.payment).toEqual({ cash: true, transfer: true });
+    expect(menu.merchant.payment).toEqual({ cash: true, transfer: true, card: false });
     expect(JSON.stringify(menu)).not.toContain("don.pepe.mp");
   });
 

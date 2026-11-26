@@ -27,7 +27,10 @@ export interface TestContext {
  * Postgres real en memoria (PGlite) con las migraciones del repo aplicadas,
  * y la app construida con un verificador de tokens local.
  */
-export async function createTestContext(configOverrides: Partial<AppDeps["config"]> = {}): Promise<TestContext> {
+export async function createTestContext(
+  configOverrides: Partial<AppDeps["config"]> = {},
+  extra: Pick<AppDeps, "payments"> = {},
+): Promise<TestContext> {
   const client = new PGlite();
   const db = drizzle(client, { schema }) as unknown as Db;
   await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER });
@@ -37,6 +40,7 @@ export async function createTestContext(configOverrides: Partial<AppDeps["config
     config: { env: "test", logLevel: "silent", corsOrigins: [], orderTokenSecret: "test-order-token-secret", ...configOverrides },
     db,
     tokenVerifier: createLocalVerifier(keys.publicKey),
+    ...extra,
   });
   await app.ready();
 

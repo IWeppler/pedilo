@@ -263,7 +263,7 @@ export interface CreateOrderInput {
   customer: { name: string; phone: string };
   notes?: string | null | undefined;
   /** Efectivo por defecto. */
-  paymentMethod?: "CASH" | "TRANSFER" | undefined;
+  paymentMethod?: "CASH" | "TRANSFER" | "MERCADO_PAGO" | undefined;
   /** Inicio de la franja (ISO). Sin esto, lo antes posible. */
   scheduledFor?: string | undefined;
   items: Array<{
@@ -331,6 +331,10 @@ export async function createOrder(
 
   const paymentMethod = input.paymentMethod ?? PaymentMethod.CASH;
   let transferDetails: TransferDetails | null = null;
+  if (paymentMethod === PaymentMethod.MERCADO_PAGO && !merchant.payment.card) {
+    throw conflict("Este comercio no acepta tarjeta", { reason: "PAYMENT_METHOD_NOT_AVAILABLE" });
+  }
+  const digital = paymentMethod === PaymentMethod.MERCADO_PAGO;
   if (paymentMethod === PaymentMethod.CASH && !merchant.payment.cash) {
     throw conflict("Este comercio no acepta efectivo", { reason: "PAYMENT_METHOD_NOT_AVAILABLE" });
   }
@@ -420,8 +424,9 @@ export async function createOrder(
           merchantSlug: merchant.slug,
           branchName: branch.name,
           branchAddress: branch.addressLine,
-          // Efectivo/transferencia: el pedido va directo al comercio (no hay pago digital que esperar).
-          status: OrderStatus.PLACED,
+          // Efectivo/transferencia: va directo al comercio. Tarjeta: espera la confirmación del pago
+          // (SPEC §7.1 paso 6); el comercio no lo ve hasta que se aprueba.
+          status: digital ? OrderStatus.PENDING_PAYMENT : OrderStatus.PLACED,
           fulfillmentType: input.fulfillmentType,
           paymentMethod,
           paymentStatus: PaymentStatus.PENDING,
@@ -445,7 +450,8 @@ export async function createOrder(
           deliveryFeeMinor,
           totalMinor: subtotalMinor + deliveryFeeMinor,
           idempotencyKey,
-          acceptDeadlineAt: acceptDeadline(now, opts.acceptTimeoutMs ?? DEFAULT_ACCEPT_TIMEOUT_MS, scheduledFor),
+          // Con tarjeta el plazo para aceptar corre desde que se aprueba el pago.
+          acceptDeadlineAt: digital ? null : acceptDeadline(now, opts.acceptTimeoutMs ?? DEFAULT_ACCEPT_TIMEOUT_MS, scheduledFor),
         })
         .returning({ id: orders.id, code: orders.code });
       const id = row!.id;
@@ -455,7 +461,14 @@ export async function createOrder(
         const [item] = await tx.insert(orderItems).values({ orderId: id, ...rest, sortOrder: i }).returning({ id: orderItems.id });
         if (options.length) await tx.insert(orderItemOptions).values(options.map((o) => ({ orderItemId: item!.id, ...o })));
       }
-      await tx.insert(orderEvents).values({ orderId: id, fromStatus: null, toStatus: OrderStatus.PLACED, actorType: "CUSTOMER", actorUserId: opts.customerUserId ?? null });
+      await tx.insert(orderEvents).values({
+        orderId: id,
+        fromStatus: null,
+        toStatus: digital ? OrderStatus.PENDING_PAYMENT : OrderStatus.PLACED,
+        actorType: "CUSTOMER",
+        actorUserId: opts.customerUserId ?? null,
+      });
+      if (digital) return id;
       // Aviso push al comercio: misma transacción, se envía después (outbox, ADR 0009).
       await enqueueOrderPlaced(tx, {
         id,
@@ -742,6 +755,9 @@ async function applyTransition(
   const at = new Date(Date.now() + offsetMs);
   // Efectivo sin cobrar en un pedido que no sigue: ya no se espera ese pago. La transferencia queda
   // pendiente: puede haber llegado igual y el comercio tiene que poder registrarla (para devolverla).
+  // Pago con tarjeta aprobado en un pedido que no sigue: hay que devolverlo (SPEC §8.2.2).
+  const refundDigital =
+    RELEASES_SLOT.includes(to) && row.paymentMethod === PaymentMethod.MERCADO_PAGO && row.paymentStatus === PaymentStatus.APPROVED;
   const dropCash =
     RELEASES_SLOT.includes(to) && row.paymentMethod === PaymentMethod.CASH && row.paymentStatus === PaymentStatus.PENDING;
   const [updated] = await tx
@@ -750,6 +766,11 @@ async function applyTransition(
       status: to,
       ...(actor.reason !== null && { statusReason: actor.reason }),
       ...(dropCash && { paymentStatus: PaymentStatus.CANCELLED }),
+      ...(refundDigital && { paymentStatus: PaymentStatus.REFUND_PENDING }),
+      // Pedido con tarjeta que nunca se pagó: el pago ya no se espera.
+      ...(RELEASES_SLOT.includes(to) && row.paymentMethod === PaymentMethod.MERCADO_PAGO && row.paymentStatus === PaymentStatus.PENDING && {
+        paymentStatus: PaymentStatus.CANCELLED,
+      }),
     })
     .where(eq(orders.id, row.id))
     .returning();
@@ -763,7 +784,13 @@ async function applyTransition(
     createdAt: at,
   });
   // Venta concluida: se devenga la comisión en el ledger (SPEC §6.3), en la misma transacción.
-  if (to === OrderStatus.PICKED_UP || to === OrderStatus.DELIVERED) await accrueOrderCommission(tx, updated!);
+  // Con tarjeta la comisión ya la retuvo el split (application_fee): no es deuda del comercio.
+  if ((to === OrderStatus.PICKED_UP || to === OrderStatus.DELIVERED) && row.paymentMethod !== PaymentMethod.MERCADO_PAGO) {
+    await accrueOrderCommission(tx, updated!);
+  }
+  if (refundDigital) {
+    for (const listener of paidCancelListeners) await listener(tx, { orderId: row.id, reason: actor.reason ?? `Pedido ${to.toLowerCase()}` });
+  }
   return updated!;
 }
 
@@ -1016,6 +1043,72 @@ export const EXPIRED_REASON = "El comercio no respondió a tiempo";
  * Idempotente y seguro con varias instancias: toma las filas con SKIP LOCKED y revalida el estado
  * dentro de la transacción. Devuelve cuántos venció.
  */
+// ---------------------------------------------------------------------------
+// Pago con tarjeta (ADR 0021): lo usa el módulo de pagos
+// ---------------------------------------------------------------------------
+
+export type PaidOrderCancelledListener = (tx: Tx, event: { orderId: string; reason: string }) => Promise<void>;
+const paidCancelListeners = new Set<PaidOrderCancelledListener>();
+
+/** Pagos se suscribe para devolver el dinero cuando un pedido pagado no sigue (lo conecta app.ts). */
+export function onPaidOrderCancelled(listener: PaidOrderCancelledListener): void {
+  paidCancelListeners.add(listener);
+}
+
+/** Tiempo para pagar un pedido con tarjeta antes de que venza. */
+export const UNPAID_ORDER_TTL_MS = 30 * 60 * 1000;
+
+/**
+ * Pago aprobado: el pedido pasa a «esperando confirmación» del comercio, con su plazo, y recién
+ * ahora suena la alarma (SPEC §7.1 paso 6). Idempotente: si ya no está esperando pago, no hace nada.
+ */
+export async function markOrderPaid(tx: Tx, orderId: string, opts: { acceptTimeoutMs?: number; now?: Date } = {}): Promise<boolean> {
+  const [row] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update");
+  if (!row || row.status !== OrderStatus.PENDING_PAYMENT) return false;
+  const now = opts.now ?? new Date();
+  await tx
+    .update(orders)
+    .set({
+      paymentStatus: PaymentStatus.APPROVED,
+      paymentConfirmedAt: now,
+      acceptDeadlineAt: acceptDeadline(now, opts.acceptTimeoutMs ?? DEFAULT_ACCEPT_TIMEOUT_MS, row.scheduledFor),
+    })
+    .where(eq(orders.id, row.id));
+  const [fresh] = await tx.select().from(orders).where(eq(orders.id, row.id));
+  await applyTransition(tx, fresh!, OrderStatus.PLACED, { actorType: "SYSTEM", actorUserId: null, reason: null });
+  await enqueueOrderPlaced(tx, {
+    id: row.id,
+    code: row.code,
+    merchantId: row.merchantId,
+    customerName: row.customerName,
+    fulfillmentType: row.fulfillmentType,
+    totalMinor: row.totalMinor,
+    scheduledFor: row.scheduledFor,
+  });
+  return true;
+}
+
+/** El proveedor confirmó (o rechazó) un reembolso: se refleja en el pago del pedido. */
+export async function setOrderPaymentStatus(tx: Tx, orderId: string, status: PaymentStatus): Promise<void> {
+  await tx.update(orders).set({ paymentStatus: status }).where(eq(orders.id, orderId));
+}
+
+/** Pedidos con tarjeta sin pagar a los 30 minutos: vencen (el cliente puede volver a pedir). */
+export async function expireUnpaidOrders(db: Db, now = new Date(), batchSize = 50): Promise<number> {
+  return db.transaction(async (tx) => {
+    const due = await tx
+      .select()
+      .from(orders)
+      .where(and(eq(orders.status, OrderStatus.PENDING_PAYMENT), lte(orders.createdAt, new Date(now.getTime() - UNPAID_ORDER_TTL_MS))))
+      .limit(batchSize)
+      .for("update", { skipLocked: true });
+    for (const row of due) {
+      await applyTransition(tx, row, OrderStatus.EXPIRED, { actorType: "SYSTEM", actorUserId: null, reason: "No se completó el pago" });
+    }
+    return due.length;
+  });
+}
+
 export async function expireOverdueOrders(db: Db, now = new Date(), batchSize = 50): Promise<number> {
   return db.transaction(async (tx) => {
     const due = await tx
