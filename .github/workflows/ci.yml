@@ -1,0 +1,62 @@
+# CI de Pedilo: en cada push a main y en cada pull request.
+# - checks: typecheck, lint, contrato de la API al día y tests (la API usa PGlite: no necesita base).
+# - build: build de producción de los paneles de Next.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Typecheck, lint, contrato y tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Si cambia una ruta o un esquema de la API hay que correr `npm run api:contract` y commitear
+      # openapi.json y los tipos del cliente: si no, las apps compilan contra un contrato viejo.
+      - name: Contrato de la API al día
+        run: |
+          npm run api:contract
+          git diff --exit-code -- services/api/openapi.json packages/api-client/src/schema.ts \
+            || (echo "::error::El contrato de la API está desactualizado: corré 'npm run api:contract' y commiteá el resultado." && exit 1)
+
+      - name: Tests
+        run: npm test
+
+  build:
+    name: Build de los paneles
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build del panel del comercio
+        run: npm run build -w @pedilo/merchant-web
+      - name: Build del admin
+        run: npm run build -w @pedilo/admin-web
