@@ -5896,6 +5896,12 @@ export interface paths {
                                 /** @enum {string} */
                                 vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
                             } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -6189,6 +6195,12 @@ export interface paths {
                                 /** @enum {string} */
                                 vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
                             } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -6310,7 +6322,7 @@ export interface paths {
         put?: never;
         /**
          * Avanzar el estado de mi reparto
-         * @description Solo las acciones de `courierDeliveryActions` (@pedilo/domain). `eventId` lo genera la app por acción: reintentar con el mismo no duplica nada (SPEC §9.3).
+         * @description Solo las acciones de `courierDeliveryActions` (@pedilo/domain). `eventId` lo genera la app por acción: reintentar con el mismo no duplica nada (SPEC §9.3). Entregado con PIN: 409 PIN_INVALID (con `attemptsLeft`) o PIN_LOCKED.
          */
         post: {
             parameters: {
@@ -6328,6 +6340,8 @@ export interface paths {
                         to: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
                         reason?: string | null;
                         eventId: string;
+                        /** @description Obligatorio para DELIVERED si el reparto pide PIN */
+                        pin?: string | null;
                     };
                 };
             };
@@ -6372,6 +6386,12 @@ export interface paths {
                                 /** @enum {string} */
                                 vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
                             } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -6539,6 +6559,12 @@ export interface paths {
                                 /** @enum {string} */
                                 vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
                             } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -6721,6 +6747,12 @@ export interface paths {
                                 /** @enum {string} */
                                 vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
                             } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -6900,6 +6932,12 @@ export interface paths {
                                 /** @enum {string} */
                                 vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
                             } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -7002,6 +7040,783 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/deliveries/{deliveryId}/reset-pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desbloquear el PIN de entrega
+         * @description Vuelve a cero los intentos (p. ej. después de confirmar por teléfono con el cliente).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    deliveryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            orderId: string | null;
+                            reference: string;
+                            /** @enum {string} */
+                            status: "DELIVERY_NEEDED" | "OFFERED" | "OFFER_EXPIRED" | "ASSIGNED" | "ARRIVING_PICKUP" | "PICKED_UP" | "ARRIVING_DROPOFF" | "DELIVERED" | "COURIER_CANCELLED" | "DELIVERY_FAILED" | "CANCELLED";
+                            version: number;
+                            pickup: {
+                                name: string;
+                                address: string;
+                                phone: string | null;
+                            };
+                            dropoff: {
+                                area: string;
+                                address: string | null;
+                                notes: string | null;
+                            };
+                            recipient: {
+                                name: string;
+                                phone: string;
+                            } | null;
+                            packageDescription: string;
+                            courierFeeMinor: number;
+                            tipMinor: number;
+                            cashToCollectMinor: number;
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            } | null;
+                            /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                            pinRequired: boolean;
+                            /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                            pin: string | null;
+                            /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                            pinLocked: boolean;
+                            offerExpiresAt: string | null;
+                            statusReason: string | null;
+                            assignedAt: string | null;
+                            pickedUpAt: string | null;
+                            deliveredAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/courier-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Saldos con cada repartidor
+         * @description Positivo: el comercio le debe al repartidor. Negativo: el repartidor le debe efectivo al comercio.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            };
+                            balanceMinor: number;
+                            lastEntryAt: string;
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/courier-balances/{courierId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Movimientos con un repartidor */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    courierId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            };
+                            balanceMinor: number;
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "DELIVERY_FEE" | "CASH_COLLECTED" | "PAYMENT";
+                                amountMinor: number;
+                                description: string;
+                                deliveryId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merchants/{merchantId}/courier-balances/{courierId}/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Registrar un pago con el repartidor
+         * @description TO_COURIER: le pagaste. FROM_COURIER: te rindió el efectivo. No se editan: un error se corrige con otro pago.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    merchantId: string;
+                    courierId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        direction: "TO_COURIER" | "FROM_COURIER";
+                        amountMinor: number;
+                        note?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            courier: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                phone: string;
+                                /** @enum {string} */
+                                vehicle: "WALK" | "BIKE" | "MOTO" | "CAR";
+                            };
+                            balanceMinor: number;
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "DELIVERY_FEE" | "CASH_COLLECTED" | "PAYMENT";
+                                amountMinor: number;
+                                description: string;
+                                deliveryId: string | null;
+                                createdAt: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/courier/balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis saldos con cada comercio
+         * @description Positivo: el comercio te debe. Negativo: le debés el efectivo que cobraste.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            merchant: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                            };
+                            balanceMinor: number;
+                            entries: {
+                                /** Format: uuid */
+                                id: string;
+                                /** @enum {string} */
+                                kind: "DELIVERY_FEE" | "CASH_COLLECTED" | "PAYMENT";
+                                amountMinor: number;
+                                description: string;
+                                deliveryId: string | null;
+                                createdAt: string;
+                            }[];
+                        }[];
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10040,6 +10855,15 @@ export interface paths {
                             paymentConfirmedAt: string | null;
                             createdAt: string;
                             updatedAt: string;
+                            tracking: {
+                                status: string;
+                                /** @description Dáselo al repartidor al recibir el pedido */
+                                pin: string | null;
+                                courier: {
+                                    name: string;
+                                    vehicle: string;
+                                } | null;
+                            } | null;
                         };
                     };
                 };
@@ -10431,6 +11255,12 @@ export interface paths {
                                     phone: string;
                                     vehicle: string;
                                 } | null;
+                                /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                                pinRequired: boolean;
+                                /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                                pin: string | null;
+                                /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                                pinLocked: boolean;
                                 offerExpiresAt: string | null;
                                 statusReason: string | null;
                                 assignedAt: string | null;
@@ -11018,6 +11848,8 @@ export interface paths {
                         feeMinor?: number;
                         /** @description Minutos que dura la oferta (10) */
                         offerMinutes?: number;
+                        /** @description Pedir el PIN del cliente al entregar (por defecto, sí) */
+                        requirePin?: boolean;
                     } | null;
                 };
             };
@@ -11149,6 +11981,12 @@ export interface paths {
                                     phone: string;
                                     vehicle: string;
                                 } | null;
+                                /** @description Para marcar entregado hay que ingresar el PIN del cliente */
+                                pinRequired: boolean;
+                                /** @description Solo para el comercio; el repartidor nunca lo recibe */
+                                pin: string | null;
+                                /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
+                                pinLocked: boolean;
                                 offerExpiresAt: string | null;
                                 statusReason: string | null;
                                 assignedAt: string | null;

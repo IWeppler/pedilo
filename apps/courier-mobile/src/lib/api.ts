@@ -56,6 +56,13 @@ export function useMyDeliveries(scope: "active" | "done", enabled = true) {
   });
 }
 
+export type Balance = JsonOf<paths["/v1/courier/balances"]["get"]["responses"][200]>[number];
+
+/** Saldos con cada comercio (pagos que te deben y efectivo que debés rendir). */
+export function useBalances() {
+  return useQuery({ queryKey: ["courier", "balances"], queryFn: () => unwrap(api.GET("/v1/courier/balances")) });
+}
+
 export function useCities() {
   return useQuery({ queryKey: ["cities"], queryFn: () => unwrap(api.GET("/v1/cities")), staleTime: 60 * 60 * 1000 });
 }

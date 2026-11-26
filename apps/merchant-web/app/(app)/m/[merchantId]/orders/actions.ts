@@ -53,7 +53,10 @@ export async function requestDispatch(merchantId: string, orderId: string, _prev
   if (feeMinor === null) return { message: "Monto inválido" };
   try {
     await merchantCall((api) =>
-      api.POST("/v1/merchants/{merchantId}/orders/{orderId}/delivery", { params: { path: { merchantId, orderId } }, body: { feeMinor } }),
+      api.POST("/v1/merchants/{merchantId}/orders/{orderId}/delivery", {
+        params: { path: { merchantId, orderId } },
+        body: { feeMinor, requirePin: formData.get("requirePin") === "on" },
+      }),
     );
   } catch (err) {
     return errorToFormState(err, {});
@@ -83,6 +86,19 @@ export async function cancelDispatch(merchantId: string, deliveryId: string, _pr
         params: { path: { merchantId, deliveryId } },
         body: { reason: text(formData, "reason") },
       }),
+    );
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(`/m/${merchantId}/orders`);
+  return { saved: true };
+}
+
+/** Desbloquear el PIN de entrega (demasiados intentos del repartidor). */
+export async function resetDispatchPin(merchantId: string, deliveryId: string): Promise<FormState> {
+  try {
+    await merchantCall((api) =>
+      api.POST("/v1/merchants/{merchantId}/deliveries/{deliveryId}/reset-pin", { params: { path: { merchantId, deliveryId } } }),
     );
   } catch (err) {
     return errorToFormState(err, {});

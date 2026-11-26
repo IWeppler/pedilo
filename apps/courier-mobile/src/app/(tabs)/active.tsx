@@ -68,13 +68,22 @@ function DeliveryCard({ delivery: d, pending }: { delivery: Delivery; pending: P
   const { enqueue } = useOutbox();
   const [withReason, setWithReason] = useState<CourierDeliveryAction | null>(null);
   const [reason, setReason] = useState("");
+  const [askPin, setAskPin] = useState<CourierDeliveryAction | null>(null);
+  const [pin, setPin] = useState("");
   const waiting = pending.at(-1);
   const pickedUp = d.status === "PICKED_UP" || d.status === "ARRIVING_DROPOFF";
 
-  const run = (a: CourierDeliveryAction, why: string | null = null) => {
-    void enqueue(d.id, a.to, why);
+  const run = (a: CourierDeliveryAction, why: string | null = null, code: string | null = null) => {
+    void enqueue(d.id, a.to, why, code);
     setWithReason(null);
     setReason("");
+    setAskPin(null);
+    setPin("");
+  };
+  const choose = (a: CourierDeliveryAction) => {
+    if (a.needsReason) setWithReason(a);
+    else if (a.to === "DELIVERED" && d.pinRequired) setAskPin(a);
+    else run(a);
   };
 
   return (
@@ -112,7 +121,32 @@ function DeliveryCard({ delivery: d, pending }: { delivery: Delivery; pending: P
         {d.tipMinor > 0 ? ` + ${formatARS(d.tipMinor)} de propina` : ""}
       </Text>
 
-      {waiting ? null : withReason ? (
+      {d.pinRequired && !waiting && (
+        <Text style={{ color: d.pinLocked ? t.danger : t.muted, fontSize: 13 }}>
+          {d.pinLocked
+            ? "PIN bloqueado por demasiados intentos: llamá al comercio para que lo desbloquee."
+            : "Para marcarlo entregado pedile al cliente su PIN de 4 dígitos."}
+        </Text>
+      )}
+
+      {waiting ? null : askPin ? (
+        <View style={{ gap: space.sm }}>
+          <TextInput
+            value={pin}
+            onChangeText={(v) => setPin(v.replace(/[^0-9]/g, "").slice(0, 4))}
+            placeholder="PIN del cliente"
+            placeholderTextColor={t.muted}
+            accessibilityLabel="PIN de entrega"
+            keyboardType="number-pad"
+            autoFocus
+            style={[styles.input, styles.pin, { backgroundColor: t.surface, color: t.text }]}
+          />
+          <View style={styles.actions}>
+            <ActionButton label="Volver" tone="neutral" onPress={() => setAskPin(null)} />
+            <ActionButton label="Confirmar entrega" tone="primary" disabled={pin.length !== 4} onPress={() => run(askPin, null, pin)} />
+          </View>
+        </View>
+      ) : withReason ? (
         <View style={{ gap: space.sm }}>
           <TextInput
             value={reason}
@@ -131,7 +165,7 @@ function DeliveryCard({ delivery: d, pending }: { delivery: Delivery; pending: P
       ) : (
         <View style={styles.actions}>
           {courierDeliveryActions(d.status as DeliveryStatus).map((a) => (
-            <ActionButton key={a.to} label={a.label} tone={a.tone} onPress={() => (a.needsReason ? setWithReason(a) : run(a))} />
+            <ActionButton key={a.to} label={a.label} tone={a.tone} onPress={() => choose(a)} />
           ))}
         </View>
       )}
@@ -222,4 +256,5 @@ const styles = StyleSheet.create({
   actions: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   action: { flexGrow: 1, borderWidth: 1.5, borderRadius: radius.pill, paddingVertical: 12, paddingHorizontal: space.md, alignItems: "center" },
   input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
+  pin: { fontSize: 28, fontWeight: "800", letterSpacing: 12, textAlign: "center" },
 });

@@ -34,6 +34,7 @@ import {
   DEFAULT_OFFER_MINUTES,
   type DeliveryDto,
   type DeliveryStatusEvent,
+  getCustomerDeliveryInfo,
   getDeliveriesForOrders,
   lastDeliveryChange,
   requestDelivery,
@@ -537,7 +538,8 @@ async function findByIdempotencyKey(db: DbOrTx, key: string): Promise<OrderDto |
 
 export async function getOrderForCustomer(db: Db, orderId: string, token: string | undefined, secret: string) {
   assertTrackingToken(secret, orderId, token);
-  return loadOrder(db, orderId);
+  const [order, tracking] = await Promise.all([loadOrder(db, orderId), getCustomerDeliveryInfo(db, orderId)]);
+  return { ...order, tracking };
 }
 
 export async function cancelOrderByCustomer(
@@ -692,7 +694,7 @@ export async function requestOrderDelivery(
   db: Db,
   merchantId: string,
   orderId: string,
-  input: { feeMinor?: number | undefined; offerMinutes?: number | undefined },
+  input: { feeMinor?: number | undefined; offerMinutes?: number | undefined; requirePin?: boolean | undefined },
   userId: string,
 ): Promise<OrderDto & { dispatch: DeliveryDto | null }> {
   await getMerchantAccess(db, merchantId, userId);
@@ -728,7 +730,12 @@ export async function requestOrderDelivery(
         cashToCollectMinor:
           row.paymentMethod === PaymentMethod.CASH && row.paymentStatus === PaymentStatus.PENDING ? row.totalMinor : 0,
       },
-      { feeMinor: input.feeMinor ?? row.deliveryFeeMinor, offerMinutes: input.offerMinutes ?? DEFAULT_OFFER_MINUTES, actorUserId: userId },
+      {
+        feeMinor: input.feeMinor ?? row.deliveryFeeMinor,
+        offerMinutes: input.offerMinutes ?? DEFAULT_OFFER_MINUTES,
+        actorUserId: userId,
+        requirePin: input.requirePin ?? true,
+      },
     );
   });
   const [dto] = await loadOrders(db, await db.select().from(orders).where(eq(orders.id, orderId)));

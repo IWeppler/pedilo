@@ -19,6 +19,7 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0013](0013-liquidacion-semanal.md) | Liquidación semanal de comisiones | Aceptada |
 | [0014](0014-reparto-desacoplado-y-ofertas.md) | Reparto desacoplado y ofertas con aceptación atómica | Aceptada |
 | [0015](0015-app-repartidor.md) | App del repartidor | Aceptada |
+| [0016](0016-pin-de-entrega-y-cuenta-con-repartidores.md) | PIN de entrega y cuenta comercio ↔ repartidor | Aceptada |
 
 Pendientes (SPEC §17): realtime (SSE), hosting de `services/api`, storage de imágenes.
 

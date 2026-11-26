@@ -101,6 +101,9 @@ const deliverySchema = z.object({
   tipMinor: z.number().int(),
   cashToCollectMinor: z.number().int(),
   courier: z.object({ id: z.uuid(), name: z.string(), phone: z.string(), vehicle: z.string() }).nullable(),
+  pinRequired: z.boolean().describe("Para marcar entregado hay que ingresar el PIN del cliente"),
+  pin: z.string().nullable().describe("Solo para el comercio; el repartidor nunca lo recibe"),
+  pinLocked: z.boolean().describe("Demasiados intentos: el comercio tiene que desbloquearlo"),
   offerExpiresAt: z.string().nullable(),
   statusReason: z.string().nullable(),
   assignedAt: z.string().nullable(),
@@ -112,6 +115,17 @@ const deliverySchema = z.object({
 
 const merchantOrderWithDeliverySchema = merchantOrderSchema.extend({
   dispatch: deliverySchema.nullable().describe("Reparto con repartidor de Pedilo (ADR 0014), si se pidió"),
+});
+
+/** Lo que ve el cliente: el pedido y, si va con repartidor de Pedilo, su PIN y quién lo lleva. */
+const customerOrderSchema = orderSchema.extend({
+  tracking: z
+    .object({
+      status: z.string(),
+      pin: z.string().nullable().describe("Dáselo al repartidor al recibir el pedido"),
+      courier: z.object({ name: z.string(), vehicle: z.string() }).nullable(),
+    })
+    .nullable(),
 });
 
 /** Saca la comisión de lo que se le devuelve al cliente. */
@@ -236,7 +250,7 @@ export const orderRoutes: FastifyPluginAsyncZod<{
         description: "404 si el pedido no existe o el token no corresponde.",
         headers: tokenHeaders,
         params: orderParams,
-        response: { 200: orderSchema, 404: errorResponses[404] },
+        response: { 200: customerOrderSchema, 404: errorResponses[404] },
       },
     },
     async (request) =>
@@ -348,6 +362,7 @@ export const orderRoutes: FastifyPluginAsyncZod<{
           .object({
             feeMinor: z.number().int().min(0).max(10_000_000).optional().describe("Lo que le pagás al repartidor (centavos)"),
             offerMinutes: z.number().int().min(2).max(60).optional().describe("Minutos que dura la oferta (10)"),
+            requirePin: z.boolean().optional().describe("Pedir el PIN del cliente al entregar (por defecto, sí)"),
           })
           .nullish(),
         response: { 201: merchantOrderWithDeliverySchema, ...errorResponses },

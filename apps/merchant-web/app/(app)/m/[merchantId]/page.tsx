@@ -50,6 +50,11 @@ async function MerchantHome({ params }: { params: Params }) {
               </Link>
             )}
             {merchant.status === "APPROVED" && (
+              <Link href={`${base}/couriers`} className={buttonVariants({ variant: "outline" })}>
+                Repartidores
+              </Link>
+            )}
+            {merchant.status === "APPROVED" && (
               <Link href={`${base}/orders`} className={buttonVariants()}>
                 Pedidos
               </Link>

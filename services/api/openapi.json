@@ -15448,6 +15448,21 @@
                         }
                       ]
                     },
+                    "pinRequired": {
+                      "type": "boolean",
+                      "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                    },
+                    "pin": {
+                      "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pinLocked": {
+                      "type": "boolean",
+                      "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -15499,6 +15514,9 @@
                     "tipMinor",
                     "cashToCollectMinor",
                     "courier",
+                    "pinRequired",
+                    "pin",
+                    "pinLocked",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -16159,6 +16177,21 @@
                           }
                         ]
                       },
+                      "pinRequired": {
+                        "type": "boolean",
+                        "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                      },
+                      "pin": {
+                        "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "pinLocked": {
+                        "type": "boolean",
+                        "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                      },
                       "offerExpiresAt": {
                         "type": [
                           "string",
@@ -16210,6 +16243,9 @@
                       "tipMinor",
                       "cashToCollectMinor",
                       "courier",
+                      "pinRequired",
+                      "pin",
+                      "pinLocked",
                       "offerExpiresAt",
                       "statusReason",
                       "assignedAt",
@@ -16437,7 +16473,7 @@
         "tags": [
           "couriers"
         ],
-        "description": "Solo las acciones de `courierDeliveryActions` (@pedilo/domain). `eventId` lo genera la app por acción: reintentar con el mismo no duplica nada (SPEC §9.3).",
+        "description": "Solo las acciones de `courierDeliveryActions` (@pedilo/domain). `eventId` lo genera la app por acción: reintentar con el mismo no duplica nada (SPEC §9.3). Entregado con PIN: 409 PIN_INVALID (con `attemptsLeft`) o PIN_LOCKED.",
         "requestBody": {
           "required": true,
           "content": {
@@ -16476,6 +16512,18 @@
                     "type": "string",
                     "minLength": 8,
                     "maxLength": 100
+                  },
+                  "pin": {
+                    "description": "Obligatorio para DELIVERED si el reparto pide PIN",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -16681,6 +16729,21 @@
                         }
                       ]
                     },
+                    "pinRequired": {
+                      "type": "boolean",
+                      "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                    },
+                    "pin": {
+                      "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pinLocked": {
+                      "type": "boolean",
+                      "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -16732,6 +16795,9 @@
                     "tipMinor",
                     "cashToCollectMinor",
                     "courier",
+                    "pinRequired",
+                    "pin",
+                    "pinLocked",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -17155,6 +17221,21 @@
                           }
                         ]
                       },
+                      "pinRequired": {
+                        "type": "boolean",
+                        "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                      },
+                      "pin": {
+                        "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "pinLocked": {
+                        "type": "boolean",
+                        "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                      },
                       "offerExpiresAt": {
                         "type": [
                           "string",
@@ -17206,6 +17287,9 @@
                       "tipMinor",
                       "cashToCollectMinor",
                       "courier",
+                      "pinRequired",
+                      "pin",
+                      "pinLocked",
                       "offerExpiresAt",
                       "statusReason",
                       "assignedAt",
@@ -17664,6 +17748,21 @@
                         }
                       ]
                     },
+                    "pinRequired": {
+                      "type": "boolean",
+                      "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                    },
+                    "pin": {
+                      "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pinLocked": {
+                      "type": "boolean",
+                      "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -17715,6 +17814,9 @@
                     "tipMinor",
                     "cashToCollectMinor",
                     "courier",
+                    "pinRequired",
+                    "pin",
+                    "pinLocked",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -18167,6 +18269,21 @@
                         }
                       ]
                     },
+                    "pinRequired": {
+                      "type": "boolean",
+                      "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                    },
+                    "pin": {
+                      "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pinLocked": {
+                      "type": "boolean",
+                      "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -18218,6 +18335,9 @@
                     "tipMinor",
                     "cashToCollectMinor",
                     "courier",
+                    "pinRequired",
+                    "pin",
+                    "pinLocked",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -18227,6 +18347,1855 @@
                     "updatedAt"
                   ],
                   "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/deliveries/{deliveryId}/reset-pin": {
+      "post": {
+        "summary": "Desbloquear el PIN de entrega",
+        "tags": [
+          "deliveries"
+        ],
+        "description": "Vuelve a cero los intentos (p. ej. después de confirmar por teléfono con el cliente).",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "deliveryId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "orderId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reference": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DELIVERY_NEEDED",
+                        "OFFERED",
+                        "OFFER_EXPIRED",
+                        "ASSIGNED",
+                        "ARRIVING_PICKUP",
+                        "PICKED_UP",
+                        "ARRIVING_DROPOFF",
+                        "DELIVERED",
+                        "COURIER_CANCELLED",
+                        "DELIVERY_FAILED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "pickup": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "address": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "address",
+                        "phone"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "dropoff": {
+                      "type": "object",
+                      "properties": {
+                        "area": {
+                          "type": "string"
+                        },
+                        "address": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "notes": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "area",
+                        "address",
+                        "notes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "recipient": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "phone": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "phone"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "packageDescription": {
+                      "type": "string"
+                    },
+                    "courierFeeMinor": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "tipMinor": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "cashToCollectMinor": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "courier": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "phone": {
+                              "type": "string"
+                            },
+                            "vehicle": {
+                              "type": "string",
+                              "enum": [
+                                "WALK",
+                                "BIKE",
+                                "MOTO",
+                                "CAR"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "phone",
+                            "vehicle"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pinRequired": {
+                      "type": "boolean",
+                      "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                    },
+                    "pin": {
+                      "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pinLocked": {
+                      "type": "boolean",
+                      "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                    },
+                    "offerExpiresAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "statusReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "assignedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "pickedUpAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "deliveredAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "orderId",
+                    "reference",
+                    "status",
+                    "version",
+                    "pickup",
+                    "dropoff",
+                    "recipient",
+                    "packageDescription",
+                    "courierFeeMinor",
+                    "tipMinor",
+                    "cashToCollectMinor",
+                    "courier",
+                    "pinRequired",
+                    "pin",
+                    "pinLocked",
+                    "offerExpiresAt",
+                    "statusReason",
+                    "assignedAt",
+                    "pickedUpAt",
+                    "deliveredAt",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/courier-balances": {
+      "get": {
+        "summary": "Saldos con cada repartidor",
+        "tags": [
+          "deliveries"
+        ],
+        "description": "Positivo: el comercio le debe al repartidor. Negativo: el repartidor le debe efectivo al comercio.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "courier": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "phone": {
+                            "type": "string"
+                          },
+                          "vehicle": {
+                            "type": "string",
+                            "enum": [
+                              "WALK",
+                              "BIKE",
+                              "MOTO",
+                              "CAR"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "phone",
+                          "vehicle"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "balanceMinor": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "lastEntryAt": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "courier",
+                      "balanceMinor",
+                      "lastEntryAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/courier-balances/{courierId}": {
+      "get": {
+        "summary": "Movimientos con un repartidor",
+        "tags": [
+          "deliveries"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "courierId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "courier": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "type": "string"
+                        },
+                        "vehicle": {
+                          "type": "string",
+                          "enum": [
+                            "WALK",
+                            "BIKE",
+                            "MOTO",
+                            "CAR"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "phone",
+                        "vehicle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "balanceMinor": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "DELIVERY_FEE",
+                              "CASH_COLLECTED",
+                              "PAYMENT"
+                            ]
+                          },
+                          "amountMinor": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "deliveryId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "amountMinor",
+                          "description",
+                          "deliveryId",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "courier",
+                    "balanceMinor",
+                    "entries"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/merchants/{merchantId}/courier-balances/{courierId}/payments": {
+      "post": {
+        "summary": "Registrar un pago con el repartidor",
+        "tags": [
+          "deliveries"
+        ],
+        "description": "TO_COURIER: le pagaste. FROM_COURIER: te rindió el efectivo. No se editan: un error se corrige con otro pago.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "direction": {
+                    "type": "string",
+                    "enum": [
+                      "TO_COURIER",
+                      "FROM_COURIER"
+                    ]
+                  },
+                  "amountMinor": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000000
+                  },
+                  "note": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "direction",
+                  "amountMinor"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "merchantId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "courierId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "courier": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "phone": {
+                          "type": "string"
+                        },
+                        "vehicle": {
+                          "type": "string",
+                          "enum": [
+                            "WALK",
+                            "BIKE",
+                            "MOTO",
+                            "CAR"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "phone",
+                        "vehicle"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "balanceMinor": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "entries": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "DELIVERY_FEE",
+                              "CASH_COLLECTED",
+                              "PAYMENT"
+                            ]
+                          },
+                          "amountMinor": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "deliveryId": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "amountMinor",
+                          "description",
+                          "deliveryId",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "courier",
+                    "balanceMinor",
+                    "entries"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/courier/balances": {
+      "get": {
+        "summary": "Mis saldos con cada comercio",
+        "tags": [
+          "couriers"
+        ],
+        "description": "Positivo: el comercio te debe. Negativo: le debés el efectivo que cobraste.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "merchant": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "balanceMinor": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "entries": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "DELIVERY_FEE",
+                                "CASH_COLLECTED",
+                                "PAYMENT"
+                              ]
+                            },
+                            "amountMinor": {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            "description": {
+                              "type": "string"
+                            },
+                            "deliveryId": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "createdAt": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "kind",
+                            "amountMinor",
+                            "description",
+                            "deliveryId",
+                            "createdAt"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "merchant",
+                      "balanceMinor",
+                      "entries"
+                    ],
+                    "additionalProperties": false
+                  }
                 }
               }
             }
@@ -26944,6 +28913,57 @@
                     },
                     "updatedAt": {
                       "type": "string"
+                    },
+                    "tracking": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string"
+                            },
+                            "pin": {
+                              "description": "Dáselo al repartidor al recibir el pedido",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "courier": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "name": {
+                                      "type": "string"
+                                    },
+                                    "vehicle": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "name",
+                                    "vehicle"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "status",
+                            "pin",
+                            "courier"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -26970,7 +28990,8 @@
                     "transfer",
                     "paymentConfirmedAt",
                     "createdAt",
-                    "updatedAt"
+                    "updatedAt",
+                    "tracking"
                   ],
                   "additionalProperties": false
                 }
@@ -28354,6 +30375,21 @@
                                   }
                                 ]
                               },
+                              "pinRequired": {
+                                "type": "boolean",
+                                "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                              },
+                              "pin": {
+                                "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "pinLocked": {
+                                "type": "boolean",
+                                "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                              },
                               "offerExpiresAt": {
                                 "type": [
                                   "string",
@@ -28405,6 +30441,9 @@
                               "tipMinor",
                               "cashToCollectMinor",
                               "courier",
+                              "pinRequired",
+                              "pin",
+                              "pinLocked",
                               "offerExpiresAt",
                               "statusReason",
                               "assignedAt",
@@ -30184,6 +32223,10 @@
                         "type": "integer",
                         "minimum": 2,
                         "maximum": 60
+                      },
+                      "requirePin": {
+                        "description": "Pedir el PIN del cliente al entregar (por defecto, sí)",
+                        "type": "boolean"
                       }
                     }
                   },
@@ -30829,6 +32872,21 @@
                                 }
                               ]
                             },
+                            "pinRequired": {
+                              "type": "boolean",
+                              "description": "Para marcar entregado hay que ingresar el PIN del cliente"
+                            },
+                            "pin": {
+                              "description": "Solo para el comercio; el repartidor nunca lo recibe",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "pinLocked": {
+                              "type": "boolean",
+                              "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
+                            },
                             "offerExpiresAt": {
                               "type": [
                                 "string",
@@ -30880,6 +32938,9 @@
                             "tipMinor",
                             "cashToCollectMinor",
                             "courier",
+                            "pinRequired",
+                            "pin",
+                            "pinLocked",
                             "offerExpiresAt",
                             "statusReason",
                             "assignedAt",

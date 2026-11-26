@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { deliveryEvents } from "../src/db/schema";
@@ -62,8 +62,23 @@ const orderStatus = async (orderId: string) => {
 };
 const offers = (token: string) => req("GET", "/v1/courier/offers", { token });
 const accept = (token: string, deliveryId: string) => req("POST", `/v1/courier/offers/${deliveryId}/accept`, { token });
-const courierStatus = (token: string, deliveryId: string, to: string, eventId = `ev-${++seq}-${Date.now()}`, reason?: string) =>
-  req("POST", `/v1/courier/deliveries/${deliveryId}/status`, { token, payload: { to, eventId, ...(reason && { reason }) } });
+const courierStatus = (
+  token: string,
+  deliveryId: string,
+  to: string,
+  eventId = `ev-${++seq}-${Date.now()}`,
+  reason?: string,
+  pin?: string,
+) =>
+  req("POST", `/v1/courier/deliveries/${deliveryId}/status`, {
+    token,
+    payload: { to, eventId, ...(reason && { reason }), ...(pin && { pin }) },
+  });
+/** El PIN lo ve el comercio (y el cliente); el repartidor no. */
+const pinOf = async (deliveryId: string) => {
+  const list = (await req("GET", `/v1/merchants/${merchantId}/deliveries`, { token: owner })).json() as Array<{ id: string; pin: string | null }>;
+  return list.find((d) => d.id === deliveryId)!.pin!;
+};
 
 /** Pedido con envío aceptado y con la oferta publicada. Devuelve ids. */
 const offeredOrder = async (payload?: Body) => {
@@ -234,7 +249,7 @@ describe("G2: aceptación atómica, estados y reconexión", () => {
   });
 
   it("entregado → pedido entregado; queda en el historial del repartidor", async () => {
-    expect((await courierStatus(winner, deliveryId, "DELIVERED")).json().status).toBe("DELIVERED");
+    expect((await courierStatus(winner, deliveryId, "DELIVERED", undefined, undefined, await pinOf(deliveryId))).json().status).toBe("DELIVERED");
     expect((await orderStatus(orderId)).status).toBe("DELIVERED");
     expect((await req("GET", "/v1/courier/deliveries", { token: winner })).json()).toEqual([]);
     const done = (await req("GET", "/v1/courier/deliveries?scope=done", { token: winner })).json();
@@ -298,5 +313,125 @@ describe("vencimiento, cancelaciones y reasignación", () => {
     const res = await req("POST", `/v1/merchants/${merchantId}/deliveries/${deliveryId}/cancel`, { token: owner, payload: { reason: "Lo llevo yo" } });
     expect(res.json().status).toBe("CANCELLED");
     expect((await transition(orderId, "PICKED_UP_BY_COURIER")).statusCode).toBe(200);
+  });
+});
+
+describe("PIN de entrega (ADR 0016)", () => {
+  it("lo ven el cliente y el comercio, nunca el repartidor; sin el PIN correcto no se entrega", async () => {
+    const placed = await req("POST", "/v1/public/orders", {
+      headers: { "idempotency-key": `pin-${Date.now()}` },
+      payload: {
+        merchantSlug: "pizzeria-centro",
+        branchId,
+        fulfillmentType: "DELIVERY",
+        deliveryZoneId: zoneId,
+        deliveryAddress: { line: DROPOFF },
+        customer: { name: "Bea", phone: "3491 999-111" },
+        items: [{ productId, modifiers: [], quantity: 1 }],
+      },
+    });
+    const { order: o, trackingToken } = placed.json();
+    await transition(o.id, "ACCEPTED");
+    const deliveryId = (await requestCourier(o.id)).json().dispatch.id as string;
+    const pin = await pinOf(deliveryId);
+    expect(pin).toMatch(/^[0-9]{4}$/);
+
+    const accepted = await accept(c1, deliveryId);
+    expect(accepted.json()).toMatchObject({ pinRequired: true, pin: null });
+    expect(JSON.stringify((await req("GET", "/v1/courier/deliveries", { token: c1 })).json())).not.toContain(`"pin":"${pin}"`);
+
+    const tracked = (await req("GET", `/v1/public/orders/${o.id}`, { headers: { "x-order-token": trackingToken } })).json();
+    expect(tracked.tracking).toEqual({ status: "ASSIGNED", pin, courier: { name: "Juan", vehicle: "MOTO" } });
+
+    await courierStatus(c1, deliveryId, "PICKED_UP");
+    expect((await courierStatus(c1, deliveryId, "DELIVERED")).statusCode).toBe(400); // falta el PIN
+    const wrong = pin === "0000" ? "1111" : "0000";
+    const bad = await courierStatus(c1, deliveryId, "DELIVERED", undefined, undefined, wrong);
+    expect(bad.json().error.details).toEqual({ reason: "PIN_INVALID", attemptsLeft: 4 });
+
+    const ok = await courierStatus(c1, deliveryId, "DELIVERED", undefined, undefined, pin);
+    expect(ok.json().status).toBe("DELIVERED");
+    const after = (await req("GET", `/v1/public/orders/${o.id}`, { headers: { "x-order-token": trackingToken } })).json();
+    expect(after).toMatchObject({ status: "DELIVERED", tracking: { pin: null } });
+  });
+
+  it("se bloquea a los 5 intentos y el comercio lo desbloquea", async () => {
+    const { deliveryId } = await offeredOrder();
+    const pin = await pinOf(deliveryId);
+    const wrong = pin === "0000" ? "1111" : "0000";
+    await accept(c2, deliveryId);
+    await courierStatus(c2, deliveryId, "PICKED_UP");
+    for (let i = 0; i < 4; i++) await courierStatus(c2, deliveryId, "DELIVERED", undefined, undefined, wrong);
+    expect((await courierStatus(c2, deliveryId, "DELIVERED", undefined, undefined, wrong)).json().error.details.reason).toBe("PIN_LOCKED");
+    // Bloqueado: ni con el correcto.
+    expect((await courierStatus(c2, deliveryId, "DELIVERED", undefined, undefined, pin)).json().error.details.reason).toBe("PIN_LOCKED");
+
+    const reset = await req("POST", `/v1/merchants/${merchantId}/deliveries/${deliveryId}/reset-pin`, { token: owner });
+    expect(reset.json()).toMatchObject({ pinLocked: false });
+    expect((await courierStatus(c2, deliveryId, "DELIVERED", undefined, undefined, pin)).json().status).toBe("DELIVERED");
+  });
+
+  it("sin PIN si el comercio no lo pide", async () => {
+    const { deliveryId } = await offeredOrder({ requirePin: false });
+    await accept(c1, deliveryId);
+    await courierStatus(c1, deliveryId, "PICKED_UP");
+    expect((await courierStatus(c1, deliveryId, "DELIVERED")).json()).toMatchObject({ status: "DELIVERED", pinRequired: false });
+  });
+});
+
+describe("saldos comercio ↔ repartidor (ADR 0016)", () => {
+  const courierIdOf = async (token: string) => (await req("GET", "/v1/courier/me", { token })).json().id as string;
+  const account = async (courierId: string) =>
+    (await req("GET", `/v1/merchants/${merchantId}/courier-balances/${courierId}`, { token: owner })).json();
+
+  it("al entregar: el comercio le debe el pago y el repartidor le debe el efectivo cobrado", async () => {
+    const c1Id = await courierIdOf(c1);
+    const before = (await account(c1Id)).balanceMinor as number;
+
+    const { deliveryId, totalMinor } = await offeredOrder({ feeMinor: 200000 });
+    await accept(c1, deliveryId);
+    await courierStatus(c1, deliveryId, "PICKED_UP");
+    await courierStatus(c1, deliveryId, "DELIVERED", undefined, undefined, await pinOf(deliveryId));
+
+    const after = await account(c1Id);
+    expect(after.balanceMinor).toBe(before + 200000 - totalMinor);
+    expect(after.entries.filter((e: { deliveryId: string }) => e.deliveryId === deliveryId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "DELIVERY_FEE", amountMinor: 200000 }),
+        expect.objectContaining({ kind: "CASH_COLLECTED", amountMinor: -totalMinor }),
+      ]),
+    );
+    const list = (await req("GET", `/v1/merchants/${merchantId}/courier-balances`, { token: owner })).json();
+    expect(list.find((b: { courier: { id: string } }) => b.courier.id === c1Id).balanceMinor).toBe(after.balanceMinor);
+  });
+
+  it("el comercio registra pagos en los dos sentidos; el repartidor ve sus saldos", async () => {
+    const c1Id = await courierIdOf(c1);
+    const pay = (payload: Body, token = owner) =>
+      req("POST", `/v1/merchants/${merchantId}/courier-balances/${c1Id}/payments`, { token, payload });
+    const start = (await account(c1Id)).balanceMinor as number;
+
+    const rendido = await pay({ direction: "FROM_COURIER", amountMinor: 500000, note: "Rindió la caja" });
+    expect(rendido.statusCode).toBe(201);
+    expect(rendido.json().balanceMinor).toBe(start + 500000);
+    const pagado = await pay({ direction: "TO_COURIER", amountMinor: 100000 });
+    expect(pagado.json().balanceMinor).toBe(start + 400000);
+    expect(pagado.json().entries[0]).toMatchObject({ kind: "PAYMENT", amountMinor: -100000, description: "Pago al repartidor" });
+
+    expect((await pay({ direction: "TO_COURIER", amountMinor: 100 }, c1)).statusCode).not.toBe(201);
+    // Con un repartidor con el que nunca trabajó: 404.
+    const pendingId = (await req("GET", "/v1/admin/couriers?status=PENDING_REVIEW", { token: admin })).json()[0].id;
+    const never = await req("POST", `/v1/merchants/${merchantId}/courier-balances/${pendingId}/payments`, {
+      token: owner,
+      payload: { direction: "TO_COURIER", amountMinor: 100 },
+    });
+    expect(never.statusCode).toBe(404);
+
+    const mine = (await req("GET", "/v1/courier/balances", { token: c1 })).json();
+    expect(mine).toEqual([expect.objectContaining({ merchant: { id: merchantId, name: "Pizzería Centro" }, balanceMinor: start + 400000 })]);
+  });
+
+  it("append-only", async () => {
+    await expect(ctx.db.execute(sql`update courier_merchant_entries set amount_minor = 1`)).rejects.toThrow();
   });
 });

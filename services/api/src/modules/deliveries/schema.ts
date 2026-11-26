@@ -1,6 +1,6 @@
 import type { CourierStatus, DeliverySource, DeliveryStatus, Vehicle } from "@pedilo/domain";
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timestamps } from "../../lib/timestamps";
 // Solo para FKs (excepción documentada en ARCHITECTURE §4). `orders` NO se referencia: el reparto
@@ -86,6 +86,13 @@ export const deliveries = pgTable(
     cashToCollectMinor: integer("cash_to_collect_minor").notNull().default(0),
 
     courierId: uuid("courier_id").references(() => courierProfiles.id, { onDelete: "restrict" }),
+    /**
+     * Prueba de entrega (SPEC §9.2, ADR 0016): el repartidor ingresa el PIN que tiene el cliente.
+     * Lo ven el cliente y el comercio; el repartidor nunca.
+     */
+    pinRequired: boolean("pin_required").notNull().default(false),
+    dropoffPin: text("dropoff_pin"),
+    pinAttempts: smallint("pin_attempts").notNull().default(0),
     offerExpiresAt: timestamp("offer_expires_at", { withTimezone: true }),
     assignedAt: timestamp("assigned_at", { withTimezone: true }),
     pickedUpAt: timestamp("picked_up_at", { withTimezone: true }),
@@ -101,6 +108,7 @@ export const deliveries = pgTable(
     index("deliveries_merchant_idx").on(t.merchantId, t.createdAt),
     check("deliveries_source_check", sql`${t.source} IN ('ORDER', 'MERCHANT_REQUEST')`),
     check("deliveries_order_check", sql`${t.source} <> 'ORDER' OR ${t.orderId} IS NOT NULL`),
+    check("deliveries_pin_check", sql`NOT ${t.pinRequired} OR ${t.dropoffPin} ~ '^[0-9]{4}$'`),
     check("deliveries_amounts_check", sql`${t.courierFeeMinor} >= 0 AND ${t.tipMinor} >= 0 AND ${t.cashToCollectMinor} >= 0`),
     check(
       "deliveries_courier_check",
@@ -147,6 +155,51 @@ export const deliveryDeclines = pgTable(
   (t) => [primaryKey({ columns: [t.deliveryId, t.courierId] })],
 );
 
+export const CourierMerchantEntryKind = {
+  /** El comercio le debe al repartidor el pago del envío (+ propina). */
+  DELIVERY_FEE: "DELIVERY_FEE",
+  /** El repartidor cobró efectivo del cliente: se lo debe al comercio. */
+  CASH_COLLECTED: "CASH_COLLECTED",
+  /** Pago registrado por el comercio (en cualquier sentido) o corrección. */
+  PAYMENT: "PAYMENT",
+} as const;
+export type CourierMerchantEntryKind = (typeof CourierMerchantEntryKind)[keyof typeof CourierMerchantEntryKind];
+
+/**
+ * Cuenta entre un comercio y un repartidor (SPEC §8.3, §9.2): Pedilo registra, no custodia fondos.
+ * Positivo = el comercio le debe al repartidor; negativo = el repartidor le debe al comercio.
+ * Append-only: el saldo es la suma.
+ */
+export const courierMerchantEntries = pgTable(
+  "courier_merchant_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    merchantId: uuid("merchant_id")
+      .notNull()
+      .references(() => merchants.id, { onDelete: "restrict" }),
+    courierId: uuid("courier_id")
+      .notNull()
+      .references(() => courierProfiles.id, { onDelete: "restrict" }),
+    deliveryId: uuid("delivery_id").references(() => deliveries.id, { onDelete: "restrict" }),
+    kind: text("kind").$type<CourierMerchantEntryKind>().notNull(),
+    amountMinor: integer("amount_minor").notNull(),
+    description: text("description").notNull(),
+    createdBy: uuid("created_by"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("courier_merchant_entries_pair_idx").on(t.merchantId, t.courierId, t.createdAt),
+    index("courier_merchant_entries_courier_idx").on(t.courierId, t.createdAt),
+    // Un reparto genera a lo sumo un asiento de cada tipo automático.
+    uniqueIndex("courier_merchant_entries_delivery_unique")
+      .on(t.deliveryId, t.kind)
+      .where(sql`${t.deliveryId} IS NOT NULL AND ${t.kind} <> 'PAYMENT'`),
+    check("courier_merchant_entries_kind_check", sql`${t.kind} IN ('DELIVERY_FEE', 'CASH_COLLECTED', 'PAYMENT')`),
+    check("courier_merchant_entries_amount_check", sql`${t.amountMinor} <> 0`),
+  ],
+);
+
+export type CourierMerchantEntryRow = typeof courierMerchantEntries.$inferSelect;
 export type CourierProfileRow = typeof courierProfiles.$inferSelect;
 export type DeliveryRow = typeof deliveries.$inferSelect;
 export type DeliveryEventRow = typeof deliveryEvents.$inferSelect;

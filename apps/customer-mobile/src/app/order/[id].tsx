@@ -1,5 +1,5 @@
 import { ApiError, type Order, unwrap } from "@pedilo/api-client";
-import { customerCanCancel, formatARS, isOrderFinal, ORDER_STATUS_LABELS } from "@pedilo/domain";
+import { customerCanCancel, formatARS, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useState } from "react";
@@ -129,6 +129,28 @@ export default function OrderScreen() {
           </View>
         </View>
         {!final && <Text style={[styles.autoRefresh, { color: t.muted }]}>Se actualiza solo · deslizá para refrescar</Text>}
+
+        {/* Repartidor de Pedilo y PIN de entrega (ADR 0016) */}
+        {o.tracking && (o.tracking.pin || o.tracking.courier) && (
+          <Card t={t} padded>
+            {o.tracking.courier && (
+              <View style={styles.rowStart}>
+                <Icon name="delivery" size={20} color={t.primary} />
+                <Text style={[styles.infoTitle, { color: t.text, flex: 1 }]}>
+                  Te lo lleva {o.tracking.courier.name} ({VEHICLE_LABELS[o.tracking.courier.vehicle as Vehicle].toLowerCase()})
+                </Text>
+              </View>
+            )}
+            {o.tracking.pin && (
+              <View style={{ gap: 4 }}>
+                <Text style={[styles.meta, { color: t.muted }]}>PIN de entrega: dáselo al repartidor cuando te entregue el pedido.</Text>
+                <Text selectable style={[styles.pin, { color: t.text }]} accessibilityLabel={`PIN de entrega ${o.tracking.pin.split("").join(" ")}`}>
+                  {o.tracking.pin}
+                </Text>
+              </View>
+            )}
+          </Card>
+        )}
 
         {/* Progreso */}
         {!failed && (
@@ -373,6 +395,7 @@ const styles = StyleSheet.create({
   divider: { height: StyleSheet.hairlineWidth },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
   rowStart: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  pin: { fontSize: 36, fontWeight: "800", letterSpacing: 14, fontVariant: ["tabular-nums"] },
   total: { fontSize: 18, fontWeight: "800" },
 
   cancelLink: { alignSelf: "center", paddingVertical: space.sm },

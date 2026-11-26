@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+
 import {
   ACTIVE_COURIER_STATUSES,
   canRevealDropoffAddress,
@@ -12,8 +14,10 @@ import { and, asc, desc, eq, gt, inArray, lte, notExists, notInArray, sql } from
 import type { Db, DbOrTx, Tx } from "../../db/client";
 import { badRequest, conflict, forbidden, isUniqueViolation, notFound } from "../../lib/errors";
 import { type Actor, recordAudit } from "../audit/service";
-import { getMerchantAccess } from "../merchants/service";
+import { getMerchantAccess, getMerchantNames } from "../merchants/service";
 import {
+  courierMerchantEntries,
+  type CourierMerchantEntryKind,
   courierProfiles,
   type CourierProfileRow,
   deliveries,
@@ -155,6 +159,11 @@ export interface DeliveryDto {
   tipMinor: number;
   cashToCollectMinor: number;
   courier: { id: string; name: string; phone: string; vehicle: Vehicle } | null;
+  /** Para marcar entregado hay que ingresar el PIN que tiene el cliente (ADR 0016). */
+  pinRequired: boolean;
+  /** Solo para el comercio: el repartidor nunca lo ve. */
+  pin: string | null;
+  pinLocked: boolean;
   offerExpiresAt: string | null;
   statusReason: string | null;
   assignedAt: string | null;
@@ -165,7 +174,7 @@ export interface DeliveryDto {
 }
 
 /** `reveal`: mostrar destino y destinatario (comercio siempre; repartidor solo asignado). */
-function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, reveal: boolean): DeliveryDto {
+function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, reveal: boolean, showPin: boolean): DeliveryDto {
   return {
     id: d.id,
     orderId: d.orderId,
@@ -180,6 +189,9 @@ function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, r
     tipMinor: d.tipMinor,
     cashToCollectMinor: d.cashToCollectMinor,
     courier: courier ? { id: courier.id, name: courier.displayName, phone: courier.phone, vehicle: courier.vehicle } : null,
+    pinRequired: d.pinRequired,
+    pin: showPin && d.pinRequired ? d.dropoffPin : null,
+    pinLocked: d.pinRequired && d.pinAttempts >= MAX_PIN_ATTEMPTS,
     offerExpiresAt: d.offerExpiresAt?.toISOString() ?? null,
     statusReason: d.statusReason,
     assignedAt: d.assignedAt?.toISOString() ?? null,
@@ -190,11 +202,16 @@ function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, r
   };
 }
 
-async function withCouriers(db: DbOrTx, rows: DeliveryRow[], reveal: (d: DeliveryRow) => boolean): Promise<DeliveryDto[]> {
+async function withCouriers(
+  db: DbOrTx,
+  rows: DeliveryRow[],
+  reveal: (d: DeliveryRow) => boolean,
+  showPin = false,
+): Promise<DeliveryDto[]> {
   const ids = [...new Set(rows.map((r) => r.courierId).filter((x): x is string => x !== null))];
   const couriers = ids.length ? await db.select().from(courierProfiles).where(inArray(courierProfiles.id, ids)) : [];
   const byId = new Map(couriers.map((c) => [c.id, c]));
-  return rows.map((r) => toDeliveryDto(r, r.courierId ? byId.get(r.courierId) : undefined, reveal(r)));
+  return rows.map((r) => toDeliveryDto(r, r.courierId ? byId.get(r.courierId) : undefined, reveal(r), showPin));
 }
 
 // ---------------------------------------------------------------------------
@@ -215,12 +232,14 @@ export interface DeliveryRequest {
 }
 
 export const DEFAULT_OFFER_MINUTES = 10;
+/** Intentos de PIN antes de bloquear (el comercio lo desbloquea). */
+export const MAX_PIN_ATTEMPTS = 5;
 
 /** Crea el delivery de un pedido y lo publica como oferta (SPEC §9.2). Un activo por pedido. */
 export async function requestDelivery(
   tx: Tx,
   req: DeliveryRequest,
-  offer: { feeMinor: number; offerMinutes: number; actorUserId: string },
+  offer: { feeMinor: number; offerMinutes: number; actorUserId: string; requirePin?: boolean },
   now = new Date(),
 ): Promise<string> {
   let row: DeliveryRow;
@@ -246,6 +265,8 @@ export async function requestDelivery(
         packageDescription: req.packageDescription,
         courierFeeMinor: offer.feeMinor,
         cashToCollectMinor: req.cashToCollectMinor,
+        pinRequired: offer.requirePin ?? true,
+        dropoffPin: (offer.requirePin ?? true) ? String(randomInt(0, 10_000)).padStart(4, "0") : null,
       })
       .returning()) as [DeliveryRow];
   } catch (err) {
@@ -293,7 +314,7 @@ export async function getDeliveriesForOrders(db: DbOrTx, orderIds: string[]): Pr
     .select()
     .from(deliveries)
     .where(and(inArray(deliveries.orderId, orderIds), notInArray(deliveries.status, [DeliveryStatus.CANCELLED])));
-  const dtos = await withCouriers(db, rows, () => true);
+  const dtos = await withCouriers(db, rows, () => true, true);
   return new Map(dtos.map((d) => [d.orderId!, d]));
 }
 
@@ -320,10 +341,10 @@ async function loadMerchantDelivery(tx: DbOrTx, merchantId: string, deliveryId: 
   return row;
 }
 
-async function deliveryDto(db: DbOrTx, id: string, reveal: boolean): Promise<DeliveryDto> {
+async function deliveryDto(db: DbOrTx, id: string, reveal: boolean, showPin = false): Promise<DeliveryDto> {
   const [row] = await db.select().from(deliveries).where(eq(deliveries.id, id));
   if (!row) throw notFound("Reparto");
-  return (await withCouriers(db, [row], () => reveal))[0]!;
+  return (await withCouriers(db, [row], () => reveal, showPin))[0]!;
 }
 
 /** Volver a ofertar (nadie aceptó, el repartidor canceló o para subir la tarifa). */
@@ -351,7 +372,7 @@ export async function reofferDelivery(
     // Con la tarifa nueva, quien la había rechazado la vuelve a ver.
     await tx.delete(deliveryDeclines).where(eq(deliveryDeclines.deliveryId, row.id));
   });
-  return deliveryDto(db, deliveryId, true);
+  return deliveryDto(db, deliveryId, true, true);
 }
 
 export async function cancelDeliveryByMerchant(
@@ -369,7 +390,7 @@ export async function cancelDeliveryByMerchant(
     }
     await changeStatus(tx, row, DeliveryStatus.CANCELLED, { type: "MERCHANT", userId, reason }, { offerExpiresAt: null });
   });
-  return deliveryDto(db, deliveryId, true);
+  return deliveryDto(db, deliveryId, true, true);
 }
 
 export async function listMerchantDeliveries(db: Db, merchantId: string, userId: string): Promise<DeliveryDto[]> {
@@ -380,7 +401,7 @@ export async function listMerchantDeliveries(db: Db, merchantId: string, userId:
     .where(eq(deliveries.merchantId, merchantId))
     .orderBy(desc(deliveries.createdAt))
     .limit(100);
-  return withCouriers(db, rows, () => true);
+  return withCouriers(db, rows, () => true, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -562,11 +583,12 @@ export async function courierUpdateStatus(
   db: Db,
   userId: string,
   deliveryId: string,
-  input: { to: DeliveryStatus; reason?: string | null | undefined; eventId: string },
+  input: { to: DeliveryStatus; reason?: string | null | undefined; eventId: string; pin?: string | null | undefined },
 ): Promise<DeliveryDto> {
   const courier = await myCourier(db, userId);
   const [seen] = await db.select({ id: deliveryEvents.id }).from(deliveryEvents).where(eq(deliveryEvents.eventId, input.eventId));
   if (seen) return deliveryDto(db, deliveryId, true);
+  if (input.to === DeliveryStatus.DELIVERED) await checkPin(db, courier.id, deliveryId, input.pin);
 
   try {
     await db.transaction(async (tx) => {
@@ -594,12 +616,236 @@ export async function courierUpdateStatus(
           ...(input.to === DeliveryStatus.COURIER_CANCELLED && { courierId: null, assignedAt: null }),
         },
       );
+      if (input.to === DeliveryStatus.DELIVERED) await recordDeliveryEntries(tx, row);
     });
   } catch (err) {
     // La misma acción llegó dos veces a la vez: la primera ganó.
     if (!isUniqueViolation(err)) throw err;
   }
   return deliveryDto(db, deliveryId, true);
+}
+
+/**
+ * PIN de entrega (SPEC §9.2). Cada error suma un intento (se guarda aunque la acción falle); al
+ * llegar al máximo se bloquea hasta que el comercio lo desbloquee.
+ */
+async function checkPin(db: Db, courierId: string, deliveryId: string, pin: string | null | undefined): Promise<void> {
+  const [row] = await db
+    .select({ pinRequired: deliveries.pinRequired, dropoffPin: deliveries.dropoffPin, attempts: deliveries.pinAttempts })
+    .from(deliveries)
+    .where(and(eq(deliveries.id, deliveryId), eq(deliveries.courierId, courierId)));
+  if (!row?.pinRequired) return;
+  if (row.attempts >= MAX_PIN_ATTEMPTS) {
+    throw conflict("Se bloqueó el PIN por demasiados intentos. Llamá al comercio para que lo desbloquee.", { reason: "PIN_LOCKED" });
+  }
+  if (!pin) throw badRequest("Pedile el PIN de entrega al cliente", { field: "pin" });
+  if (pin.trim() !== row.dropoffPin) {
+    const [updated] = await db
+      .update(deliveries)
+      .set({ pinAttempts: sql`${deliveries.pinAttempts} + 1` })
+      .where(eq(deliveries.id, deliveryId))
+      .returning({ attempts: deliveries.pinAttempts });
+    const left = Math.max(0, MAX_PIN_ATTEMPTS - (updated?.attempts ?? MAX_PIN_ATTEMPTS));
+    throw conflict(left > 0 ? `El PIN no es correcto. Te quedan ${left} intentos.` : "El PIN no es correcto y se bloqueó.", {
+      reason: left > 0 ? "PIN_INVALID" : "PIN_LOCKED",
+      attemptsLeft: left,
+    });
+  }
+}
+
+/** El comercio desbloquea el PIN (p. ej. después de confirmar por teléfono con el cliente). */
+export async function resetPinAttempts(db: Db, merchantId: string, deliveryId: string, userId: string): Promise<DeliveryDto> {
+  await getMerchantAccess(db, merchantId, userId);
+  const [row] = await db
+    .update(deliveries)
+    .set({ pinAttempts: 0 })
+    .where(and(eq(deliveries.id, deliveryId), eq(deliveries.merchantId, merchantId)))
+    .returning({ id: deliveries.id });
+  if (!row) throw notFound("Reparto");
+  return deliveryDto(db, deliveryId, true, true);
+}
+
+/** Lo que el cliente ve del reparto de su pedido: PIN (mientras no se entregó) y quién lo lleva. */
+export async function getCustomerDeliveryInfo(
+  db: DbOrTx,
+  orderId: string,
+): Promise<{ status: DeliveryStatus; pin: string | null; courier: { name: string; vehicle: Vehicle } | null } | null> {
+  const [row] = await db
+    .select()
+    .from(deliveries)
+    .where(and(eq(deliveries.orderId, orderId), notInArray(deliveries.status, [DeliveryStatus.CANCELLED])));
+  if (!row) return null;
+  const [courier] = row.courierId ? await db.select().from(courierProfiles).where(eq(courierProfiles.id, row.courierId)) : [];
+  const open = !["DELIVERED", "DELIVERY_FAILED"].includes(row.status);
+  return {
+    status: row.status,
+    pin: row.pinRequired && open ? row.dropoffPin : null,
+    // Solo el primer nombre: el cliente no necesita el teléfono del repartidor.
+    courier: courier ? { name: courier.displayName.split(" ")[0]!, vehicle: courier.vehicle } : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Cuenta comercio ↔ repartidor (SPEC §8.3, ADR 0016)
+// ---------------------------------------------------------------------------
+
+/** Al entregar: el comercio le debe el pago (+ propina) y el repartidor le debe el efectivo cobrado. */
+async function recordDeliveryEntries(tx: Tx, d: DeliveryRow): Promise<void> {
+  const values: Array<typeof courierMerchantEntries.$inferInsert> = [];
+  const fee = d.courierFeeMinor + d.tipMinor;
+  if (fee > 0) {
+    values.push({ merchantId: d.merchantId, courierId: d.courierId!, deliveryId: d.id, kind: "DELIVERY_FEE", amountMinor: fee, description: `Envío ${d.reference}` });
+  }
+  if (d.cashToCollectMinor > 0) {
+    values.push({
+      merchantId: d.merchantId,
+      courierId: d.courierId!,
+      deliveryId: d.id,
+      kind: "CASH_COLLECTED",
+      amountMinor: -d.cashToCollectMinor,
+      description: `Efectivo cobrado ${d.reference}`,
+    });
+  }
+  if (values.length) await tx.insert(courierMerchantEntries).values(values).onConflictDoNothing();
+}
+
+export interface CourierAccountEntryDto {
+  id: string;
+  kind: CourierMerchantEntryKind;
+  amountMinor: number;
+  description: string;
+  deliveryId: string | null;
+  createdAt: string;
+}
+
+const toAccountEntry = (e: typeof courierMerchantEntries.$inferSelect): CourierAccountEntryDto => ({
+  id: e.id,
+  kind: e.kind,
+  amountMinor: e.amountMinor,
+  description: e.description,
+  deliveryId: e.deliveryId,
+  createdAt: e.createdAt.toISOString(),
+});
+
+async function pairBalances(db: DbOrTx, where: ReturnType<typeof eq>) {
+  return db
+    .select({
+      merchantId: courierMerchantEntries.merchantId,
+      courierId: courierMerchantEntries.courierId,
+      balance: sql<number>`sum(${courierMerchantEntries.amountMinor})::int`,
+      lastAt: sql<Date>`max(${courierMerchantEntries.createdAt})`,
+    })
+    .from(courierMerchantEntries)
+    .where(where)
+    .groupBy(courierMerchantEntries.merchantId, courierMerchantEntries.courierId);
+}
+
+export interface MerchantCourierBalanceDto {
+  courier: { id: string; name: string; phone: string; vehicle: Vehicle };
+  /** Positivo: le debés al repartidor. Negativo: el repartidor te debe. */
+  balanceMinor: number;
+  lastEntryAt: string;
+}
+
+export async function listMerchantCourierBalances(db: Db, merchantId: string, userId: string): Promise<MerchantCourierBalanceDto[]> {
+  await getMerchantAccess(db, merchantId, userId);
+  const rows = await pairBalances(db, eq(courierMerchantEntries.merchantId, merchantId));
+  if (rows.length === 0) return [];
+  const couriers = await db.select().from(courierProfiles).where(inArray(courierProfiles.id, rows.map((r) => r.courierId)));
+  const byId = new Map(couriers.map((c) => [c.id, c]));
+  return rows
+    .map((r) => {
+      const c = byId.get(r.courierId)!;
+      return {
+        courier: { id: c.id, name: c.displayName, phone: c.phone, vehicle: c.vehicle },
+        balanceMinor: r.balance,
+        lastEntryAt: new Date(r.lastAt).toISOString(),
+      };
+    })
+    .sort((a, b) => Math.abs(b.balanceMinor) - Math.abs(a.balanceMinor));
+}
+
+export async function getMerchantCourierAccount(db: Db, merchantId: string, courierId: string, userId: string) {
+  await getMerchantAccess(db, merchantId, userId);
+  const entries = await db
+    .select()
+    .from(courierMerchantEntries)
+    .where(and(eq(courierMerchantEntries.merchantId, merchantId), eq(courierMerchantEntries.courierId, courierId)))
+    .orderBy(desc(courierMerchantEntries.createdAt))
+    .limit(200);
+  if (entries.length === 0) throw notFound("Cuenta con el repartidor");
+  const [c] = await db.select().from(courierProfiles).where(eq(courierProfiles.id, courierId));
+  const [total] = await pairBalances(db, and(eq(courierMerchantEntries.merchantId, merchantId), eq(courierMerchantEntries.courierId, courierId))!);
+  return {
+    courier: { id: c!.id, name: c!.displayName, phone: c!.phone, vehicle: c!.vehicle },
+    balanceMinor: total?.balance ?? 0,
+    entries: entries.map(toAccountEntry),
+  };
+}
+
+/**
+ * El comercio registra un pago: le pagó al repartidor (TO_COURIER, baja lo que le debe) o el
+ * repartidor le rindió efectivo (FROM_COURIER). Solo con repartidores con los que ya trabajó.
+ */
+export async function recordCourierPayment(
+  db: Db,
+  merchantId: string,
+  courierId: string,
+  input: { direction: "TO_COURIER" | "FROM_COURIER"; amountMinor: number; note?: string | null | undefined },
+  actor: Actor,
+) {
+  await getMerchantAccess(db, merchantId, actor.userId);
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: courierMerchantEntries.id })
+      .from(courierMerchantEntries)
+      .where(and(eq(courierMerchantEntries.merchantId, merchantId), eq(courierMerchantEntries.courierId, courierId)))
+      .limit(1);
+    if (!existing) throw notFound("Cuenta con el repartidor");
+    const note = input.note?.trim();
+    const description =
+      (input.direction === "TO_COURIER" ? "Pago al repartidor" : "Efectivo rendido por el repartidor") + (note ? ` · ${note}` : "");
+    const amountMinor = input.direction === "TO_COURIER" ? -input.amountMinor : input.amountMinor;
+    const [row] = await tx
+      .insert(courierMerchantEntries)
+      .values({ merchantId, courierId, kind: "PAYMENT", amountMinor, description, createdBy: actor.userId })
+      .returning({ id: courierMerchantEntries.id });
+    await recordAudit(tx, actor, {
+      action: "courier_account.payment",
+      entityType: "merchant",
+      entityId: merchantId,
+      after: { entryId: row!.id, courierId, direction: input.direction, amountMinor: input.amountMinor },
+    });
+  });
+  return getMerchantCourierAccount(db, merchantId, courierId, actor.userId);
+}
+
+export interface CourierBalanceDto {
+  merchant: { id: string; name: string };
+  /** Positivo: el comercio te debe. Negativo: le debés al comercio (efectivo cobrado). */
+  balanceMinor: number;
+  entries: CourierAccountEntryDto[];
+}
+
+/** Saldos del repartidor con cada comercio, con los últimos movimientos. */
+export async function listCourierBalances(db: Db, userId: string): Promise<CourierBalanceDto[]> {
+  const courier = await myCourier(db, userId);
+  const rows = await pairBalances(db, eq(courierMerchantEntries.courierId, courier.id));
+  if (rows.length === 0) return [];
+  const [names, entries] = await Promise.all([
+    getMerchantNames(db, rows.map((r) => r.merchantId)),
+    db
+      .select()
+      .from(courierMerchantEntries)
+      .where(eq(courierMerchantEntries.courierId, courier.id))
+      .orderBy(desc(courierMerchantEntries.createdAt))
+      .limit(200),
+  ]);
+  return rows.map((r) => ({
+    merchant: { id: r.merchantId, name: names.get(r.merchantId) ?? "—" },
+    balanceMinor: r.balance,
+    entries: entries.filter((e) => e.merchantId === r.merchantId).slice(0, 20).map(toAccountEntry),
+  }));
 }
 
 // ---------------------------------------------------------------------------

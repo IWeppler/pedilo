@@ -78,6 +78,13 @@
       "when": 1795639245820,
       "tag": "0010_deliveries",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795641321427,
+      "tag": "0011_delivery_pin_and_courier_balances",
+      "breakpoints": true
     }
   ]
 }

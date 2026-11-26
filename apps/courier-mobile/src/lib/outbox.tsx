@@ -21,6 +21,8 @@ export interface PendingAction {
   deliveryId: string;
   to: DeliveryStatus;
   reason: string | null;
+  /** PIN de entrega que dio el cliente (solo para «entregado»). */
+  pin?: string | null;
   createdAt: string;
 }
 
@@ -28,7 +30,7 @@ interface OutboxValue {
   pending: PendingAction[];
   /** Último rechazo del servidor (acción inválida, reparto cancelado…), para mostrarlo. */
   rejected: { action: PendingAction; message: string } | null;
-  enqueue: (deliveryId: string, to: DeliveryStatus, reason?: string | null) => Promise<void>;
+  enqueue: (deliveryId: string, to: DeliveryStatus, reason?: string | null, pin?: string | null) => Promise<void>;
   flush: () => Promise<void>;
   dismissRejected: () => void;
 }
@@ -62,7 +64,7 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
           await unwrap(
             api.POST("/v1/courier/deliveries/{deliveryId}/status", {
               params: { path: { deliveryId: action.deliveryId } },
-              body: { to: action.to, reason: action.reason, eventId: action.eventId },
+              body: { to: action.to, reason: action.reason, eventId: action.eventId, ...(action.pin && { pin: action.pin }) },
             }),
           );
         } catch (err) {
@@ -100,8 +102,8 @@ export function OutboxProvider({ children }: { children: ReactNode }) {
   }, [pending.length, flush]);
 
   const enqueue = useCallback(
-    async (deliveryId: string, to: DeliveryStatus, reason: string | null = null) => {
-      await persist([...queue.current, { eventId: newEventId(), deliveryId, to, reason, createdAt: new Date().toISOString() }]);
+    async (deliveryId: string, to: DeliveryStatus, reason: string | null = null, pin: string | null = null) => {
+      await persist([...queue.current, { eventId: newEventId(), deliveryId, to, reason, pin, createdAt: new Date().toISOString() }]);
       await flush();
     },
     [persist, flush],

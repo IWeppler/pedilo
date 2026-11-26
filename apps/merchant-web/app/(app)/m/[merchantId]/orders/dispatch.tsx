@@ -9,7 +9,7 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { cancelDispatch, reofferDispatch, requestDispatch } from "./actions";
+import { cancelDispatch, reofferDispatch, requestDispatch, resetDispatchPin } from "./actions";
 import { useMinutesLeft } from "../order-alerts";
 
 type Dispatch = NonNullable<MerchantOrder["dispatch"]>;
@@ -36,14 +36,22 @@ function FeeForm({
   action,
   suggestedMinor,
   label,
+  withPinOption,
 }: {
   action: (prev: typeof initialFormState, formData: FormData) => Promise<typeof initialFormState>;
   suggestedMinor: number;
   label: string;
+  withPinOption?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, initialFormState);
   return (
     <form action={formAction} className="flex flex-wrap items-center gap-2">
+      {withPinOption && (
+        <label className="flex items-center gap-1.5 text-sm" title="El cliente ve un PIN en el seguimiento y se lo da al repartidor al recibir">
+          <input type="checkbox" name="requirePin" defaultChecked className="size-4 accent-primary" />
+          Pedir PIN al entregar
+        </label>
+      )}
       <label className="flex items-center gap-1.5 text-sm">
         Pago al repartidor $
         <Input name="fee" inputMode="decimal" defaultValue={minorToPesosInput(suggestedMinor)} className="h-8 w-24" aria-label="Pago al repartidor en pesos" />
@@ -57,7 +65,9 @@ function FeeForm({
 }
 
 function RequestForm({ merchantId, orderId, suggestedMinor }: { merchantId: string; orderId: string; suggestedMinor: number }) {
-  return <FeeForm action={requestDispatch.bind(null, merchantId, orderId)} suggestedMinor={suggestedMinor} label="Pedir repartidor" />;
+  return (
+    <FeeForm action={requestDispatch.bind(null, merchantId, orderId)} suggestedMinor={suggestedMinor} label="Pedir repartidor" withPinOption />
+  );
 }
 
 function DispatchStatus({ merchantId, d }: { merchantId: string; d: Dispatch }) {
@@ -65,6 +75,7 @@ function DispatchStatus({ merchantId, d }: { merchantId: string; d: Dispatch }) 
   const minutes = useMinutesLeft(status === "OFFERED" ? d.offerExpiresAt : null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelState, cancelAction, cancelPending] = useActionState(cancelDispatch.bind(null, merchantId, d.id), initialFormState);
+  const [pinState, pinAction, pinPending] = useActionState(resetDispatchPin.bind(null, merchantId, d.id), initialFormState);
 
   return (
     <div className="grid gap-2 rounded-lg border bg-muted/40 p-3 text-sm">
@@ -82,6 +93,22 @@ function DispatchStatus({ merchantId, d }: { merchantId: string; d: Dispatch }) 
             {d.courier.phone}
           </a>
         </p>
+      )}
+      {d.pin && status !== "DELIVERED" && (
+        <p className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground">PIN de entrega:</span>
+          <span className="font-mono font-semibold tracking-widest">{d.pin}</span>
+          <span className="text-xs text-muted-foreground">(lo tiene el cliente; el repartidor no)</span>
+        </p>
+      )}
+      {d.pinLocked && (
+        <form action={pinAction} className="flex flex-wrap items-center gap-2 text-destructive">
+          <span>El repartidor erró el PIN demasiadas veces.</span>
+          <Button type="submit" size="sm" variant="outline" disabled={pinPending}>
+            {pinPending ? "…" : "Desbloquear PIN"}
+          </Button>
+          {pinState.message && <span className="text-xs">{pinState.message}</span>}
+        </form>
       )}
       {d.statusReason && status !== "OFFERED" && <p className="text-muted-foreground">Motivo: {d.statusReason}</p>}
 

@@ -72,7 +72,8 @@ export async function closeSettlementWeek(
       and(
         isNull(settlementAllocations.entryId),
         lt(commissionEntries.createdAt, periodEnd),
-        sql`not exists (select 1 from settlements s where s.merchant_id = ${commissionEntries.merchantId} and s.period_end = ${periodEnd})`,
+        // Fecha como texto + cast: en SQL crudo el driver `postgres` no serializa un Date (PGlite sí).
+        sql`not exists (select 1 from settlements s where s.merchant_id = ${commissionEntries.merchantId} and s.period_end = ${periodEnd.toISOString()}::timestamptz)`,
       ),
     )
     .groupBy(commissionEntries.merchantId)

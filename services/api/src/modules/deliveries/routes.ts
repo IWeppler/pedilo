@@ -11,7 +11,12 @@ import {
   courierUpdateStatus,
   declineOffer,
   DEFAULT_OFFER_MINUTES,
+  getMerchantCourierAccount,
   getMyCourier,
+  listCourierBalances,
+  listMerchantCourierBalances,
+  recordCourierPayment,
+  resetPinAttempts,
   listCouriersForAdmin,
   listMerchantDeliveries,
   listMyDeliveries,
@@ -68,6 +73,9 @@ const deliverySchema = z.object({
   tipMinor: z.number().int(),
   cashToCollectMinor: z.number().int(),
   courier: z.object({ id: z.uuid(), name: z.string(), phone: z.string(), vehicle: vehicleSchema }).nullable(),
+  pinRequired: z.boolean().describe("Para marcar entregado hay que ingresar el PIN del cliente"),
+  pin: z.string().nullable().describe("Solo para el comercio; el repartidor nunca lo recibe"),
+  pinLocked: z.boolean().describe("Demasiados intentos: el comercio tiene que desbloquearlo"),
   offerExpiresAt: z.string().nullable(),
   statusReason: z.string().nullable(),
   assignedAt: z.string().nullable(),
@@ -75,6 +83,20 @@ const deliverySchema = z.object({
   deliveredAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
+});
+
+const accountEntrySchema = z.object({
+  id: z.uuid(),
+  kind: z.enum(["DELIVERY_FEE", "CASH_COLLECTED", "PAYMENT"]),
+  amountMinor: z.number().int(),
+  description: z.string(),
+  deliveryId: z.uuid().nullable(),
+  createdAt: z.string(),
+});
+const courierAccountSchema = z.object({
+  courier: z.object({ id: z.uuid(), name: z.string(), phone: z.string(), vehicle: vehicleSchema }),
+  balanceMinor: z.number().int(),
+  entries: z.array(accountEntrySchema),
 });
 
 const phone = z.string().trim().regex(/^[0-9+()\s-]{8,24}$/, "Teléfono inválido");
@@ -210,13 +232,14 @@ export const deliveryRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
         summary: "Avanzar el estado de mi reparto",
         description:
           "Solo las acciones de `courierDeliveryActions` (@pedilo/domain). `eventId` lo genera la app por acción: " +
-          "reintentar con el mismo no duplica nada (SPEC §9.3).",
+          "reintentar con el mismo no duplica nada (SPEC §9.3). Entregado con PIN: 409 PIN_INVALID (con `attemptsLeft`) o PIN_LOCKED.",
         security,
         params: deliveryParams,
         body: z.object({
           to: deliveryStatusSchema,
           reason: z.string().trim().max(300).nullable().optional(),
           eventId: z.string().min(8).max(100),
+          pin: z.string().trim().regex(/^[0-9]{4}$/, "El PIN tiene 4 dígitos").nullable().optional().describe("Obligatorio para DELIVERED si el reparto pide PIN"),
         }),
         response: { 200: deliverySchema, ...errorResponses },
       },
@@ -281,6 +304,109 @@ export const deliveryRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
     },
     (request) =>
       cancelDeliveryByMerchant(db, request.params.merchantId, request.params.deliveryId, request.body.reason, authOf(request).userId),
+  );
+
+  app.post(
+    "/merchants/:merchantId/deliveries/:deliveryId/reset-pin",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["deliveries"],
+        summary: "Desbloquear el PIN de entrega",
+        description: "Vuelve a cero los intentos (p. ej. después de confirmar por teléfono con el cliente).",
+        security,
+        params: merchantDeliveryParams,
+        response: { 200: deliverySchema, ...errorResponses },
+      },
+    },
+    (request) => resetPinAttempts(db, request.params.merchantId, request.params.deliveryId, authOf(request).userId),
+  );
+
+  // --- Cuenta comercio ↔ repartidor (ADR 0016) ---
+
+  app.get(
+    "/merchants/:merchantId/courier-balances",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["deliveries"],
+        summary: "Saldos con cada repartidor",
+        description: "Positivo: el comercio le debe al repartidor. Negativo: el repartidor le debe efectivo al comercio.",
+        security,
+        params: z.object({ merchantId: z.uuid() }),
+        response: {
+          200: z.array(
+            z.object({
+              courier: z.object({ id: z.uuid(), name: z.string(), phone: z.string(), vehicle: vehicleSchema }),
+              balanceMinor: z.number().int(),
+              lastEntryAt: z.string(),
+            }),
+          ),
+          ...errorResponses,
+        },
+      },
+    },
+    (request) => listMerchantCourierBalances(db, request.params.merchantId, authOf(request).userId),
+  );
+
+  app.get(
+    "/merchants/:merchantId/courier-balances/:courierId",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["deliveries"],
+        summary: "Movimientos con un repartidor",
+        security,
+        params: z.object({ merchantId: z.uuid(), courierId: z.uuid() }),
+        response: { 200: courierAccountSchema, ...errorResponses },
+      },
+    },
+    (request) => getMerchantCourierAccount(db, request.params.merchantId, request.params.courierId, authOf(request).userId),
+  );
+
+  app.post(
+    "/merchants/:merchantId/courier-balances/:courierId/payments",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["deliveries"],
+        summary: "Registrar un pago con el repartidor",
+        description: "TO_COURIER: le pagaste. FROM_COURIER: te rindió el efectivo. No se editan: un error se corrige con otro pago.",
+        security,
+        params: z.object({ merchantId: z.uuid(), courierId: z.uuid() }),
+        body: z.object({
+          direction: z.enum(["TO_COURIER", "FROM_COURIER"]),
+          amountMinor: z.number().int().min(1).max(100_000_000),
+          note: z.string().trim().max(200).nullable().optional(),
+        }),
+        response: { 201: courierAccountSchema, ...errorResponses },
+      },
+    },
+    async (request, reply) =>
+      reply.code(201).send(
+        await recordCourierPayment(db, request.params.merchantId, request.params.courierId, request.body, {
+          userId: authOf(request).userId,
+          requestId: request.id,
+        }),
+      ),
+  );
+
+  app.get(
+    "/courier/balances",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["couriers"],
+        summary: "Mis saldos con cada comercio",
+        description: "Positivo: el comercio te debe. Negativo: le debés el efectivo que cobraste.",
+        security,
+        response: {
+          200: z.array(z.object({ merchant: z.object({ id: z.uuid(), name: z.string() }), balanceMinor: z.number().int(), entries: z.array(accountEntrySchema) })),
+          ...errorResponses,
+        },
+      },
+    },
+    (request) => listCourierBalances(db, authOf(request).userId),
   );
 
   // --- Admin ---

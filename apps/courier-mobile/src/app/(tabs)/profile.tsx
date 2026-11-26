@@ -6,7 +6,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Button, Card, Field, Loading } from "@/components/ui";
-import { api, useMe, useMyDeliveries } from "@/lib/api";
+import { api, useBalances, useMe, useMyDeliveries } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { space, useTheme } from "@/lib/theme";
 
@@ -19,6 +19,7 @@ export default function ProfileScreen() {
   const { email, signOut } = useAuth();
   const me = useMe();
   const done = useMyDeliveries("done");
+  const balances = useBalances();
   const [minFee, setMinFee] = useState<string | null>(null);
 
   const save = useMutation({
@@ -63,6 +64,25 @@ export default function ProfileScreen() {
             />
           )}
           {save.isError && <Text style={{ color: t.danger }}>No pudimos guardar. Revisá tu conexión.</Text>}
+        </Card>
+
+        <Text style={[styles.section, { color: t.text }]}>Cuentas con comercios</Text>
+        <Card>
+          {(balances.data ?? []).length === 0 && <Text style={{ color: t.muted }}>Sin movimientos todavía.</Text>}
+          {(balances.data ?? []).map((b) => (
+            <View key={b.merchant.id} style={{ gap: 2 }}>
+              <View style={styles.row}>
+                <Text style={{ color: t.text, fontWeight: "700", flex: 1 }}>{b.merchant.name}</Text>
+                <Text style={{ color: b.balanceMinor >= 0 ? t.success : t.danger, fontWeight: "800" }}>{formatARS(Math.abs(b.balanceMinor))}</Text>
+              </View>
+              <Text style={{ color: t.muted, fontSize: 13 }}>
+                {b.balanceMinor > 0 ? "Te debe" : b.balanceMinor < 0 ? "Le debés (efectivo cobrado)" : "Están al día"}
+              </Text>
+            </View>
+          ))}
+          <Text style={{ color: t.muted, fontSize: 12 }}>
+            Suma tus envíos y resta el efectivo que cobraste. Los pagos los registra el comercio.
+          </Text>
         </Card>
 
         <Text style={[styles.section, { color: t.text }]}>Últimos repartos</Text>
