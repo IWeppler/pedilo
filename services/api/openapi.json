@@ -11499,6 +11499,1355 @@
         }
       }
     },
+    "/v1/admin/merchants/{id}/suspend": {
+      "post": {
+        "summary": "Suspender un comercio aprobado",
+        "tags": [
+          "admin"
+        ],
+        "description": "Desaparece de la app y no recibe pedidos nuevos; puede terminar los que tiene en curso. El motivo lo ve el comercio.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "taxId": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "categoryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "contactPhone": {
+                      "type": "string"
+                    },
+                    "contactEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "logoUrl": {
+                      "description": "Relativa a la API (`/media/...`) en modo local",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "coverUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "payment": {
+                      "type": "object",
+                      "properties": {
+                        "acceptsCash": {
+                          "type": "boolean"
+                        },
+                        "acceptsTransfer": {
+                          "type": "boolean"
+                        },
+                        "transfer": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "alias": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "cbu": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "holder": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "alias",
+                                "cbu",
+                                "holder"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "acceptsCash",
+                        "acceptsTransfer",
+                        "transfer"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PENDING_REVIEW",
+                        "APPROVED",
+                        "REJECTED",
+                        "SUSPENDED"
+                      ]
+                    },
+                    "rejectionReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "submittedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reviewedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "branches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "cityId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "addressLine": {
+                            "type": "string"
+                          },
+                          "addressNotes": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lat": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "lng": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "phone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "timezone": {
+                            "type": "string"
+                          },
+                          "acceptsPickup": {
+                            "type": "boolean"
+                          },
+                          "acceptsDelivery": {
+                            "type": "boolean"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "scheduling": {
+                            "type": "object",
+                            "properties": {
+                              "enabled": {
+                                "type": "boolean",
+                                "description": "Acepta pedidos programados"
+                              },
+                              "leadMinutes": {
+                                "type": "integer",
+                                "minimum": 15,
+                                "maximum": 2880,
+                                "description": "Anticipación mínima en minutos"
+                              },
+                              "maxDays": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 14,
+                                "description": "Hasta cuántos días adelante"
+                              },
+                              "slotCapacity": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 500
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Pedidos por franja de 30 min; null = sin límite"
+                              }
+                            },
+                            "required": [
+                              "enabled",
+                              "leadMinutes",
+                              "maxDays",
+                              "slotCapacity"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "hours": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "weekday": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6,
+                                  "description": "0 = domingo … 6 = sábado"
+                                },
+                                "opensAt": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$"
+                                },
+                                "closesAt": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                                  "description": "Si es menor o igual que opensAt, el rango cruza la medianoche"
+                                }
+                              },
+                              "required": [
+                                "weekday",
+                                "opensAt",
+                                "closesAt"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "feeMinor": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991,
+                                  "description": "Tarifa de envío en centavos"
+                                },
+                                "minOrderMinor": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991,
+                                  "description": "Pedido mínimo en centavos"
+                                },
+                                "active": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "description",
+                                "feeMinor",
+                                "minOrderMinor",
+                                "active"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "cityId",
+                          "addressLine",
+                          "addressNotes",
+                          "lat",
+                          "lng",
+                          "phone",
+                          "timezone",
+                          "acceptsPickup",
+                          "acceptsDelivery",
+                          "active",
+                          "scheduling",
+                          "hours",
+                          "zones"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "onboarding": {
+                      "type": "object",
+                      "properties": {
+                        "ready": {
+                          "type": "boolean"
+                        },
+                        "problems": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "issue": {
+                                "type": "string",
+                                "enum": [
+                                  "NO_ACTIVE_BRANCH",
+                                  "BRANCH_WITHOUT_HOURS",
+                                  "BRANCH_WITHOUT_FULFILLMENT"
+                                ]
+                              },
+                              "branchId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              }
+                            },
+                            "required": [
+                              "issue"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "ready",
+                        "problems"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "owner": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "email": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "phone": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "email",
+                            "phone"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "legalName",
+                    "taxId",
+                    "slug",
+                    "categoryId",
+                    "contactPhone",
+                    "contactEmail",
+                    "logoUrl",
+                    "coverUrl",
+                    "payment",
+                    "status",
+                    "rejectionReason",
+                    "submittedAt",
+                    "reviewedAt",
+                    "createdAt",
+                    "updatedAt",
+                    "branches",
+                    "onboarding",
+                    "owner"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/merchants/{id}/reactivate": {
+      "post": {
+        "summary": "Reactivar un comercio suspendido",
+        "tags": [
+          "admin"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "taxId": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "categoryId": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "contactPhone": {
+                      "type": "string"
+                    },
+                    "contactEmail": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "logoUrl": {
+                      "description": "Relativa a la API (`/media/...`) en modo local",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "coverUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "payment": {
+                      "type": "object",
+                      "properties": {
+                        "acceptsCash": {
+                          "type": "boolean"
+                        },
+                        "acceptsTransfer": {
+                          "type": "boolean"
+                        },
+                        "transfer": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "alias": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "cbu": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "holder": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "alias",
+                                "cbu",
+                                "holder"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "acceptsCash",
+                        "acceptsTransfer",
+                        "transfer"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PENDING_REVIEW",
+                        "APPROVED",
+                        "REJECTED",
+                        "SUSPENDED"
+                      ]
+                    },
+                    "rejectionReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "submittedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "reviewedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string"
+                    },
+                    "updatedAt": {
+                      "type": "string"
+                    },
+                    "branches": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "cityId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "addressLine": {
+                            "type": "string"
+                          },
+                          "addressNotes": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "lat": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "lng": {
+                            "type": [
+                              "number",
+                              "null"
+                            ]
+                          },
+                          "phone": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "timezone": {
+                            "type": "string"
+                          },
+                          "acceptsPickup": {
+                            "type": "boolean"
+                          },
+                          "acceptsDelivery": {
+                            "type": "boolean"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "scheduling": {
+                            "type": "object",
+                            "properties": {
+                              "enabled": {
+                                "type": "boolean",
+                                "description": "Acepta pedidos programados"
+                              },
+                              "leadMinutes": {
+                                "type": "integer",
+                                "minimum": 15,
+                                "maximum": 2880,
+                                "description": "Anticipación mínima en minutos"
+                              },
+                              "maxDays": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 14,
+                                "description": "Hasta cuántos días adelante"
+                              },
+                              "slotCapacity": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                    "maximum": 500
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Pedidos por franja de 30 min; null = sin límite"
+                              }
+                            },
+                            "required": [
+                              "enabled",
+                              "leadMinutes",
+                              "maxDays",
+                              "slotCapacity"
+                            ],
+                            "additionalProperties": false
+                          },
+                          "hours": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "weekday": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 6,
+                                  "description": "0 = domingo … 6 = sábado"
+                                },
+                                "opensAt": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$"
+                                },
+                                "closesAt": {
+                                  "type": "string",
+                                  "pattern": "^([01]\\d|2[0-4]):[0-5]\\d$",
+                                  "description": "Si es menor o igual que opensAt, el rango cruza la medianoche"
+                                }
+                              },
+                              "required": [
+                                "weekday",
+                                "opensAt",
+                                "closesAt"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "zones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid",
+                                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "description": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "feeMinor": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991,
+                                  "description": "Tarifa de envío en centavos"
+                                },
+                                "minOrderMinor": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991,
+                                  "description": "Pedido mínimo en centavos"
+                                },
+                                "active": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "description",
+                                "feeMinor",
+                                "minOrderMinor",
+                                "active"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "cityId",
+                          "addressLine",
+                          "addressNotes",
+                          "lat",
+                          "lng",
+                          "phone",
+                          "timezone",
+                          "acceptsPickup",
+                          "acceptsDelivery",
+                          "active",
+                          "scheduling",
+                          "hours",
+                          "zones"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "onboarding": {
+                      "type": "object",
+                      "properties": {
+                        "ready": {
+                          "type": "boolean"
+                        },
+                        "problems": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "issue": {
+                                "type": "string",
+                                "enum": [
+                                  "NO_ACTIVE_BRANCH",
+                                  "BRANCH_WITHOUT_HOURS",
+                                  "BRANCH_WITHOUT_FULFILLMENT"
+                                ]
+                              },
+                              "branchId": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                              }
+                            },
+                            "required": [
+                              "issue"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "ready",
+                        "problems"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "owner": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            "email": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "phone": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "email",
+                            "phone"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "legalName",
+                    "taxId",
+                    "slug",
+                    "categoryId",
+                    "contactPhone",
+                    "contactEmail",
+                    "logoUrl",
+                    "coverUrl",
+                    "payment",
+                    "status",
+                    "rejectionReason",
+                    "submittedAt",
+                    "reviewedAt",
+                    "createdAt",
+                    "updatedAt",
+                    "branches",
+                    "onboarding",
+                    "owner"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/admin/merchants/{id}/reject": {
       "post": {
         "summary": "Rechazar un comercio en revisión, con motivo visible para el comercio",

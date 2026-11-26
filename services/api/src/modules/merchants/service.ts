@@ -1094,6 +1094,43 @@ async function review(
   return getMerchantForAdmin(db, merchantId);
 }
 
+/**
+ * Suspender un comercio aprobado (con motivo) o reactivarlo. Suspendido desaparece de la app y no
+ * recibe pedidos nuevos; los que ya tenía en curso los puede terminar. No edita catálogo ni datos.
+ */
+export async function setMerchantSuspended(
+  db: Db,
+  merchantId: string,
+  suspended: boolean,
+  reason: string | null,
+  actor: Actor,
+): Promise<AdminMerchantDetailDto> {
+  const to = suspended ? MerchantStatus.SUSPENDED : MerchantStatus.APPROVED;
+  if (suspended && !reason?.trim()) throw badRequest("Indicá el motivo de la suspensión (lo ve el comercio)", { field: "reason" });
+  await db.transaction(async (tx) => {
+    const [current] = await tx.select().from(merchants).where(eq(merchants.id, merchantId)).for("update");
+    if (!current) throw notFound("Comercio");
+    if (current.status !== (suspended ? MerchantStatus.APPROVED : MerchantStatus.SUSPENDED)) {
+      throw conflict(suspended ? "Solo se pueden suspender comercios aprobados" : "El comercio no está suspendido", {
+        reason: "INVALID_STATUS",
+        status: current.status,
+      });
+    }
+    await tx
+      .update(merchants)
+      .set({ status: to, rejectionReason: suspended ? reason!.trim() : null })
+      .where(eq(merchants.id, merchantId));
+    await recordAudit(tx, actor, {
+      action: suspended ? "merchant.suspend" : "merchant.reactivate",
+      entityType: "merchant",
+      entityId: merchantId,
+      before: { status: current.status },
+      after: { status: to, reason: suspended ? reason!.trim() : null },
+    });
+  });
+  return getMerchantForAdmin(db, merchantId);
+}
+
 export const approveMerchant = (db: Db, merchantId: string, actor: Actor) =>
   review(db, merchantId, MerchantStatus.APPROVED, null, actor);
 

@@ -16,6 +16,7 @@ import { commissionLabel } from "@/lib/categories";
 
 import { BillingCard } from "./billing-card";
 import { ReviewActions } from "./review-actions";
+import { SuspensionActions } from "./suspension-actions";
 
 export default function MerchantReviewPage({ params }: PageProps<"/merchants/[id]">) {
   return (
@@ -161,6 +162,10 @@ async function MerchantReview({ params }: { params: PageProps<"/merchants/[id]">
       ))}
 
       <BillingCard merchantId={merchant.id} billing={billing} />
+
+      {(merchant.status === "APPROVED" || merchant.status === "SUSPENDED") && (
+        <SuspensionActions merchantId={merchant.id} status={merchant.status} reason={merchant.rejectionReason} />
+      )}
 
       {merchant.status === "PENDING_REVIEW" && (
         <ReviewActions merchantId={merchant.id} ready={merchant.onboarding.ready} />

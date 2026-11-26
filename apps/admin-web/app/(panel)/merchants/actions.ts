@@ -16,6 +16,29 @@ export async function approveMerchant(id: string, _prev: FormState, formData: Fo
   redirect("/merchants?status=PENDING_REVIEW");
 }
 
+export async function suspendMerchant(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const values = formValues(formData);
+  try {
+    await adminCall((api) =>
+      api.POST("/v1/admin/merchants/{id}/suspend", { params: { path: { id } }, body: { reason: text(formData, "reason") } }),
+    );
+  } catch (err) {
+    return errorToFormState(err, values);
+  }
+  revalidatePath(`/merchants/${id}`);
+  return { saved: true };
+}
+
+export async function reactivateMerchant(id: string): Promise<FormState> {
+  try {
+    await adminCall((api) => api.POST("/v1/admin/merchants/{id}/reactivate", { params: { path: { id } } }));
+  } catch (err) {
+    return errorToFormState(err, {});
+  }
+  revalidatePath(`/merchants/${id}`);
+  return { saved: true };
+}
+
 export async function rejectMerchant(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const values = formValues(formData);
   try {

@@ -4273,6 +4273,449 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/merchants/{id}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspender un comercio aprobado
+         * @description Desaparece de la app y no recibe pedidos nuevos; puede terminar los que tiene en curso. El motivo lo ve el comercio.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        reason: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            legalName: string;
+                            taxId: string;
+                            slug: string;
+                            /** Format: uuid */
+                            categoryId: string;
+                            contactPhone: string;
+                            contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            rejectionReason: string | null;
+                            submittedAt: string | null;
+                            reviewedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            branches: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                cityId: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                                lat: number | null;
+                                lng: number | null;
+                                phone: string | null;
+                                timezone: string;
+                                acceptsPickup: boolean;
+                                acceptsDelivery: boolean;
+                                active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
+                                hours: {
+                                    /** @description 0 = domingo … 6 = sábado */
+                                    weekday: number;
+                                    opensAt: string;
+                                    /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                    closesAt: string;
+                                }[];
+                                zones: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    description: string | null;
+                                    /** @description Tarifa de envío en centavos */
+                                    feeMinor: number;
+                                    /** @description Pedido mínimo en centavos */
+                                    minOrderMinor: number;
+                                    active: boolean;
+                                }[];
+                            }[];
+                            onboarding: {
+                                ready: boolean;
+                                problems: {
+                                    /** @enum {string} */
+                                    issue: "NO_ACTIVE_BRANCH" | "BRANCH_WITHOUT_HOURS" | "BRANCH_WITHOUT_FULFILLMENT";
+                                    /** Format: uuid */
+                                    branchId?: string;
+                                }[];
+                            };
+                            owner: {
+                                /** Format: uuid */
+                                id: string;
+                                email: string | null;
+                                phone: string | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/merchants/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reactivar un comercio suspendido */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            displayName: string;
+                            legalName: string;
+                            taxId: string;
+                            slug: string;
+                            /** Format: uuid */
+                            categoryId: string;
+                            contactPhone: string;
+                            contactEmail: string | null;
+                            /** @description Relativa a la API (`/media/...`) en modo local */
+                            logoUrl: string | null;
+                            coverUrl: string | null;
+                            payment: {
+                                acceptsCash: boolean;
+                                acceptsTransfer: boolean;
+                                transfer: {
+                                    alias: string | null;
+                                    cbu: string | null;
+                                    holder: string | null;
+                                } | null;
+                            };
+                            /** @enum {string} */
+                            status: "DRAFT" | "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "SUSPENDED";
+                            rejectionReason: string | null;
+                            submittedAt: string | null;
+                            reviewedAt: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            branches: {
+                                /** Format: uuid */
+                                id: string;
+                                name: string;
+                                /** Format: uuid */
+                                cityId: string;
+                                addressLine: string;
+                                addressNotes: string | null;
+                                lat: number | null;
+                                lng: number | null;
+                                phone: string | null;
+                                timezone: string;
+                                acceptsPickup: boolean;
+                                acceptsDelivery: boolean;
+                                active: boolean;
+                                scheduling: {
+                                    /** @description Acepta pedidos programados */
+                                    enabled: boolean;
+                                    /** @description Anticipación mínima en minutos */
+                                    leadMinutes: number;
+                                    /** @description Hasta cuántos días adelante */
+                                    maxDays: number;
+                                    /** @description Pedidos por franja de 30 min; null = sin límite */
+                                    slotCapacity: number | null;
+                                };
+                                hours: {
+                                    /** @description 0 = domingo … 6 = sábado */
+                                    weekday: number;
+                                    opensAt: string;
+                                    /** @description Si es menor o igual que opensAt, el rango cruza la medianoche */
+                                    closesAt: string;
+                                }[];
+                                zones: {
+                                    /** Format: uuid */
+                                    id: string;
+                                    name: string;
+                                    description: string | null;
+                                    /** @description Tarifa de envío en centavos */
+                                    feeMinor: number;
+                                    /** @description Pedido mínimo en centavos */
+                                    minOrderMinor: number;
+                                    active: boolean;
+                                }[];
+                            }[];
+                            onboarding: {
+                                ready: boolean;
+                                problems: {
+                                    /** @enum {string} */
+                                    issue: "NO_ACTIVE_BRANCH" | "BRANCH_WITHOUT_HOURS" | "BRANCH_WITHOUT_FULFILLMENT";
+                                    /** Format: uuid */
+                                    branchId?: string;
+                                }[];
+                            };
+                            owner: {
+                                /** Format: uuid */
+                                id: string;
+                                email: string | null;
+                                phone: string | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/merchants/{id}/reject": {
         parameters: {
             query?: never;

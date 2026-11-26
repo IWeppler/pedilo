@@ -240,6 +240,32 @@ describe("onboarding completo: borrador → revisión → rechazo → reenvío �
     expect(res.json().error.details.reason).toBe("INVALID_STATUS");
   });
 
+  it("suspender (con motivo) lo saca de la app y bloquea la edición; reactivar lo devuelve", async () => {
+    const slug = (await req("GET", `/v1/merchants/${merchantId}`, owner)).json().slug as string;
+    const publicUrl = `/v1/public/merchants/${slug}`;
+    const anon = () => ctx.app.inject({ method: "GET", url: publicUrl });
+    expect((await anon()).statusCode).toBe(200);
+
+    expect((await req("POST", `/v1/admin/merchants/${merchantId}/suspend`, admin, {})).statusCode).toBe(400);
+    expect((await req("POST", `/v1/admin/merchants/${merchantId}/suspend`, owner, { reason: "Reclamos reiterados" })).statusCode).toBe(403);
+    const suspended = await req("POST", `/v1/admin/merchants/${merchantId}/suspend`, admin, { reason: "Reclamos reiterados" });
+    expect(suspended.json()).toMatchObject({ status: "SUSPENDED", rejectionReason: "Reclamos reiterados" });
+
+    expect((await anon()).statusCode).toBe(404);
+    const blocked = await req("PATCH", `/v1/merchants/${merchantId}`, owner, { contactPhone: "3491 111111" });
+    expect(blocked.json().error.details.reason).toBe("SUSPENDED");
+    expect((await req("GET", `/v1/merchants/${merchantId}`, owner)).json()).toMatchObject({ status: "SUSPENDED", rejectionReason: "Reclamos reiterados" });
+    expect((await req("POST", `/v1/admin/merchants/${merchantId}/suspend`, admin, { reason: "Otra vez" })).statusCode).toBe(409);
+
+    const back = await req("POST", `/v1/admin/merchants/${merchantId}/reactivate`, admin);
+    expect(back.json()).toMatchObject({ status: "APPROVED", rejectionReason: null });
+    expect((await anon()).statusCode).toBe(200);
+    expect((await req("POST", `/v1/admin/merchants/${merchantId}/reactivate`, admin)).statusCode).toBe(409);
+
+    const actions = (await auditRowsFor(ctx.db, merchantId)).map((r) => r.action);
+    expect(actions).toEqual(expect.arrayContaining(["merchant.suspend", "merchant.reactivate"]));
+  });
+
   it("aprobado: datos fiscales bloqueados, contacto y operación editables", async () => {
     const locked = await req("PATCH", `/v1/merchants/${merchantId}`, owner, { legalName: "Otra SRL" });
     expect(locked.statusCode).toBe(409);

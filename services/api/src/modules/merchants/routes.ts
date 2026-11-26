@@ -18,6 +18,7 @@ import {
   listMyMerchants,
   registerMerchant,
   rejectMerchant,
+  setMerchantSuspended,
   replaceBranchHours,
   submitMerchant,
   updateBranch,
@@ -506,6 +507,38 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
       },
     },
     (request) => approveMerchant(db, request.params.id, actorOf(request)),
+  );
+
+  app.post(
+    "/admin/merchants/:id/suspend",
+    {
+      onRequest: requireAdmin,
+      schema: {
+        tags: ["admin"],
+        summary: "Suspender un comercio aprobado",
+        description: "Desaparece de la app y no recibe pedidos nuevos; puede terminar los que tiene en curso. El motivo lo ve el comercio.",
+        security,
+        params: idParamsSchema,
+        body: z.object({ reason: z.string().trim().min(5).max(500) }),
+        response: { 200: merchantDetailSchema.extend({ owner: ownerSchema }), ...errorResponses },
+      },
+    },
+    (request) => setMerchantSuspended(db, request.params.id, true, request.body.reason, actorOf(request)),
+  );
+
+  app.post(
+    "/admin/merchants/:id/reactivate",
+    {
+      onRequest: requireAdmin,
+      schema: {
+        tags: ["admin"],
+        summary: "Reactivar un comercio suspendido",
+        security,
+        params: idParamsSchema,
+        response: { 200: merchantDetailSchema.extend({ owner: ownerSchema }), ...errorResponses },
+      },
+    },
+    (request) => setMerchantSuspended(db, request.params.id, false, null, actorOf(request)),
   );
 
   app.post(

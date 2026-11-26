@@ -47,6 +47,7 @@ export const merchants = pgTable(
     logoPath: text("logo_path"),
     coverPath: text("cover_path"),
     status: text("status").$type<MerchantStatus>().notNull().default("DRAFT"),
+    /** Motivo del último rechazo o de la suspensión (lo ve el comercio). */
     rejectionReason: text("rejection_reason"),
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
     reviewedAt: timestamp("reviewed_at", { withTimezone: true }),

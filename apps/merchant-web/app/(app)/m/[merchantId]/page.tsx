@@ -181,7 +181,7 @@ function StatusMessage({ merchant }: { merchant: MerchantDetail }) {
         <Alert>
           <AlertTitle>Tu comercio está aprobado</AlertTitle>
           <AlertDescription>
-            Podés seguir ajustando sucursales, horarios y zonas. La carga del catálogo llega en el próximo paso.
+            Ya aparece en la app. Podés seguir ajustando el catálogo, sucursales, horarios y zonas.
           </AlertDescription>
         </Alert>
       );
@@ -189,7 +189,10 @@ function StatusMessage({ merchant }: { merchant: MerchantDetail }) {
       return (
         <Alert variant="destructive">
           <AlertTitle>Tu comercio está suspendido</AlertTitle>
-          <AlertDescription>Contactá al equipo de Pedilo.</AlertDescription>
+          <AlertDescription>
+            {merchant.rejectionReason ? `Motivo: ${merchant.rejectionReason}. ` : ""}No aparece en la app ni recibe pedidos nuevos;
+            podés terminar los que tenías en curso. Contactá al equipo de Pedilo.
+          </AlertDescription>
         </Alert>
       );
   }
