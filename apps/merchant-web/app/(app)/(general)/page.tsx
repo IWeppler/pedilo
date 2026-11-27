@@ -20,8 +20,11 @@ export default function HomePage() {
 async function MyMerchants() {
   const merchants = await merchantCall((api) => api.GET("/v1/me/merchants"));
 
-  // Con un solo comercio se va directo a su panel.
-  if (merchants.length === 1) redirect(`/m/${merchants[0]!.id}`);
+  // Con un solo comercio se va directo a su panel: a Pedidos si ya está aprobado.
+  if (merchants.length === 1) {
+    const only = merchants[0]!;
+    redirect(only.status === "APPROVED" ? `/m/${only.id}/orders` : `/m/${only.id}`);
+  }
 
   if (merchants.length === 0) {
     return (
@@ -54,7 +57,7 @@ async function MyMerchants() {
       />
       <div className="grid gap-3">
         {merchants.map((m) => (
-          <Link key={m.id} href={`/m/${m.id}`} className="rounded-xl border p-4 transition-colors hover:bg-muted">
+          <Link key={m.id} href={m.status === "APPROVED" ? `/m/${m.id}/orders` : `/m/${m.id}`} className="rounded-xl border p-4 transition-colors hover:bg-muted">
             <div className="flex items-center justify-between gap-3">
               <span className="font-medium">{m.displayName}</span>
               <MerchantStatusBadge status={m.status} />

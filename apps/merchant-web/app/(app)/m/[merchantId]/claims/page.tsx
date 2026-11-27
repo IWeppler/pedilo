@@ -6,7 +6,6 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { merchantCall } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -38,11 +37,6 @@ async function Claims({ params, searchParams }: Pick<Props, "params" | "searchPa
       <PageHeader
         title="Reclamos"
         description="Proponé una solución dentro de las 24 h: si no, el reclamo pasa a Pedilo."
-        actions={
-          <Link href={`/m/${merchantId}`} className={buttonVariants({ variant: "outline" })}>
-            Volver
-          </Link>
-        }
       />
       <Card>
         <CardHeader>

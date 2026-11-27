@@ -5,7 +5,6 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { merchantCall } from "@/lib/api";
 
@@ -43,11 +42,6 @@ async function Couriers({ params, searchParams }: Pick<Props, "params" | "search
       <PageHeader
         title="Repartidores"
         description="Lo que les debés por envíos y lo que te deben por efectivo cobrado a clientes."
-        actions={
-          <Link href={`/m/${merchantId}`} className={buttonVariants({ variant: "outline" })}>
-            Volver
-          </Link>
-        }
       />
 
       {balances.length === 0 ? (

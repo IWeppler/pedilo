@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/api";
 
-import { logout } from "../login/actions";
+import { logout } from "../../login/actions";
 
 export default function AppLayout({ children }: LayoutProps<"/">) {
   return (

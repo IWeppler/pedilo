@@ -36,7 +36,7 @@ async function Billing({ params }: { params: Props["params"] }) {
         description="Pedilo cobra una comisión por pedido completado. El cliente no paga cargos de Pedilo."
         actions={
           <Link href={`/m/${merchantId}`} className={buttonVariants({ variant: "outline" })}>
-            Volver
+            Volver a Mi comercio
           </Link>
         }
       />

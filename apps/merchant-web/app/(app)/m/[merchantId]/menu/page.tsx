@@ -54,12 +54,6 @@ async function Menu({ params }: { params: Props["params"] }) {
         description={merchant.displayName}
         actions={
           <>
-            <Link
-              href={`/m/${merchantId}`}
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Volver
-            </Link>
             {!suspended && (
               <Link href={`${base}/products/new`} className={buttonVariants()}>
                 Nuevo producto

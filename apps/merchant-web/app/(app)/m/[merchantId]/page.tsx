@@ -10,9 +10,11 @@ import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getMyMerchant, getReferenceData } from "@/lib/api";
 
+import { AlertSettings } from "./order-alerts";
+import { PushSetup } from "./orders/push-setup";
 import { SubmitForReview } from "./submit-button";
 
 type Params = PageProps<"/m/[merchantId]">["params"];
@@ -36,37 +38,8 @@ async function MerchantHome({ params }: { params: Params }) {
 
   return (
     <>
-      <PageHeader
-        title={merchant.displayName}
-        description={<MerchantStatusBadge status={merchant.status} />}
-        actions={
-          <>
-            <Link href={`${base}/menu`} className={buttonVariants({ variant: "outline" })}>
-              Catálogo
-            </Link>
-            {merchant.status === "APPROVED" && (
-              <Link href={`${base}/billing`} className={buttonVariants({ variant: "outline" })}>
-                Plan y comisiones
-              </Link>
-            )}
-            {merchant.status === "APPROVED" && (
-              <Link href={`${base}/couriers`} className={buttonVariants({ variant: "outline" })}>
-                Repartidores
-              </Link>
-            )}
-            {merchant.status !== "DRAFT" && (
-              <Link href={`${base}/claims`} className={buttonVariants({ variant: "outline" })}>
-                Reclamos
-              </Link>
-            )}
-            {merchant.status === "APPROVED" && (
-              <Link href={`${base}/orders`} className={buttonVariants()}>
-                Pedidos
-              </Link>
-            )}
-          </>
-        }
-      />
+      {/* Las secciones (pedidos, catálogo, repartidores…) están en el sidebar del layout. */}
+      <PageHeader title="Mi comercio" description={<MerchantStatusBadge status={merchant.status} />} />
 
       <StatusMessage merchant={merchant} />
 
@@ -83,6 +56,33 @@ async function MerchantHome({ params }: { params: Params }) {
               <p className="text-sm text-muted-foreground">Completá lo que falta y vas a poder enviarlo.</p>
             )}
           </CardContent>
+        </Card>
+      )}
+
+      {merchant.status === "APPROVED" && (
+        <Card id="avisos" className="scroll-mt-20">
+          <CardHeader>
+            <CardTitle>Avisos de pedidos</CardTitle>
+            <CardDescription>Cómo te enteras de un pedido nuevo en este navegador. Se configura en cada dispositivo.</CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-2">
+            <AlertSettings />
+            <PushSetup merchantId={merchant.id} />
+          </CardContent>
+        </Card>
+      )}
+
+      {merchant.status === "APPROVED" && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <div className="grid gap-1">
+              <CardTitle>Plan y comisiones</CardTitle>
+              <CardDescription>Tu plan, la comisión por pedido y las liquidaciones semanales.</CardDescription>
+            </div>
+            <Link href={`${base}/billing`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Ver plan
+            </Link>
+          </CardHeader>
         </Card>
       )}
 
