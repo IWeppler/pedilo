@@ -19,5 +19,6 @@ SPEC §8: el cliente paga con tarjeta, el dinero va al comercio y Pedilo cobra s
 - **Panel**: «Tarjeta con Mercado Pago» en Perfil (conectar/desconectar; solo el dueño). Los pedidos con tarjeta nunca pagados no aparecen en la lista del comercio.
 
 ## Consecuencias
-- Pendiente: webhook con URL pública https y `MP_WEBHOOK_SECRET`; prueba de punta a punta con un vendedor y un comprador de prueba.
+- **Pendiente: túnel https para desarrollo** (p. ej. ngrok o Cloudflare Tunnel hacia `localhost:4000`). Mercado Pago no acepta URLs `http`, así que sin túnel no se puede ni conectar un comercio por OAuth ni recibir webhooks. Con la URL del túnel: `MP_OAUTH_REDIRECT_URI=https://<túnel>/v1/payments/mercadopago/oauth/callback` (la misma cargada en el panel de la app), `API_PUBLIC_URL=https://<túnel>` y `MP_WEBHOOK_SECRET` al registrar el webhook.
+- Pendiente: prueba de punta a punta con el vendedor de prueba (conecta la cuenta) y el comprador de prueba (paga desde la app).
 - La comisión de un reembolso la reparte Mercado Pago en proporción; si el comercio no tiene saldo, el reembolso falla y va a revisión.
