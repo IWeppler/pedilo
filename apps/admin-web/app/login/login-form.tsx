@@ -8,22 +8,13 @@ import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 
-import { loginWithToken, sendLoginLink } from "./actions";
+import { loginWithPassword, loginWithToken } from "./actions";
 
-/** Login con Supabase: pide el email y manda un link de acceso. */
+/** Login con Supabase: email y contraseña. */
 export function EmailLoginForm() {
-  const [state, action] = useActionState(sendLoginLink, initialFormState);
-  const error = state.fieldErrors?.email;
-
-  if (state.saved) {
-    return (
-      <Alert>
-        <AlertDescription>
-          Si la cuenta existe, te mandamos un link a <strong>{state.values?.email}</strong>. Abrilo en este mismo navegador para entrar.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const [state, action] = useActionState(loginWithPassword, initialFormState);
+  const emailError = state.fieldErrors?.email;
+  const passwordError = state.fieldErrors?.password;
 
   return (
     <form action={action} className="grid gap-4">
@@ -32,16 +23,19 @@ export function EmailLoginForm() {
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
       )}
-      <FormField id="email" label="Email" error={error} hint="Solo para cuentas del equipo con rol de administrador.">
+      <FormField id="email" label="Email" error={emailError}>
         <Input
-          {...fieldA11y("email", error, true)}
+          {...fieldA11y("email", emailError, true)}
           type="email"
           required
-          autoComplete="email"
+          autoComplete="username"
           defaultValue={state.values?.email}
         />
       </FormField>
-      <SubmitButton pendingText="Enviando…">Enviarme el link</SubmitButton>
+      <FormField id="password" label="Contraseña" error={passwordError}>
+        <Input {...fieldA11y("password", passwordError, true)} type="password" required autoComplete="current-password" />
+      </FormField>
+      <SubmitButton pendingText="Entrando…">Entrar</SubmitButton>
     </form>
   );
 }

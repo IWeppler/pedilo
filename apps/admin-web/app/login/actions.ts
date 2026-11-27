@@ -2,7 +2,6 @@
 
 import { ApiError, unwrap } from "@pedilo/api-client";
 import type { FormState } from "@pedilo/web-utils";
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { API_URL, apiClient } from "@/lib/api";
@@ -12,28 +11,39 @@ import { createSupabaseServer } from "@/lib/supabase";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Login con Supabase Auth (ADR 0004): link de acceso al email. Acá no se crean cuentas: el
- * admin entra primero al panel de comercios (o se lo invita desde Supabase) y después se le
- * da el rol con `npm run admin:grant`. El rol lo verifica la API en cada request.
+ * Login con Supabase Auth (ADR 0004): email y contraseña. Acá no se crean cuentas ni se dan
+ * roles: el rol ADMIN se da con `npm run admin:grant` y lo verifica la API en cada request.
+ * Además se chequea al entrar, para no dejar abierta una sesión que no puede usar el panel.
  */
-export async function sendLoginLink(_prev: FormState, formData: FormData): Promise<FormState> {
+export async function loginWithPassword(_prev: FormState, formData: FormData): Promise<FormState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  if (!EMAIL_RE.test(email)) return { fieldErrors: { email: "Ingresá un email válido" }, values: { email } };
+  const password = String(formData.get("password") ?? "");
+  const values = { email };
+  if (!EMAIL_RE.test(email)) return { fieldErrors: { email: "Ingresá un email válido" }, values };
+  if (!password) return { fieldErrors: { password: "Ingresá tu contraseña" }, values };
 
   const supabase = await createSupabaseServer();
-  const { error } = await supabase.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: `${await siteOrigin()}/auth/callback`, shouldCreateUser: false },
-  });
-  // Cuenta inexistente: se responde igual que si existiera, para no revelar qué emails están registrados.
-  if (error && error.code !== "otp_disabled") {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !data.session) {
     const message =
-      error.status === 429
-        ? "Pediste demasiados links. Esperá unos minutos y probá de nuevo."
-        : "No se pudo enviar el email. Probá de nuevo.";
-    return { message, values: { email } };
+      error?.status === 429
+        ? "Demasiados intentos. Esperá unos minutos y probá de nuevo."
+        : // Mismo mensaje para email inexistente o contraseña incorrecta: no revela qué cuentas hay.
+          "El email o la contraseña no son correctos.";
+    return { message, values };
   }
-  return { saved: true, values: { email } };
+
+  try {
+    const me = await unwrap(apiClient(data.session.access_token).GET("/v1/me"));
+    if (me.platformRole !== "ADMIN") {
+      await supabase.auth.signOut();
+      return { message: "Esta cuenta no tiene permisos de administrador.", values };
+    }
+  } catch {
+    await supabase.auth.signOut();
+    return { message: `No se pudo conectar con la API (${API_URL}). ¿Está corriendo?`, values };
+  }
+  redirect("/merchants");
 }
 
 /**
@@ -62,13 +72,4 @@ export async function loginWithToken(_prev: FormState, formData: FormData): Prom
 export async function logout() {
   await clearToken();
   redirect("/login");
-}
-
-/** Origen público del panel, para armar el link del email. */
-async function siteOrigin(): Promise<string> {
-  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/+$/, "");
-  const h = await headers();
-  const origin = h.get("origin");
-  if (origin) return origin;
-  return `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
 }

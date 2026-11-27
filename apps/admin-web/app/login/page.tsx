@@ -9,7 +9,6 @@ import { DevTokenForm, EmailLoginForm } from "./login-form";
 const REASONS: Record<string, string> = {
   expired: "Tu sesión venció. Entrá de nuevo.",
   forbidden: "Ese usuario no tiene permisos de administrador.",
-  link: "El link no es válido o ya se usó. Pedí uno nuevo y abrilo en este mismo navegador.",
 };
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {

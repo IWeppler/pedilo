@@ -224,7 +224,7 @@ Pantallas (Expo Router, `src/app/`):
 
 - **Datos y mutaciones del lado del servidor.** Server Components leen con `adminCall()` (`lib/api.ts`) y los formularios llaman Server Actions que hacen el `POST`/`PATCH` a la API. Las Server Actions son una capa fina: arman el body y traducen errores; la validación y los permisos los decide la API.
 - **Sesión:** el token vive en una cookie `httpOnly` (`pedilo_admin_token`), nunca en el JS del navegador. `proxy.ts` hace un chequeo optimista (sin cookie → `/login`); la validación real la hace la API en cada llamada. Si la API responde 401/403, `adminCall` redirige a `/login?reason=expired|forbidden`.
-- **Login:** hoy se pega un token de desarrollo (`npm run dev:token -w @pedilo/api -- --admin`). Con Supabase se reemplaza por login con email y hay que sumar el refresh del access token.
+- **Login:** con Supabase, email y contraseña (`signInWithPassword`); al entrar se verifica con `GET /v1/me` que la cuenta sea ADMIN y, si no, se cierra la sesión. La sesión vive en cookies de `@supabase/ssr` y `proxy.ts` la refresca. Sin Supabase (desarrollo) se pega un token de `npm run dev:token -w @pedilo/api -- --admin`.
 - **Cache Components (Next 16):** todo lo que lee cookies, `searchParams`, `params` o `usePathname` va dentro de un `<Suspense>`; `adminCall` llama a `connection()` porque los datos del panel siempre son de tiempo de request.
 - **Formularios:** `useActionState` + `<select>` nativos (entran directo en `FormData`). Al volver con errores, el `<form>` se remonta con `key` para que selects y checkboxes muestren lo enviado (React 19 resetea el form tras la acción).
 - **UI:** shadcn/ui (estilo base-nova sobre Base UI) en `components/ui/`; se agregan con `npx shadcn@latest add <componente>` dentro de la app.
