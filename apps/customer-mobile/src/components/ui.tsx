@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, View, type ViewStyle } from "react-native";
 
+import { Text } from "@/components/text";
 import { space, useTheme } from "@/lib/theme";
 
 /** Piezas chicas de UI reutilizadas en las pantallas. */

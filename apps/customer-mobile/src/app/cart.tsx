@@ -3,9 +3,10 @@ import { formatARS } from "@pedilo/domain";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { type ReactNode, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text, TextInput } from "@/components/text";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
@@ -13,7 +14,7 @@ import { api, useBranchSlots, useMerchantCategories, useMerchantMenu } from "@/l
 import { openCardPayment } from "@/lib/card-payment";
 import { type CartLine, useCart } from "@/lib/cart";
 import { useMyOrders } from "@/lib/my-orders";
-import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
+import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 const newIdempotencyKey = () => `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
 
@@ -129,8 +130,8 @@ export default function CartScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: t.background }}>
         <TopBar title="Tu pedido" onBack={back} />
         <Centered>
-          <View style={[styles.emptyIcon, { backgroundColor: t.primarySoft }]}>
-            <Icon name="cart" size={40} color={t.primary} />
+          <View style={[styles.emptyIcon, { backgroundColor: t.surface }]}>
+            <Icon name="cart" size={40} color={t.text} />
           </View>
           <Text style={[styles.emptyTitle, { color: t.text }]}>Tu pedido está vacío</Text>
           <Text style={{ color: t.muted, textAlign: "center" }}>Elegí un comercio y agregá productos.</Text>
@@ -156,8 +157,8 @@ export default function CartScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Comercio */}
           <View style={styles.merchant}>
-            <View style={[styles.merchantIcon, { backgroundColor: t.primarySoft }]}>
-              <Icon name={icon} size={22} color={t.primary} />
+            <View style={[styles.merchantIcon, { backgroundColor: t.background }]}>
+              <Icon name={icon} size={22} color={t.text} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.merchantName, { color: t.text }]} numberOfLines={1}>
@@ -168,7 +169,7 @@ export default function CartScreen() {
               </Text>
             </View>
             <Pressable accessibilityRole="button" onPress={back} hitSlop={8}>
-              <Text style={[styles.link, { color: t.primary }]}>+ Agregar más</Text>
+              <Text style={[styles.link, { color: t.text, textDecorationLine: "underline" }]}>+ Agregar más</Text>
             </Pressable>
           </View>
 
@@ -214,7 +215,7 @@ export default function CartScreen() {
               {mode === "PICKUP" && (
                 <Card t={t}>
                   <View style={styles.infoRow}>
-                    <Icon name="location" size={20} color={t.primary} />
+                    <Icon name="location" size={20} color={t.accent} />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.meta, { color: t.muted }]}>Retirás en</Text>
                       <Text style={[styles.infoText, { color: t.text }]}>
@@ -363,7 +364,7 @@ export default function CartScreen() {
           {error && <Notice t={t}>{error}</Notice>}
         </ScrollView>
 
-        <View style={[styles.footer, cardShadow(t), { backgroundColor: t.card, borderColor: t.border }]}>
+        <View style={[styles.footer, { backgroundColor: t.card, borderColor: t.border }]}>
           <Pressable
             onPress={() => {
               setError(null);
@@ -396,7 +397,7 @@ function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
         accessibilityLabel="Volver"
         onPress={onBack}
         hitSlop={8}
-        style={[styles.backButton, cardShadow(t), { backgroundColor: t.card }]}
+        style={[styles.backButton, { backgroundColor: t.surface }]}
       >
         <Icon name="back" size={20} color={t.text} />
       </Pressable>
@@ -411,7 +412,7 @@ function SectionTitle({ t, children }: { t: Theme; children: ReactNode }) {
 }
 
 function Card({ t, padded, children }: { t: Theme; padded?: boolean; children: ReactNode }) {
-  return <View style={[styles.card, padded && styles.cardPadded, cardShadow(t), { backgroundColor: t.card }]}>{children}</View>;
+  return <View style={[styles.card, padded && styles.cardPadded, { backgroundColor: t.surface }]}>{children}</View>;
 }
 
 function Notice({ t, children }: { t: Theme; children: ReactNode }) {
@@ -439,8 +440,8 @@ function LineRow({
   const t = useTheme();
   return (
     <View style={[styles.line, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
-      <View style={[styles.thumb, { backgroundColor: t.primarySoft }]}>
-        <Icon name={icon} size={24} color={t.primary} />
+      <View style={[styles.thumb, { backgroundColor: t.background }]}>
+        <Icon name={icon} size={24} color={t.muted} />
       </View>
       <View style={styles.lineBody}>
         <Text style={[styles.lineName, { color: t.text }]}>
@@ -454,7 +455,7 @@ function LineRow({
         )}
         {l.notes && <Text style={[styles.meta, { color: t.muted, fontStyle: "italic" }]}>«{l.notes}»</Text>}
         <View style={styles.lineFooter}>
-          <Text style={[styles.linePrice, { color: t.primary }]}>{formatARS(l.unitPriceMinor * l.quantity)}</Text>
+          <Text style={[styles.linePrice, { color: t.text }]}>{formatARS(l.unitPriceMinor * l.quantity)}</Text>
           <View style={[styles.qty, { backgroundColor: t.surface }]}>
             <Pressable
               accessibilityRole="button"
@@ -504,20 +505,19 @@ function ModeOption({
       accessibilityLabel={`${label}, ${detail}`}
       style={({ pressed }) => [
         styles.mode,
-        !selected && cardShadow(t),
-        {
-          backgroundColor: selected ? t.primarySoft : t.card,
+                {
+          backgroundColor: t.surface,
           borderColor: selected ? t.primary : "transparent",
           opacity: pressed ? 0.85 : 1,
         },
       ]}
     >
-      <View style={[styles.modeIcon, { backgroundColor: selected ? t.primary : t.surface }]}>
+      <View style={[styles.modeIcon, { backgroundColor: selected ? t.primary : t.background }]}>
         <Icon name={icon} size={22} color={selected ? t.primaryText : t.muted} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.modeLabel, { color: t.text }]}>{label}</Text>
-        <Text style={[styles.meta, { color: selected ? t.primary : t.muted }]}>{detail}</Text>
+        <Text style={[styles.meta, { color: t.muted }]}>{detail}</Text>
       </View>
     </Pressable>
   );
@@ -573,14 +573,14 @@ const styles = StyleSheet.create({
 
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space.lg, paddingVertical: space.sm },
   backButton: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  topTitle: { fontSize: 18, fontWeight: "800" },
+  topTitle: { fontFamily: font.display, fontSize: 18, fontWeight: "700" },
 
   emptyIcon: { width: 88, height: 88, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  emptyTitle: { fontSize: 20, fontWeight: "800" },
+  emptyTitle: { fontFamily: font.display, fontSize: 20, fontWeight: "700" },
 
   merchant: { flexDirection: "row", alignItems: "center", gap: space.md },
   merchantIcon: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  merchantName: { fontSize: 17, fontWeight: "800" },
+  merchantName: { fontFamily: font.display, fontSize: 17, fontWeight: "700" },
   link: { fontSize: 14, fontWeight: "700" },
   meta: { fontSize: 13 },
 
@@ -592,16 +592,16 @@ const styles = StyleSheet.create({
   lineBody: { flex: 1, gap: 2 },
   lineName: { fontSize: 15, fontWeight: "700" },
   lineFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.xs },
-  linePrice: { fontSize: 15, fontWeight: "800" },
+  linePrice: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
   qty: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.pill, padding: 4 },
   qtyBtn: { width: 28, height: 28, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   qtyValue: { fontSize: 15, fontWeight: "700", minWidth: 18, textAlign: "center" },
 
-  section: { fontSize: 18, fontWeight: "800", marginTop: space.sm },
+  section: { fontFamily: font.display, fontSize: 18, fontWeight: "700", marginTop: space.sm },
   modes: { flexDirection: "row", gap: space.md },
   mode: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.lg, borderWidth: 2, padding: space.md },
   modeIcon: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  modeLabel: { fontSize: 15, fontWeight: "800" },
+  modeLabel: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
 
   infoRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
   infoText: { fontSize: 15 },
@@ -628,5 +628,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
     height: 54,
   },
-  confirmText: { fontSize: 16, fontWeight: "800" },
+  confirmText: { fontFamily: font.display, fontSize: 16, fontWeight: "700" },
 });

@@ -3,9 +3,10 @@ import { customerCanCancel, formatARS, isOrderFinal, ORDER_STATUS_LABELS, VEHICL
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useEffect, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text } from "@/components/text";
 import { Icon, type IconName } from "@/components/icon";
 import { ClaimSection } from "@/components/claim-section";
 import { describeSlot } from "@/components/slot-picker";
@@ -14,7 +15,7 @@ import { api, useOrder } from "@/lib/api";
 import { openCardPayment } from "@/lib/card-payment";
 import { useMyOrders } from "@/lib/my-orders";
 import { registerOrderForPush } from "@/lib/push";
-import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
+import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 type Status = Order["status"];
 
@@ -98,7 +99,7 @@ export default function OrderScreen() {
     ? { bg: t.dangerBg, fg: t.danger, iconBg: t.danger, iconFg: "#ffffff" }
     : completed
       ? { bg: t.successBg, fg: t.success, iconBg: t.success, iconFg: "#ffffff" }
-      : { bg: t.primary, fg: t.primaryText, iconBg: "rgba(255,255,255,0.22)", iconFg: t.primaryText };
+      : { bg: t.primary, fg: t.primaryText, iconBg: "rgba(255,255,255,0.14)", iconFg: t.primaryText };
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
@@ -108,7 +109,7 @@ export default function OrderScreen() {
           accessibilityLabel="Volver"
           onPress={back}
           hitSlop={8}
-          style={[styles.backButton, cardShadow(t), { backgroundColor: t.card }]}
+          style={[styles.backButton, { backgroundColor: t.surface }]}
         >
           <Icon name="back" size={20} color={t.text} />
         </Pressable>
@@ -150,7 +151,7 @@ export default function OrderScreen() {
           <Card t={t} padded>
             {o.tracking.courier && (
               <View style={styles.rowStart}>
-                <Icon name="delivery" size={20} color={t.primary} />
+                <Icon name="delivery" size={20} color={t.text} />
                 <Text style={[styles.infoTitle, { color: t.text, flex: 1 }]}>
                   Te lo lleva {o.tracking.courier.name} ({VEHICLE_LABELS[o.tracking.courier.vehicle as Vehicle].toLowerCase()})
                 </Text>
@@ -179,8 +180,8 @@ export default function OrderScreen() {
         {/* Entrega */}
         <Card t={t}>
           <View style={styles.infoRow}>
-            <View style={[styles.infoIcon, { backgroundColor: t.primarySoft }]}>
-              <Icon name={o.fulfillmentType === "PICKUP" ? "pickup" : "delivery"} size={20} color={t.primary} />
+            <View style={[styles.infoIcon, { backgroundColor: t.background }]}>
+              <Icon name={o.fulfillmentType === "PICKUP" ? "pickup" : "delivery"} size={20} color={t.text} />
             </View>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={[styles.infoTitle, { color: t.text }]}>{o.fulfillmentType === "PICKUP" ? "Retiro en el local" : "Envío a domicilio"}</Text>
@@ -192,8 +193,8 @@ export default function OrderScreen() {
           </View>
           {o.scheduledFor && (
             <View style={[styles.infoRow, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
-              <View style={[styles.infoIcon, { backgroundColor: t.primarySoft }]}>
-                <Icon name="calendar" size={20} color={t.primary} />
+              <View style={[styles.infoIcon, { backgroundColor: t.background }]}>
+                <Icon name="calendar" size={20} color={t.text} />
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[styles.infoTitle, { color: t.text }]}>Programado</Text>
@@ -236,8 +237,8 @@ export default function OrderScreen() {
         <Card t={t} padded>
           {o.items.map((item) => (
             <View key={item.id} style={styles.item}>
-              <View style={[styles.qtyPill, { backgroundColor: t.primarySoft }]}>
-                <Text style={[styles.qtyText, { color: t.primary }]}>{item.quantity}×</Text>
+              <View style={[styles.qtyPill, { backgroundColor: t.background }]}>
+                <Text style={[styles.qtyText, { color: t.text }]}>{item.quantity}×</Text>
               </View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[styles.itemName, { color: t.text }]}>
@@ -340,7 +341,7 @@ function statusMessage(o: Order): string | null {
 }
 
 function Card({ t, padded, children }: { t: Theme; padded?: boolean; children: ReactNode }) {
-  return <View style={[styles.card, padded && styles.cardPadded, cardShadow(t), { backgroundColor: t.card }]}>{children}</View>;
+  return <View style={[styles.card, padded && styles.cardPadded, { backgroundColor: t.surface }]}>{children}</View>;
 }
 
 function Step({ label, state, last, t }: { label: string; state: "done" | "current" | "pending"; last: boolean; t: Theme }) {
@@ -352,7 +353,7 @@ function Step({ label, state, last, t }: { label: string; state: "done" | "curre
           style={[
             styles.stepDot,
             state === "done" && { backgroundColor: t.primary, borderColor: t.primary },
-            state === "current" && { backgroundColor: t.primarySoft, borderColor: t.primary },
+            state === "current" && { backgroundColor: t.background, borderColor: t.primary },
             state === "pending" && { backgroundColor: "transparent", borderColor: t.border },
           ]}
         >
@@ -379,13 +380,13 @@ const styles = StyleSheet.create({
 
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space.lg, paddingVertical: space.sm },
   backButton: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  topTitle: { fontSize: 18, fontWeight: "800" },
+  topTitle: { fontFamily: font.display, fontSize: 18, fontWeight: "700" },
 
   hero: { flexDirection: "row", alignItems: "center", gap: space.lg, borderRadius: radius.lg, padding: space.lg },
   heroIcon: { width: 64, height: 64, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   heroBody: { flex: 1, gap: 2 },
   heroMerchant: { fontSize: 13, fontWeight: "600", opacity: 0.9 },
-  heroStatus: { fontSize: 24, fontWeight: "800" },
+  heroStatus: { fontFamily: font.display, fontSize: 24, fontWeight: "800" },
   heroMessage: { fontSize: 14, opacity: 0.95 },
   autoRefresh: { fontSize: 12, textAlign: "center", marginTop: -space.xs },
 
@@ -404,17 +405,17 @@ const styles = StyleSheet.create({
   infoTitle: { fontSize: 15, fontWeight: "700" },
   meta: { fontSize: 13 },
 
-  section: { fontSize: 18, fontWeight: "800", marginTop: space.sm },
+  section: { fontFamily: font.display, fontSize: 18, fontWeight: "700", marginTop: space.sm },
   item: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   qtyPill: { borderRadius: radius.sm, paddingHorizontal: space.sm, paddingVertical: 3, minWidth: 36, alignItems: "center" },
-  qtyText: { fontSize: 13, fontWeight: "800" },
+  qtyText: { fontFamily: font.display, fontSize: 13, fontWeight: "700" },
   itemName: { fontSize: 15, fontWeight: "600" },
   itemPrice: { fontSize: 15 },
   divider: { height: StyleSheet.hairlineWidth },
   rowBetween: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
   rowStart: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  pin: { fontSize: 36, fontWeight: "800", letterSpacing: 14, fontVariant: ["tabular-nums"] },
-  total: { fontSize: 18, fontWeight: "800" },
+  pin: { fontFamily: font.display, fontSize: 36, fontWeight: "800", letterSpacing: 14, fontVariant: ["tabular-nums"] },
+  total: { fontFamily: font.display, fontSize: 18, fontWeight: "700" },
 
   cancelLink: { alignSelf: "center", paddingVertical: space.sm },
   cancelLinkText: { fontSize: 15, fontWeight: "700" },

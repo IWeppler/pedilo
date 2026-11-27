@@ -9,19 +9,18 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text, TextInput } from "@/components/text";
 import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { useCityMerchants, useMerchantCategories } from "@/lib/api";
 import { useCity } from "@/lib/city";
-import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
+import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 /** Filtros rápidos que se activan desde los destacados o el botón de filtro. */
 type QuickFilter = "open" | "freeDelivery" | "pickup";
@@ -78,8 +77,8 @@ export default function HomeScreen() {
       >
         {/* Encabezado: marca + ciudad */}
         <View style={styles.header}>
-          <View style={[styles.logo, { backgroundColor: t.primary }]}>
-            <Text style={[styles.logoText, { color: t.primaryText }]}>P</Text>
+          <View style={[styles.logo, { backgroundColor: t.accent }]}>
+            <Text style={[styles.logoText, { color: t.accentText }]}>P</Text>
           </View>
           <Pressable
             accessibilityRole="button"
@@ -90,18 +89,18 @@ export default function HomeScreen() {
           >
             <Text style={[styles.headerLabel, { color: t.muted }]}>Pedir en</Text>
             <View style={styles.cityRow}>
-              <Icon name="location" size={18} color={t.primary} />
+              <Icon name="location" size={18} color={t.accent} />
               <Text style={[styles.cityName, { color: t.text }]} numberOfLines={1}>
                 {city.name}
               </Text>
-              <Icon name="chevronDown" size={18} color={t.primary} />
+              <Icon name="chevronDown" size={18} color={t.text} />
             </View>
           </Pressable>
         </View>
 
         {/* Búsqueda + filtro «abiertos» */}
         <View style={styles.searchRow}>
-          <View style={[styles.search, cardShadow(t), { backgroundColor: t.card }]}>
+          <View style={[styles.search, { backgroundColor: t.surface }]}>
             <Icon name="search" size={20} color={t.muted} />
             <TextInput
               value={query}
@@ -122,12 +121,12 @@ export default function HomeScreen() {
             style={({ pressed }) => [
               styles.filterButton,
               {
-                backgroundColor: filter === "open" ? t.text : t.primary,
+                backgroundColor: filter === "open" ? t.primary : t.surface,
                 opacity: pressed ? 0.85 : 1,
               },
             ]}
           >
-            <Icon name="filter" size={22} color={t.primaryText} />
+            <Icon name="filter" size={22} color={filter === "open" ? t.primaryText : t.text} />
           </Pressable>
         </View>
 
@@ -178,9 +177,9 @@ export default function HomeScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={`Quitar filtro ${FILTER_LABEL[filter]}`}
                   onPress={() => setFilter(null)}
-                  style={[styles.activeFilter, { backgroundColor: t.primarySoft }]}
+                  style={[styles.activeFilter, { backgroundColor: t.primary }]}
                 >
-                  <Text style={[styles.activeFilterText, { color: t.primary }]}>{FILTER_LABEL[filter]}  ✕</Text>
+                  <Text style={[styles.activeFilterText, { color: t.primaryText }]}>{FILTER_LABEL[filter]}  ✕</Text>
                 </Pressable>
               </View>
             )}
@@ -307,7 +306,7 @@ function Highlights({ merchants, cityName, onPick }: { merchants: CityMerchant[]
         {slides.map((s) => (
           <View key={s.key} style={[styles.slide, { width: slideWidth, backgroundColor: t.primary }]}>
             <View style={styles.slideBody}>
-              <View style={[styles.slideTag, { backgroundColor: "rgba(255,255,255,0.22)" }]}>
+              <View style={[styles.slideTag, { backgroundColor: "rgba(255,255,255,0.14)" }]}>
                 <Text style={styles.slideTagText} numberOfLines={1}>
                   {s.tag}
                 </Text>
@@ -328,7 +327,7 @@ function Highlights({ merchants, cityName, onPick }: { merchants: CityMerchant[]
               </Pressable>
             </View>
             <View style={styles.slideArt}>
-              <Icon name={s.icon} size={64} color="#ffffff" />
+              <Icon name={s.icon} size={56} color={t.accent} />
             </View>
           </View>
         ))}
@@ -355,7 +354,7 @@ function SectionHeader({ title, action, onAction }: { title: string; action?: st
       <Text style={[styles.sectionTitle, { color: t.text }]}>{title}</Text>
       {action && onAction && (
         <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
-          <Text style={[styles.sectionAction, { color: t.primary }]}>{action}</Text>
+          <Text style={[styles.sectionAction, { color: t.text }]}>{action}</Text>
         </Pressable>
       )}
     </View>
@@ -370,16 +369,14 @@ function CategoryPill({ label, icon, selected, onPress }: { label: string; icon:
       accessibilityRole="button"
       accessibilityState={{ selected }}
       accessibilityLabel={label}
-      style={({ pressed }) => [
-        styles.pill,
-        !selected && cardShadow(t),
-        { backgroundColor: selected ? t.primary : t.card, opacity: pressed ? 0.85 : 1 },
-      ]}
+      style={({ pressed }) => [styles.pill, { opacity: pressed ? 0.7 : 1 }]}
     >
-      <View style={[styles.pillIcon, { backgroundColor: selected ? "rgba(255,255,255,0.25)" : t.primarySoft }]}>
-        <Icon name={icon} size={16} color={selected ? t.primaryText : t.primary} />
+      <View style={[styles.pillIcon, { backgroundColor: selected ? t.primary : t.surface }]}>
+        <Icon name={icon} size={24} color={selected ? t.primaryText : t.text} />
       </View>
-      <Text style={[styles.pillText, { color: selected ? t.primaryText : t.text }]}>{label}</Text>
+      <Text style={[styles.pillText, { color: selected ? t.text : t.muted, fontWeight: selected ? "700" : "500" }]} numberOfLines={2}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -408,13 +405,13 @@ function FeaturedCard({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${m.displayName}, abierto`}
-      style={({ pressed }) => [styles.featured, cardShadow(t), { backgroundColor: t.card, opacity: pressed ? 0.8 : 1 }]}
+      style={({ pressed }) => [styles.featured, { opacity: pressed ? 0.8 : 1 }]}
     >
-      <View style={[styles.featuredCover, { backgroundColor: t.primarySoft }]}>
+      <View style={[styles.featuredCover, { backgroundColor: t.surface }]}>
         <Photo
           url={m.coverUrl ?? m.logoUrl}
           style={StyleSheet.absoluteFill}
-          fallback={<Icon name={categoryIcon(categorySlug)} size={48} color={t.primary} />}
+          fallback={<Icon name={categoryIcon(categorySlug)} size={44} color={t.muted} />}
         />
         {m.acceptsDelivery && m.minDeliveryFeeMinor === 0 && (
           <View style={[styles.coverTag, { backgroundColor: t.success }]}>
@@ -453,13 +450,13 @@ function MerchantRow({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${m.displayName}, ${m.openNow ? "abierto" : "cerrado"}`}
-      style={({ pressed }) => [styles.row, cardShadow(t), { backgroundColor: t.card, opacity: pressed ? 0.75 : 1 }]}
+      style={({ pressed }) => [styles.row, { opacity: pressed ? 0.6 : 1 }]}
     >
-      <View style={[styles.rowIcon, { backgroundColor: m.openNow ? t.primarySoft : t.surface, overflow: "hidden" }]}>
+      <View style={[styles.rowIcon, { backgroundColor: t.surface, overflow: "hidden" }]}>
         <Photo
           url={m.logoUrl}
           style={[StyleSheet.absoluteFill, { opacity: m.openNow ? 1 : 0.5 }]}
-          fallback={<Icon name={categoryIcon(categorySlug)} size={26} color={m.openNow ? t.primary : t.muted} />}
+          fallback={<Icon name={categoryIcon(categorySlug)} size={26} color={m.openNow ? t.text : t.muted} />}
         />
       </View>
       <View style={styles.rowBody}>
@@ -511,30 +508,30 @@ const styles = StyleSheet.create({
 
   header: { flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.lg },
   logo: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  logoText: { fontSize: 22, fontWeight: "900" },
+  logoText: { fontFamily: font.display, fontSize: 24, fontWeight: "800", marginTop: -2 },
   headerLabel: { fontSize: 13 },
   cityRow: { flexDirection: "row", alignItems: "center", gap: 2 },
-  cityName: { fontSize: 17, fontWeight: "700", flexShrink: 1 },
+  cityName: { fontFamily: font.display, fontSize: 18, fontWeight: "700", flexShrink: 1 },
 
   searchRow: { flexDirection: "row", gap: space.md, paddingHorizontal: space.lg, alignItems: "center" },
-  search: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.pill, paddingHorizontal: space.lg, height: 50 },
+  search: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, paddingHorizontal: space.lg, height: 50 },
   searchInput: { flex: 1, fontSize: 16, height: "100%" },
-  filterButton: { width: 50, height: 50, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  filterButton: { width: 50, height: 50, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
 
   highlights: { marginTop: space.xl, gap: space.md },
-  slide: { flexDirection: "row", borderRadius: radius.lg, padding: space.lg, minHeight: 150, overflow: "hidden" },
+  slide: { flexDirection: "row", borderRadius: radius.lg, padding: space.lg, paddingVertical: space.xl, minHeight: 168, overflow: "hidden" },
   slideBody: { flex: 1, gap: 6, alignItems: "flex-start" },
   slideTag: { borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: 3 },
   slideTagText: { color: "#ffffff", fontSize: 12, fontWeight: "600" },
-  slideTitle: { color: "#ffffff", fontSize: 22, fontWeight: "800" },
-  slideSubtitle: { color: "rgba(255,255,255,0.9)", fontSize: 14 },
-  slideCta: { marginTop: space.sm, backgroundColor: "#1c1917", borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: 10 },
-  slideCtaText: { color: "#ffffff", fontWeight: "700", fontSize: 14 },
+  slideTitle: { color: "#ffffff", fontFamily: font.display, fontSize: 26, lineHeight: 29, fontWeight: "800", letterSpacing: -0.5 },
+  slideSubtitle: { color: "rgba(255,255,255,0.72)", fontSize: 14, lineHeight: 19 },
+  slideCta: { marginTop: space.sm, backgroundColor: "#ffffff", borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: 10 },
+  slideCtaText: { color: "#151515", fontWeight: "700", fontSize: 14 },
   slideArt: {
     width: 104,
     height: 104,
     borderRadius: radius.pill,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.08)",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
@@ -544,33 +541,33 @@ const styles = StyleSheet.create({
   dot: { height: 6, borderRadius: radius.pill },
 
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: space.lg, marginTop: space.xl, marginBottom: space.md },
-  sectionTitle: { fontSize: 19, fontWeight: "800" },
-  sectionAction: { fontSize: 14, fontWeight: "600" },
+  sectionTitle: { fontFamily: font.display, fontSize: 21, fontWeight: "700", letterSpacing: -0.3 },
+  sectionAction: { fontSize: 14, fontWeight: "600", textDecorationLine: "underline" },
 
   categories: { gap: space.sm, paddingHorizontal: space.lg, paddingVertical: 4 },
-  pill: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.pill, paddingLeft: 6, paddingRight: space.lg, paddingVertical: 6 },
-  pillIcon: { width: 30, height: 30, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  pillText: { fontSize: 14, fontWeight: "600" },
+  pill: { alignItems: "center", gap: 6, width: 76 },
+  pillIcon: { width: 60, height: 60, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  pillText: { fontSize: 12, lineHeight: 15, textAlign: "center" },
 
   carouselRow: { gap: space.md, paddingHorizontal: space.lg, paddingVertical: 4 },
-  featured: { width: 210, borderRadius: radius.lg, overflow: "hidden" },
-  featuredCover: { height: 110, alignItems: "center", justifyContent: "center" },
+  featured: { width: 228 },
+  featuredCover: { height: 140, borderRadius: radius.lg, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   coverTag: { position: "absolute", top: space.sm, left: space.sm, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: 3 },
   coverTagText: { color: "#ffffff", fontSize: 11, fontWeight: "700" },
-  featuredBody: { padding: space.md, gap: 2 },
-  featuredTitle: { fontSize: 16, fontWeight: "700" },
+  featuredBody: { paddingTop: space.sm, gap: 2 },
+  featuredTitle: { fontFamily: font.display, fontSize: 17, fontWeight: "700" },
   meta: { fontSize: 13 },
 
   activeFilterRow: { flexDirection: "row", paddingHorizontal: space.lg, marginBottom: space.md },
   activeFilter: { borderRadius: radius.pill, paddingHorizontal: space.md, paddingVertical: 6 },
   activeFilterText: { fontSize: 13, fontWeight: "700" },
 
-  list: { paddingHorizontal: space.lg, gap: space.md },
-  row: { flexDirection: "row", gap: space.md, borderRadius: radius.lg, padding: space.md, alignItems: "center" },
-  rowIcon: { width: 60, height: 60, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  list: { paddingHorizontal: space.lg, gap: space.lg },
+  row: { flexDirection: "row", gap: space.md, alignItems: "center" },
+  rowIcon: { width: 68, height: 68, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   rowBody: { flex: 1, gap: 2 },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space.sm },
-  rowTitle: { fontSize: 16, fontWeight: "700", flexShrink: 1 },
+  rowTitle: { fontFamily: font.display, fontSize: 17, fontWeight: "700", flexShrink: 1 },
   rowInfo: { flexDirection: "row", flexWrap: "wrap", gap: space.md, marginTop: 2 },
   infoBit: { flexDirection: "row", alignItems: "center", gap: 4 },
   infoText: { fontSize: 12 },

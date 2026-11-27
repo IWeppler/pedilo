@@ -10,18 +10,17 @@ import {
   ScrollView,
   SectionList,
   StyleSheet,
-  Text,
-  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Text, TextInput } from "@/components/text";
 import { CartBar } from "@/components/cart-bar";
 import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Centered, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
-import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
+import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 interface MenuSectionData {
   key: string;
@@ -115,7 +114,7 @@ export default function MerchantScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: t.background }]}>
-      {/* Íconos claros sobre la portada naranja; normales con la barra compacta. */}
+      {/* Íconos claros sobre la portada oscura; normales con la barra compacta. */}
       <StatusBar style={compact ? "dark" : "light"} />
       <SectionList
         ref={listRef}
@@ -133,21 +132,21 @@ export default function MerchantScreen() {
         onScrollToIndexFailed={() => {}}
         ListHeaderComponent={
           <View onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-            {/* Portada: la foto del comercio o, si no tiene, el ícono del rubro sobre el naranja de marca */}
+            {/* Portada: la foto del comercio o, si no tiene, el ícono del rubro sobre la tinta de marca */}
             <View style={[styles.cover, { backgroundColor: t.primary, paddingTop: insets.top }]}>
               <Photo
                 url={merchant.coverUrl}
                 style={StyleSheet.absoluteFill}
                 fallback={
                   <View style={styles.coverArt}>
-                    <Icon name={icon} size={72} color="#ffffff" />
+                    <Icon name={icon} size={64} color={t.accent} />
                   </View>
                 }
               />
             </View>
 
             {/* Datos del comercio */}
-            <View style={[styles.info, cardShadow(t), { backgroundColor: t.card }]}>
+            <View style={styles.info}>
               <Text style={[styles.title, { color: t.text }]}>{merchant.displayName}</Text>
               <View style={styles.badges}>
                 {branch && (
@@ -179,7 +178,7 @@ export default function MerchantScreen() {
             </View>
 
             {/* Búsqueda */}
-            <View style={[styles.search, cardShadow(t), { backgroundColor: t.card }]}>
+            <View style={[styles.search, { backgroundColor: t.surface }]}>
               <Icon name="search" size={20} color={t.muted} />
               <TextInput
                 value={query}
@@ -227,7 +226,7 @@ export default function MerchantScreen() {
           accessibilityLabel="Volver"
           onPress={back}
           hitSlop={8}
-          style={[styles.floatingBack, cardShadow(t), { top: insets.top + space.sm, backgroundColor: t.card }]}
+          style={[styles.floatingBack, { top: insets.top + space.sm, backgroundColor: t.card }]}
         >
           <Icon name="back" size={22} color={t.text} />
         </Pressable>
@@ -235,7 +234,7 @@ export default function MerchantScreen() {
 
       {/* Barra compacta al pasar la portada */}
       {compact && (
-        <View style={[styles.compact, cardShadow(t), { paddingTop: insets.top, backgroundColor: t.card }]}>
+        <View style={[styles.compact, { paddingTop: insets.top, backgroundColor: t.background, borderBottomColor: t.border }]}>
           <View style={styles.compactBar}>
             <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={back} hitSlop={12} style={styles.compactBack}>
               <Icon name="back" size={22} color={t.text} />
@@ -293,8 +292,8 @@ function SectionTabs({
 function Fact({ icon, label, value, t }: { icon: IconName; label: string; value: string; t: Theme }) {
   return (
     <View style={styles.fact}>
-      <View style={[styles.factIcon, { backgroundColor: t.primarySoft }]}>
-        <Icon name={icon} size={16} color={t.primary} />
+      <View style={[styles.factIcon, { backgroundColor: t.surface }]}>
+        <Icon name={icon} size={16} color={t.text} />
       </View>
       <View>
         <Text style={[styles.factLabel, { color: t.muted }]}>{label}</Text>
@@ -315,8 +314,7 @@ function ProductCard({ product: p, icon, onPress }: { product: PublicProduct; ic
       accessibilityLabel={`${p.name}, ${price}${p.available ? "" : ", sin stock"}`}
       style={({ pressed }) => [
         styles.product,
-        cardShadow(t),
-        { backgroundColor: t.card, opacity: pressed ? 0.75 : p.available ? 1 : 0.55 },
+        { borderBottomColor: t.border, opacity: pressed ? 0.6 : p.available ? 1 : 0.55 },
       ]}
     >
       <View style={styles.productBody}>
@@ -329,15 +327,15 @@ function ProductCard({ product: p, icon, onPress }: { product: PublicProduct; ic
           </Text>
         )}
         <View style={styles.productFooter}>
-          <Text style={[styles.price, { color: t.primary }]}>{price}</Text>
+          <Text style={[styles.price, { color: t.text }]}>{price}</Text>
           {!p.available && <Badge label="Sin stock" tone="danger" />}
         </View>
       </View>
-      <View style={[styles.thumb, { backgroundColor: t.primarySoft }]}>
+      <View style={[styles.thumb, { backgroundColor: t.surface }]}>
         <Photo
           url={p.imageUrl}
           style={[StyleSheet.absoluteFill, { borderRadius: radius.md, opacity: p.available ? 1 : 0.5 }]}
-          fallback={<Icon name={icon} size={34} color={t.primary} />}
+          fallback={<Icon name={icon} size={34} color={t.muted} />}
         />
         {p.available && (
           <View style={[styles.addButton, { backgroundColor: t.primary, borderColor: t.card }]}>
@@ -371,8 +369,8 @@ const styles = StyleSheet.create({
   },
   floatingBack: { position: "absolute", left: space.lg, width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 
-  info: { marginHorizontal: space.lg, marginTop: -48, borderRadius: radius.lg, padding: space.lg, gap: space.sm },
-  title: { fontSize: 24, fontWeight: "800" },
+  info: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.sm },
+  title: { fontFamily: font.display, fontSize: 30, lineHeight: 33, fontWeight: "800", letterSpacing: -0.6 },
   badges: { flexDirection: "row", alignItems: "center", gap: space.sm },
   address: { flexDirection: "row", gap: 6, alignItems: "flex-start" },
   meta: { fontSize: 13 },
@@ -380,29 +378,29 @@ const styles = StyleSheet.create({
   fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
   factIcon: { width: 32, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   factLabel: { fontSize: 11 },
-  factValue: { fontSize: 14, fontWeight: "700" },
+  factValue: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
 
-  search: { flexDirection: "row", alignItems: "center", gap: space.sm, marginHorizontal: space.lg, marginTop: space.lg, borderRadius: radius.pill, paddingHorizontal: space.lg, height: 48 },
+  search: { flexDirection: "row", alignItems: "center", gap: space.sm, marginHorizontal: space.lg, marginTop: space.lg, borderRadius: radius.md, paddingHorizontal: space.lg, height: 48 },
   searchInput: { flex: 1, fontSize: 16, height: "100%" },
 
   tabs: { gap: space.sm, paddingHorizontal: space.lg, alignItems: "center" },
   tab: { borderRadius: radius.pill, paddingHorizontal: space.lg, paddingVertical: 8 },
   tabText: { fontSize: 14, fontWeight: "600" },
 
-  compact: { position: "absolute", top: 0, left: 0, right: 0, paddingBottom: space.xs },
+  compact: { position: "absolute", top: 0, left: 0, right: 0, paddingBottom: space.xs, borderBottomWidth: StyleSheet.hairlineWidth },
   compactBar: { height: BAR_HEIGHT, flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg },
   compactBack: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  compactTitle: { fontSize: 17, fontWeight: "700", flex: 1 },
+  compactTitle: { fontFamily: font.display, fontSize: 18, fontWeight: "700", flex: 1 },
 
-  sectionHeader: { flexDirection: "row", alignItems: "baseline", gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.md },
-  sectionTitle: { fontSize: 19, fontWeight: "800" },
+  sectionHeader: { flexDirection: "row", alignItems: "baseline", gap: space.sm, paddingHorizontal: space.lg, paddingTop: space.xl, paddingBottom: space.xs },
+  sectionTitle: { fontFamily: font.display, fontSize: 21, fontWeight: "700", letterSpacing: -0.3 },
 
-  product: { flexDirection: "row", gap: space.md, marginHorizontal: space.lg, marginBottom: space.md, borderRadius: radius.lg, padding: space.md },
+  product: { flexDirection: "row", gap: space.md, marginHorizontal: space.lg, paddingVertical: space.lg, borderBottomWidth: StyleSheet.hairlineWidth },
   productBody: { flex: 1, gap: 4 },
-  productName: { fontSize: 16, fontWeight: "700" },
+  productName: { fontSize: 16, fontWeight: "600" },
   productFooter: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: "auto", paddingTop: space.xs },
-  price: { fontSize: 16, fontWeight: "800" },
-  thumb: { width: 92, height: 92, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  price: { fontFamily: font.display, fontSize: 16, fontWeight: "700" },
+  thumb: { width: 104, height: 104, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   addButton: {
     position: "absolute",
     right: -6,

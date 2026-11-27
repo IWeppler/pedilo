@@ -20,8 +20,8 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: t.primary,
         tabBarInactiveTintColor: t.muted,
-        tabBarStyle: { backgroundColor: t.card, borderTopColor: t.border },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
+        tabBarStyle: { backgroundColor: t.background, borderTopColor: t.border, elevation: 0 },
+        tabBarLabelStyle: { fontSize: 11, fontFamily: "HankenGrotesk_600SemiBold" },
         sceneStyle: { backgroundColor: t.background },
       }}
     >
@@ -39,7 +39,7 @@ export default function TabsLayout() {
           title: "Carrito",
           tabBarIcon: ({ color }) => <Icon name="cart" color={color} />,
           tabBarBadge: itemCount > 0 ? itemCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: t.primary, color: t.primaryText, fontSize: 11 },
+          tabBarBadgeStyle: { backgroundColor: t.accent, color: t.accentText, fontSize: 11 },
         }}
         listeners={{
           tabPress: (e) => {

@@ -1,39 +1,47 @@
 /**
- * Paleta de Pedilo con modo claro y oscuro.
- * `primary` es el naranja de marca: botones principales, selección, acentos.
+ * Paleta de Pedilo. Base blanca para que manden las fotos de comercios y productos.
+ * - `primary` es la tinta: botones principales, selección y texto fuerte.
+ * - `accent` (rojo tomate) es solo para señales chicas: la marca, el contador del carrito,
+ *   lo obligatorio. Nunca para fondos grandes.
+ * - Verde y rojo de estado solo para «abierto/listo» y errores.
+ * Sin sombras: las superficies se separan por color (`surface`) o por una línea (`border`).
  */
 const light = {
-  background: "#fafaf9",
+  background: "#ffffff",
   card: "#ffffff",
-  surface: "#f2f1ef",
-  border: "#e7e5e4",
-  text: "#1c1917",
-  muted: "#78716c",
-  primary: "#f2681d",
+  surface: "#f3f2ef",
+  border: "#e6e4e0",
+  text: "#151515",
+  muted: "#6e6a64",
+  primary: "#151515",
   primaryText: "#ffffff",
-  primarySoft: "#fff0e6",
-  success: "#15803d",
-  successBg: "#dcfce7",
-  danger: "#b91c1c",
-  dangerBg: "#fee2e2",
-  shadow: "#1c1917",
+  primarySoft: "#f3f2ef",
+  accent: "#e5432b",
+  accentText: "#ffffff",
+  accentSoft: "#fdebe7",
+  success: "#1f7a45",
+  successBg: "#e3f3e8",
+  danger: "#b42318",
+  dangerBg: "#fdecea",
 };
 
 const dark: typeof light = {
-  background: "#0c0a09",
-  card: "#1c1917",
-  surface: "#292524",
-  border: "#292524",
-  text: "#fafaf9",
-  muted: "#a8a29e",
-  primary: "#ff7a33",
-  primaryText: "#ffffff",
-  primarySoft: "#3b1d0c",
-  success: "#4ade80",
-  successBg: "#14532d",
-  danger: "#f87171",
-  dangerBg: "#450a0a",
-  shadow: "#000000",
+  background: "#0f0f0f",
+  card: "#181818",
+  surface: "#222220",
+  border: "#2e2d2a",
+  text: "#f5f4f1",
+  muted: "#a3a09a",
+  primary: "#f5f4f1",
+  primaryText: "#151515",
+  primarySoft: "#222220",
+  accent: "#ff5a40",
+  accentText: "#ffffff",
+  accentSoft: "#3a1a14",
+  success: "#5cc98a",
+  successBg: "#123322",
+  danger: "#f2867c",
+  dangerBg: "#3d1512",
 };
 
 export type Theme = typeof light;
@@ -52,13 +60,9 @@ export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24 } as const;
 
 export const radius = { sm: 10, md: 14, lg: 20, pill: 999 } as const;
 
-/** Sombra suave para tarjetas (iOS usa shadow*, Android elevation). */
-export function cardShadow(t: Theme) {
-  return {
-    shadowColor: t.shadow,
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
-  } as const;
-}
+/**
+ * Familias tipográficas. En los estilos se escribe `fontFamily: font.display` (títulos, precios,
+ * marca) y el peso con `fontWeight`; el `Text` de `@/components/text` elige el archivo de fuente.
+ * Sin `fontFamily`, el texto usa la familia de lectura.
+ */
+export const font = { display: "display", text: "text" } as const;

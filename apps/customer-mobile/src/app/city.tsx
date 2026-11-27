@@ -1,14 +1,15 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text } from "@/components/text";
 import { Icon } from "@/components/icon";
 import { ErrorState, Loading } from "@/components/ui";
 import { useCities } from "@/lib/api";
 import { useCity } from "@/lib/city";
 import { canLocate, locateCity, type LocateResult } from "@/lib/locate-city";
-import { cardShadow, radius, space, useTheme } from "@/lib/theme";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 type City = { slug: string; name: string; province: string };
 type LocateFailure = Exclude<LocateResult<City>, { kind: "found" }>;
@@ -47,7 +48,7 @@ export default function CityScreen() {
             accessibilityLabel="Cerrar"
             onPress={() => router.back()}
             hitSlop={8}
-            style={[styles.close, cardShadow(t), { backgroundColor: t.card }]}
+            style={[styles.close, { backgroundColor: t.surface }]}
           >
             <Icon name="close" size={20} color={t.text} />
           </Pressable>
@@ -57,8 +58,8 @@ export default function CityScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={[styles.badge, { backgroundColor: t.primarySoft }]}>
-          <Icon name="location" size={32} color={t.primary} />
+        <View style={[styles.badge, { backgroundColor: t.accentSoft }]}>
+          <Icon name="location" size={32} color={t.accent} />
         </View>
         <Text style={[styles.title, { color: t.text }]}>¿Dónde estás?</Text>
         <Text style={[styles.subtitle, { color: t.muted }]}>Elegí tu ciudad para ver los comercios cerca tuyo.</Text>
@@ -102,7 +103,7 @@ export default function CityScreen() {
               </View>
             )}
 
-            <View style={[styles.list, cardShadow(t), { backgroundColor: t.card }]}>
+            <View style={[styles.list, { backgroundColor: t.surface }]}>
               {cities.data.map((c, i) => {
                 const selected = city?.slug === c.slug;
                 return (
@@ -118,7 +119,7 @@ export default function CityScreen() {
                       { opacity: pressed ? 0.6 : 1 },
                     ]}
                   >
-                    <View style={[styles.rowIcon, { backgroundColor: selected ? t.primary : t.surface }]}>
+                    <View style={[styles.rowIcon, { backgroundColor: selected ? t.primary : t.background }]}>
                       <Icon name="location" size={18} color={selected ? t.primaryText : t.muted} />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -168,7 +169,7 @@ function LocateNotice({ result }: { result: LocateFailure }) {
         <Text style={[styles.noticeText, { color: t.text }]}>{message}</Text>
         {settings && (
           <Pressable accessibilityRole="button" onPress={() => void Linking.openSettings()} hitSlop={8}>
-            <Text style={[styles.noticeLink, { color: t.primary }]}>Abrir ajustes</Text>
+            <Text style={[styles.noticeLink, { color: t.text, textDecorationLine: "underline" }]}>Abrir ajustes</Text>
           </Pressable>
         )}
       </View>
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   content: { padding: space.lg, paddingTop: 0, gap: space.md, paddingBottom: space.xl },
 
   badge: { width: 64, height: 64, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 28, fontWeight: "800" },
+  title: { fontFamily: font.display, fontSize: 28, fontWeight: "800" },
   subtitle: { fontSize: 15, marginBottom: space.sm },
   state: { minHeight: 200 },
 
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  locateTitle: { fontSize: 16, fontWeight: "800" },
+  locateTitle: { fontFamily: font.display, fontSize: 16, fontWeight: "700" },
   locateSub: { fontSize: 13, opacity: 0.9 },
 
   notice: { flexDirection: "row", gap: space.sm, borderRadius: radius.md, padding: space.md, alignItems: "flex-start" },

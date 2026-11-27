@@ -2,15 +2,16 @@ import type { PublicProduct } from "@pedilo/api-client";
 import { formatARS, priceSelection, SelectionError } from "@pedilo/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useMemo, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Text, TextInput } from "@/components/text";
 import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
 import { useCart } from "@/lib/cart";
-import { cardShadow, radius, space, useTheme } from "@/lib/theme";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 /**
  * Detalle de producto: variante, opciones y cantidad. El precio y las validaciones salen de
@@ -131,14 +132,14 @@ function ProductDetail({
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Foto del producto o, si no tiene, el ícono del rubro */}
-          <View style={[styles.hero, { backgroundColor: t.primarySoft, paddingTop: topGap }]}>
+          <View style={[styles.hero, { backgroundColor: t.surface, paddingTop: topGap }]}>
             <Photo
               url={product.imageUrl}
               style={StyleSheet.absoluteFill}
               accessibilityLabel={product.name}
               fallback={
                 <View style={[styles.heroArt, { backgroundColor: t.card }]}>
-                  <Icon name={icon} size={64} color={t.primary} />
+                  <Icon name={icon} size={64} color={t.muted} />
                 </View>
               }
             />
@@ -146,7 +147,7 @@ function ProductDetail({
 
           <View style={[styles.sheet, { backgroundColor: t.background }]}>
             <Text style={[styles.title, { color: t.text }]}>{product.name}</Text>
-            <Text style={[styles.basePrice, { color: t.primary }]}>{basePrice}</Text>
+            <Text style={[styles.basePrice, { color: t.text }]}>{basePrice}</Text>
             {product.description && <Text style={[styles.description, { color: t.muted }]}>{product.description}</Text>}
             {!product.available && <Badge label="Sin stock por ahora" tone="danger" />}
 
@@ -216,7 +217,7 @@ function ProductDetail({
               maxLength={200}
               multiline
               accessibilityLabel="Aclaraciones para el comercio"
-              style={[styles.notes, cardShadow(t), { backgroundColor: t.card, color: t.text }]}
+              style={[styles.notes, { backgroundColor: t.surface, color: t.text }]}
             />
           </View>
         </ScrollView>
@@ -225,7 +226,6 @@ function ProductDetail({
         <View
           style={[
             styles.footer,
-            cardShadow(t),
             { backgroundColor: t.card, borderColor: t.border, paddingBottom: Math.max(insets.bottom, space.md) },
           ]}
         >
@@ -265,7 +265,7 @@ function ProductDetail({
         accessibilityLabel="Cerrar"
         onPress={onClose}
         hitSlop={8}
-        style={[styles.close, cardShadow(t), { top: topGap, backgroundColor: t.card }]}
+        style={[styles.close, { top: topGap, backgroundColor: t.card }]}
       >
         <Icon name="close" size={20} color={t.text} />
       </Pressable>
@@ -298,7 +298,7 @@ function groupRule(min: number, max: number): string {
   return `Obligatorio · de ${min} a ${max}`;
 }
 
-/** Bloque de opciones. Los obligatorios llevan etiqueta naranja que pasa a «Listo» al completarse. */
+/** Bloque de opciones. Los obligatorios llevan etiqueta roja que pasa a «Listo» al completarse. */
 function Group({
   title,
   rule,
@@ -313,7 +313,7 @@ function Group({
   children: ReactNode;
 }) {
   const t = useTheme();
-  const tag = required ? (done ? { label: "Listo", bg: t.successBg, fg: t.success } : { label: "Obligatorio", bg: t.primarySoft, fg: t.primary }) : null;
+  const tag = required ? (done ? { label: "Listo", bg: t.successBg, fg: t.success } : { label: "Obligatorio", bg: t.accentSoft, fg: t.accent }) : null;
   return (
     <View style={styles.group}>
       <View style={styles.groupHeader}>
@@ -328,7 +328,7 @@ function Group({
           </View>
         )}
       </View>
-      <View style={[styles.groupCard, cardShadow(t), { backgroundColor: t.card }]}>{children}</View>
+      <View style={[styles.groupCard, { borderColor: t.border }]}>{children}</View>
     </View>
   );
 }
@@ -467,18 +467,18 @@ const styles = StyleSheet.create({
   heroArt: { width: 130, height: 130, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   close: { position: "absolute", right: space.lg, width: 38, height: 38, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 
-  sheet: { marginTop: -24, borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: space.lg, paddingTop: space.xl, gap: space.sm },
-  title: { fontSize: 24, fontWeight: "800" },
-  basePrice: { fontSize: 18, fontWeight: "800" },
+  sheet: { padding: space.lg, paddingTop: space.xl, gap: space.sm },
+  title: { fontFamily: font.display, fontSize: 28, lineHeight: 31, fontWeight: "800", letterSpacing: -0.5 },
+  basePrice: { fontFamily: font.display, fontSize: 18, fontWeight: "700" },
   description: { fontSize: 15, lineHeight: 21 },
 
   group: { marginTop: space.lg, gap: space.sm },
   groupHeader: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  groupTitle: { fontSize: 17, fontWeight: "800" },
+  groupTitle: { fontFamily: font.display, fontSize: 17, fontWeight: "700" },
   groupRule: { fontSize: 13 },
   groupTag: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: radius.pill, paddingHorizontal: space.sm, paddingVertical: 4 },
   groupTagText: { fontSize: 12, fontWeight: "700" },
-  groupCard: { borderRadius: radius.lg, paddingHorizontal: space.md },
+  groupCard: { borderRadius: radius.lg, borderWidth: 1, paddingHorizontal: space.md },
 
   option: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md, minHeight: 52 },
   optionLabel: { fontSize: 16, flex: 1 },
@@ -487,7 +487,7 @@ const styles = StyleSheet.create({
   radioDot: { width: 10, height: 10, borderRadius: radius.pill },
   check: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, alignItems: "center", justifyContent: "center" },
 
-  label: { fontSize: 17, fontWeight: "800", marginTop: space.lg },
+  label: { fontFamily: font.display, fontSize: 17, fontWeight: "700", marginTop: space.lg },
   notes: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.md, fontSize: 15, minHeight: 64, textAlignVertical: "top" },
 
   stepper: { flexDirection: "row", alignItems: "center", gap: space.sm },
@@ -508,5 +508,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     height: 52,
   },
-  addText: { fontSize: 16, fontWeight: "800" },
+  addText: { fontFamily: font.display, fontSize: 16, fontWeight: "700" },
 });

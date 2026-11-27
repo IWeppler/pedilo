@@ -10,14 +10,15 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Switch, View } from "react-native";
 
+import { Text, TextInput } from "@/components/text";
 import { Icon } from "@/components/icon";
 import { Photo } from "@/components/photo";
 import { Button, Chip } from "@/components/ui";
 import { api } from "@/lib/api";
 import { API_URL } from "@/lib/config";
-import { radius, space, type Theme, useTheme } from "@/lib/theme";
+import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 const REASONS: ClaimReason[] = ["MISSING_ITEM", "WRONG_ITEM", "QUALITY", "DELAY", "NOT_DELIVERED", "WRONG_CHARGE"];
 const CLAIMABLE = ["DELIVERED", "PICKED_UP", "DELIVERY_FAILED"];
@@ -83,7 +84,7 @@ function OpenClaim({ orderId, token, t }: { orderId: string; token: string; t: T
     );
   }
   return (
-    <View style={[styles.card, { backgroundColor: t.card }]}>
+    <View style={[styles.card, { backgroundColor: t.surface }]}>
       <Text style={[styles.title, { color: t.text }]}>Contanos qué pasó</Text>
       <Text style={{ color: t.muted, fontSize: 13 }}>
         El comercio tiene 24 h para proponerte una solución. Podés reclamar hasta {CLAIM_WINDOW_HOURS} h después de recibir el pedido.
@@ -178,12 +179,12 @@ function ClaimStatusCard({ orderId, token, claim: c }: { orderId: string; token:
   const proposalPending = c.status === "MERCHANT_REVIEW" && c.proposal;
 
   return (
-    <View style={[styles.card, { backgroundColor: t.card }]}>
+    <View style={[styles.card, { backgroundColor: t.surface }]}>
       <View style={styles.row}>
         <Text style={[styles.title, { color: t.text, flex: 1 }]}>Reclamo: {CLAIM_REASON_LABELS[c.reason]}</Text>
       </View>
-      <View style={[styles.status, { backgroundColor: open ? t.primarySoft : t.successBg }]}>
-        <Text style={{ color: open ? t.primary : t.success, fontWeight: "700" }}>{CLAIM_STATUS_LABELS[c.status]}</Text>
+      <View style={[styles.status, { backgroundColor: open ? t.accentSoft : t.successBg }]}>
+        <Text style={{ color: open ? t.accent : t.success, fontWeight: "700" }}>{CLAIM_STATUS_LABELS[c.status]}</Text>
       </View>
 
       {proposalPending && (
@@ -245,7 +246,7 @@ function ClaimStatusCard({ orderId, token, claim: c }: { orderId: string; token:
           </View>
           {c.status === "DISPUTED" && !escalating && (
             <Pressable onPress={() => setEscalating(true)} accessibilityRole="button" hitSlop={8}>
-              <Text style={{ color: t.primary, fontWeight: "700", textAlign: "center" }}>No llegamos a un acuerdo: pedir que intervenga Pedilo</Text>
+              <Text style={{ color: t.text, fontWeight: "700", textAlign: "center", textDecorationLine: "underline" }}>No llegamos a un acuerdo: pedir que intervenga Pedilo</Text>
             </Pressable>
           )}
         </>
@@ -258,7 +259,7 @@ function ClaimStatusCard({ orderId, token, claim: c }: { orderId: string; token:
 const styles = StyleSheet.create({
   openLink: { flexDirection: "row", gap: space.sm, alignItems: "center", justifyContent: "center", paddingVertical: space.md },
   card: { borderRadius: radius.lg, padding: space.lg, gap: space.md },
-  title: { fontSize: 17, fontWeight: "800" },
+  title: { fontFamily: font.display, fontSize: 17, fontWeight: "700" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 15 },
   row: { flexDirection: "row", gap: space.sm, alignItems: "center" },

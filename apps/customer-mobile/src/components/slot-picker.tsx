@@ -1,8 +1,9 @@
 import type { BranchSlots } from "@pedilo/api-client";
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { radius, space, useTheme } from "@/lib/theme";
+import { Text } from "@/components/text";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 /**
  * Elegir una franja de 30 min para un pedido programado (ADR 0011): primero el día, después la
@@ -59,13 +60,13 @@ export function SlotPicker({
               style={[
                 styles.time,
                 {
-                  backgroundColor: selected ? t.primarySoft : t.card,
+                  backgroundColor: selected ? t.primary : t.card,
                   borderColor: selected ? t.primary : t.border,
                   opacity: s.available ? 1 : 0.4,
                 },
               ]}
             >
-              <Text style={[styles.timeText, { color: selected ? t.primary : t.text, textDecorationLine: s.available ? "none" : "line-through" }]}>
+              <Text style={[styles.timeText, { color: selected ? t.primaryText : t.text, textDecorationLine: s.available ? "none" : "line-through" }]}>
                 {s.label}
               </Text>
             </Pressable>
@@ -118,7 +119,7 @@ export function describeSlot(iso: string, timezone: string): string {
 const styles = StyleSheet.create({
   row: { gap: space.sm },
   day: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: space.sm, alignItems: "center", minWidth: 72 },
-  dayTitle: { fontSize: 15, fontWeight: "800" },
+  dayTitle: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
   daySub: { fontSize: 12 },
   times: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   time: { borderRadius: radius.pill, borderWidth: 1.5, paddingHorizontal: space.md, paddingVertical: space.sm },
