@@ -1,7 +1,8 @@
 "use client";
 
 import { initialFormState } from "@pedilo/web-utils";
-import { useActionState } from "react";
+import { Eye, EyeOff } from "lucide-react";
+import { useActionState, useState } from "react";
 
 import { FormField, fieldA11y } from "@/components/form-field";
 import { SubmitButton } from "@/components/submit-button";
@@ -15,6 +16,7 @@ export function EmailLoginForm() {
   const [state, action] = useActionState(loginWithPassword, initialFormState);
   const emailError = state.fieldErrors?.email;
   const passwordError = state.fieldErrors?.password;
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={action} className="grid gap-4">
@@ -33,7 +35,27 @@ export function EmailLoginForm() {
         />
       </FormField>
       <FormField id="password" label="Contraseña" error={passwordError}>
-        <Input {...fieldA11y("password", passwordError, true)} type="password" required autoComplete="current-password" />
+        <div className="relative">
+          <Input
+            {...fieldA11y("password", passwordError, true)}
+            type={showPassword ? "text" : "password"}
+            required
+            autoComplete="current-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            className="pr-10"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={showPassword}
+            className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          >
+            {showPassword ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+          </button>
+        </div>
       </FormField>
       <SubmitButton pendingText="Entrando…">Entrar</SubmitButton>
     </form>
