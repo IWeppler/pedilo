@@ -20709,6 +20709,49 @@
                       "type": "boolean",
                       "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                     },
+                    "courierLocation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            },
+                            "accuracyM": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Precisión del GPS en metros"
+                            },
+                            "recordedAt": {
+                              "type": "string",
+                              "description": "Cuándo se tomó el punto (hora del servidor)"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng",
+                            "accuracyM",
+                            "recordedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -20763,6 +20806,7 @@
                     "pinRequired",
                     "pin",
                     "pinLocked",
+                    "courierLocation",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -21438,6 +21482,49 @@
                         "type": "boolean",
                         "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                       },
+                      "courierLocation": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              },
+                              "accuracyM": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Precisión del GPS en metros"
+                              },
+                              "recordedAt": {
+                                "type": "string",
+                                "description": "Cuándo se tomó el punto (hora del servidor)"
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lng",
+                              "accuracyM",
+                              "recordedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                      },
                       "offerExpiresAt": {
                         "type": [
                           "string",
@@ -21492,6 +21579,7 @@
                       "pinRequired",
                       "pin",
                       "pinLocked",
+                      "courierLocation",
                       "offerExpiresAt",
                       "statusReason",
                       "assignedAt",
@@ -21990,6 +22078,49 @@
                       "type": "boolean",
                       "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                     },
+                    "courierLocation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            },
+                            "accuracyM": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Precisión del GPS en metros"
+                            },
+                            "recordedAt": {
+                              "type": "string",
+                              "description": "Cuándo se tomó el punto (hora del servidor)"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng",
+                            "accuracyM",
+                            "recordedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -22044,6 +22175,7 @@
                     "pinRequired",
                     "pin",
                     "pinLocked",
+                    "courierLocation",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -22051,6 +22183,288 @@
                     "deliveredAt",
                     "createdAt",
                     "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/courier/location": {
+      "put": {
+        "summary": "Compartir mi ubicación durante un reparto",
+        "tags": [
+          "couriers"
+        ],
+        "description": "Seguimiento en vivo (ADR 0022). Solo se guarda el último punto y solo con un reparto en curso; sin repartos activos se borra y responde `sharing: false` (la app deja de mandar). `ageMs`: antigüedad del punto según el teléfono (no su hora, por si el reloj está mal).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "lat": {
+                    "type": "number",
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "lng": {
+                    "type": "number",
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "accuracyM": {
+                    "anyOf": [
+                      {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "ageMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 86400000
+                  }
+                },
+                "required": [
+                  "lat",
+                  "lng"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sharing": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "sharing"
                   ],
                   "additionalProperties": false
                 }
@@ -22482,6 +22896,49 @@
                         "type": "boolean",
                         "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                       },
+                      "courierLocation": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number"
+                              },
+                              "lng": {
+                                "type": "number"
+                              },
+                              "accuracyM": {
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Precisión del GPS en metros"
+                              },
+                              "recordedAt": {
+                                "type": "string",
+                                "description": "Cuándo se tomó el punto (hora del servidor)"
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lng",
+                              "accuracyM",
+                              "recordedAt"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                      },
                       "offerExpiresAt": {
                         "type": [
                           "string",
@@ -22536,6 +22993,7 @@
                       "pinRequired",
                       "pin",
                       "pinLocked",
+                      "courierLocation",
                       "offerExpiresAt",
                       "statusReason",
                       "assignedAt",
@@ -23009,6 +23467,49 @@
                       "type": "boolean",
                       "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                     },
+                    "courierLocation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            },
+                            "accuracyM": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Precisión del GPS en metros"
+                            },
+                            "recordedAt": {
+                              "type": "string",
+                              "description": "Cuándo se tomó el punto (hora del servidor)"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng",
+                            "accuracyM",
+                            "recordedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -23063,6 +23564,7 @@
                     "pinRequired",
                     "pin",
                     "pinLocked",
+                    "courierLocation",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -23530,6 +24032,49 @@
                       "type": "boolean",
                       "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                     },
+                    "courierLocation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            },
+                            "accuracyM": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Precisión del GPS en metros"
+                            },
+                            "recordedAt": {
+                              "type": "string",
+                              "description": "Cuándo se tomó el punto (hora del servidor)"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng",
+                            "accuracyM",
+                            "recordedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -23584,6 +24129,7 @@
                     "pinRequired",
                     "pin",
                     "pinLocked",
+                    "courierLocation",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -24031,6 +24577,49 @@
                       "type": "boolean",
                       "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                     },
+                    "courierLocation": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            },
+                            "accuracyM": {
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Precisión del GPS en metros"
+                            },
+                            "recordedAt": {
+                              "type": "string",
+                              "description": "Cuándo se tomó el punto (hora del servidor)"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng",
+                            "accuracyM",
+                            "recordedAt"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"
+                    },
                     "offerExpiresAt": {
                       "type": [
                         "string",
@@ -24085,6 +24674,7 @@
                     "pinRequired",
                     "pin",
                     "pinLocked",
+                    "courierLocation",
                     "offerExpiresAt",
                     "statusReason",
                     "assignedAt",
@@ -34198,12 +34788,56 @@
                                   "type": "null"
                                 }
                               ]
+                            },
+                            "courierLocation": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number"
+                                    },
+                                    "lng": {
+                                      "type": "number"
+                                    },
+                                    "accuracyM": {
+                                      "anyOf": [
+                                        {
+                                          "type": "integer",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Precisión del GPS en metros"
+                                    },
+                                    "recordedAt": {
+                                      "type": "string",
+                                      "description": "Cuándo se tomó el punto (hora del servidor)"
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng",
+                                    "accuracyM",
+                                    "recordedAt"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Dónde está el repartidor: solo con el pedido ya retirado y un punto de los últimos minutos (ADR 0022)"
                             }
                           },
                           "required": [
                             "status",
                             "pin",
-                            "courier"
+                            "courier",
+                            "courierLocation"
                           ],
                           "additionalProperties": false
                         },
@@ -35897,6 +36531,49 @@
                                 "type": "boolean",
                                 "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                               },
+                              "courierLocation": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "lat": {
+                                        "type": "number"
+                                      },
+                                      "lng": {
+                                        "type": "number"
+                                      },
+                                      "accuracyM": {
+                                        "anyOf": [
+                                          {
+                                            "type": "integer",
+                                            "minimum": -9007199254740991,
+                                            "maximum": 9007199254740991
+                                          },
+                                          {
+                                            "type": "null"
+                                          }
+                                        ],
+                                        "description": "Precisión del GPS en metros"
+                                      },
+                                      "recordedAt": {
+                                        "type": "string",
+                                        "description": "Cuándo se tomó el punto (hora del servidor)"
+                                      }
+                                    },
+                                    "required": [
+                                      "lat",
+                                      "lng",
+                                      "accuracyM",
+                                      "recordedAt"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Última ubicación del repartidor con el reparto en curso (ADR 0022)"
+                              },
                               "offerExpiresAt": {
                                 "type": [
                                   "string",
@@ -35951,6 +36628,7 @@
                               "pinRequired",
                               "pin",
                               "pinLocked",
+                              "courierLocation",
                               "offerExpiresAt",
                               "statusReason",
                               "assignedAt",
@@ -38394,6 +39072,49 @@
                               "type": "boolean",
                               "description": "Demasiados intentos: el comercio tiene que desbloquearlo"
                             },
+                            "courierLocation": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number"
+                                    },
+                                    "lng": {
+                                      "type": "number"
+                                    },
+                                    "accuracyM": {
+                                      "anyOf": [
+                                        {
+                                          "type": "integer",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Precisión del GPS en metros"
+                                    },
+                                    "recordedAt": {
+                                      "type": "string",
+                                      "description": "Cuándo se tomó el punto (hora del servidor)"
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng",
+                                    "accuracyM",
+                                    "recordedAt"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Última ubicación del repartidor con el reparto en curso (ADR 0022)"
+                            },
                             "offerExpiresAt": {
                               "type": [
                                 "string",
@@ -38448,6 +39169,7 @@
                             "pinRequired",
                             "pin",
                             "pinLocked",
+                            "courierLocation",
                             "offerExpiresAt",
                             "statusReason",
                             "assignedAt",

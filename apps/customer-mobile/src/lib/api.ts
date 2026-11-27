@@ -45,7 +45,12 @@ export function useOrder(orderId: string, token: string | undefined) {
     queryFn: () =>
       unwrap(api.GET("/v1/public/orders/{orderId}", { params: { path: { orderId }, header: { "x-order-token": token! } } })),
     enabled: Boolean(token),
-    refetchInterval: (query) => (query.state.data && isOrderFinal(query.state.data.status) ? false : 10_000),
+    // Con el repartidor en camino se refresca más seguido para mover el mapa (ADR 0022).
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data && isOrderFinal(data.status)) return false;
+      return data?.tracking?.courierLocation ? 5_000 : 10_000;
+    },
   });
 }
 

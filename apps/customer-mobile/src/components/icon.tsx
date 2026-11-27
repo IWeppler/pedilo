@@ -12,6 +12,7 @@ const ICONS = {
   cart: { ios: "bag.fill", android: "shopping_bag" },
   search: { ios: "magnifyingglass", android: "search" },
   location: { ios: "mappin.and.ellipse", android: "location_on" },
+  map: { ios: "map", android: "map" },
   chevronDown: { ios: "chevron.down", android: "expand_more" },
   chevronRight: { ios: "chevron.right", android: "chevron_right" },
   filter: { ios: "slider.horizontal.3", android: "tune" },

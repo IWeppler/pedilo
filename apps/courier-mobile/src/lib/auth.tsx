@@ -29,6 +29,19 @@ const supabase: SupabaseClient | null =
     : null;
 
 export const supabaseConfigured = supabase !== null;
+
+/**
+ * Token para la API: el de desarrollo o el de la sesión de Supabase. Vive fuera de React porque
+ * la tarea de ubicación en segundo plano (ADR 0022) corre aunque la app no tenga pantallas.
+ */
+let devTokenCache: string | null | undefined; // undefined = todavía no se leyó del teléfono
+async function currentToken(): Promise<string | null> {
+  if (devTokenCache === undefined) devTokenCache = await kv.get(DEV_TOKEN_KEY);
+  if (devTokenCache) return devTokenCache;
+  const { data } = (await supabase?.auth.getSession()) ?? { data: { session: null } };
+  return data.session?.access_token ?? null;
+}
+setTokenSource(currentToken);
 /** El login con token pegado solo existe en desarrollo o si no hay Supabase configurado. */
 export const devLoginAllowed = __DEV__ || !supabase;
 
@@ -48,24 +61,13 @@ const AuthContext = createContext<AuthValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>("loading");
   const [email, setEmail] = useState<string | null>(null);
-  const [devToken, setDevToken] = useState<string | null>(null);
-
-  // El cliente de la API pide el token en cada request: token de desarrollo o sesión de Supabase.
-  useEffect(() => {
-    setTokenSource(async () => {
-      if (devToken) return devToken;
-      const { data } = (await supabase?.auth.getSession()) ?? { data: { session: null } };
-      return data.session?.access_token ?? null;
-    });
-  }, [devToken]);
-
   useEffect(() => {
     let cancelled = false;
     void (async () => {
       const stored = await kv.get(DEV_TOKEN_KEY);
       const session = stored ? null : (await supabase?.auth.getSession())?.data.session;
       if (cancelled) return;
-      setDevToken(stored);
+      devTokenCache = stored;
       setEmail(session?.user.email ?? null);
       setStatus(stored || session ? "signedIn" : "signedOut");
     })();
@@ -100,13 +102,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithDevToken = useCallback(async (token: string) => {
     await kv.set(DEV_TOKEN_KEY, token);
-    setDevToken(token);
+    devTokenCache = token;
     setStatus("signedIn");
   }, []);
 
   const signOut = useCallback(async () => {
     await kv.remove(DEV_TOKEN_KEY);
-    setDevToken(null);
+    devTokenCache = null;
     await supabase?.auth.signOut();
     setStatus("signedOut");
   }, []);

@@ -120,6 +120,13 @@
       "when": 1795728166614,
       "tag": "0016_mercado_pago",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795777878108,
+      "tag": "0017_courier_locations",
+      "breakpoints": true
     }
   ]
 }

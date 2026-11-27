@@ -24,6 +24,7 @@ import {
   registerCourier,
   reofferDelivery,
   reviewCourier,
+  updateCourierLocation,
   updateMyCourier,
 } from "./service";
 
@@ -59,6 +60,13 @@ const offerSchema = z.object({
   expiresAt: z.string().describe("Hora del servidor"),
 });
 
+const courierLocationSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  accuracyM: z.number().int().nullable().describe("Precisión del GPS en metros"),
+  recordedAt: z.string().describe("Cuándo se tomó el punto (hora del servidor)"),
+});
+
 const deliverySchema = z.object({
   id: z.uuid(),
   orderId: z.uuid().nullable(),
@@ -76,6 +84,9 @@ const deliverySchema = z.object({
   pinRequired: z.boolean().describe("Para marcar entregado hay que ingresar el PIN del cliente"),
   pin: z.string().nullable().describe("Solo para el comercio; el repartidor nunca lo recibe"),
   pinLocked: z.boolean().describe("Demasiados intentos: el comercio tiene que desbloquearlo"),
+  courierLocation: courierLocationSchema
+    .nullable()
+    .describe("Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022)"),
   offerExpiresAt: z.string().nullable(),
   statusReason: z.string().nullable(),
   assignedAt: z.string().nullable(),
@@ -245,6 +256,30 @@ export const deliveryRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
       },
     },
     (request) => courierUpdateStatus(db, authOf(request).userId, request.params.deliveryId, request.body),
+  );
+
+  app.put(
+    "/courier/location",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["couriers"],
+        summary: "Compartir mi ubicación durante un reparto",
+        description:
+          "Seguimiento en vivo (ADR 0022). Solo se guarda el último punto y solo con un reparto en curso; " +
+          "sin repartos activos se borra y responde `sharing: false` (la app deja de mandar). " +
+          "`ageMs`: antigüedad del punto según el teléfono (no su hora, por si el reloj está mal).",
+        security,
+        body: z.object({
+          lat: z.number().min(-90).max(90),
+          lng: z.number().min(-180).max(180),
+          accuracyM: z.number().min(0).max(100_000).nullable().optional(),
+          ageMs: z.number().int().min(0).max(86_400_000).optional(),
+        }),
+        response: { 200: z.object({ sharing: z.boolean() }), ...errorResponses },
+      },
+    },
+    (request) => updateCourierLocation(db, authOf(request).userId, request.body),
   );
 
   // --- Comercio ---

@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { deliveryEvents } from "../src/db/schema";
-import { expireOffers } from "../src/modules/deliveries/service";
+import { courierLocations, deliveryEvents } from "../src/db/schema";
+import { expireOffers, purgeStaleCourierLocations } from "../src/modules/deliveries/service";
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
@@ -341,7 +341,7 @@ describe("PIN de entrega (ADR 0016)", () => {
     expect(JSON.stringify((await req("GET", "/v1/courier/deliveries", { token: c1 })).json())).not.toContain(`"pin":"${pin}"`);
 
     const tracked = (await req("GET", `/v1/public/orders/${o.id}`, { headers: { "x-order-token": trackingToken } })).json();
-    expect(tracked.tracking).toEqual({ status: "ASSIGNED", pin, courier: { name: "Juan", vehicle: "MOTO" } });
+    expect(tracked.tracking).toEqual({ status: "ASSIGNED", pin, courier: { name: "Juan", vehicle: "MOTO" }, courierLocation: null });
 
     await courierStatus(c1, deliveryId, "PICKED_UP");
     expect((await courierStatus(c1, deliveryId, "DELIVERED")).statusCode).toBe(400); // falta el PIN
@@ -433,5 +433,112 @@ describe("saldos comercio ↔ repartidor (ADR 0016)", () => {
 
   it("append-only", async () => {
     await expect(ctx.db.execute(sql`update courier_merchant_entries set amount_minor = 1`)).rejects.toThrow();
+  });
+});
+
+describe("seguimiento en vivo (ADR 0022)", () => {
+  let c3: string;
+  let c3Id: string;
+  const share = (token: string, payload: Body) => req("PUT", "/v1/courier/location", { token, payload });
+  const tracking = async (orderId: string, token: string) =>
+    (await req("GET", `/v1/public/orders/${orderId}`, { headers: { "x-order-token": token } })).json().tracking as {
+      status: string;
+      courierLocation: { lat: number; lng: number; accuracyM: number | null; recordedAt: string } | null;
+    };
+  const merchantView = async (deliveryId: string) => {
+    const list = (await req("GET", `/v1/merchants/${merchantId}/deliveries`, { token: owner })).json() as Array<{
+      id: string;
+      courierLocation: { lat: number; lng: number } | null;
+    }>;
+    return list.find((d) => d.id === deliveryId)!;
+  };
+  const stored = async () => ctx.db.select().from(courierLocations).where(eq(courierLocations.courierId, c3Id));
+
+  /** Pedido con envío y su token de seguimiento, ya aceptado por c3. */
+  const assignedToC3 = async () => {
+    const placed = await req("POST", "/v1/public/orders", {
+      headers: { "idempotency-key": `track-${++seq}-${Date.now()}` },
+      payload: {
+        merchantSlug: "pizzeria-centro",
+        branchId,
+        fulfillmentType: "DELIVERY",
+        deliveryZoneId: zoneId,
+        deliveryAddress: { line: DROPOFF },
+        customer: { name: "Caro", phone: `3491 800-${String(seq).padStart(3, "0")}` },
+        items: [{ productId, modifiers: [], quantity: 1 }],
+      },
+    });
+    const { order, trackingToken } = placed.json();
+    await transition(order.id, "ACCEPTED");
+    const deliveryId = (await requestCourier(order.id, { requirePin: false })).json().dispatch.id as string;
+    expect((await accept(c3, deliveryId)).statusCode).toBe(200);
+    return { orderId: order.id as string, trackingToken: trackingToken as string, deliveryId };
+  };
+
+  beforeAll(async () => {
+    c3 = (await ctx.tokenFor()).token;
+    c3Id = (await registerCourier(c3, { displayName: "Lucía Gómez" })).json().id;
+    await req("POST", `/v1/admin/couriers/${c3Id}/review`, { token: admin, payload: { status: "APPROVED" } });
+    await req("PATCH", "/v1/courier/me", { token: c3, payload: { available: true } });
+  });
+
+  it("sin un reparto en curso no se guarda nada y la app deja de mandar", async () => {
+    const res = await share(c3, { lat: -29.23, lng: -61.77 });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ sharing: false });
+    expect(await stored()).toHaveLength(0);
+    // Un perfil sin aprobar no comparte.
+    expect((await share(pending, { lat: -29.23, lng: -61.77 })).statusCode).toBe(403);
+    expect((await share(c3, { lat: -95, lng: 0 })).statusCode).toBe(400);
+  });
+
+  it("el comercio lo ve desde que acepta; el cliente recién con el pedido retirado; al entregar se borra", async () => {
+    const { orderId, trackingToken, deliveryId } = await assignedToC3();
+
+    expect((await share(c3, { lat: -29.231, lng: -61.771, accuracyM: 12.4 })).json()).toEqual({ sharing: true });
+    expect((await merchantView(deliveryId)).courierLocation).toMatchObject({ lat: -29.231, lng: -61.771 });
+    const listed = (await req("GET", `/v1/merchants/${merchantId}/orders?scope=active`, { token: owner })).json() as Array<{
+      id: string;
+      dispatch: { courierLocation: unknown } | null;
+    }>;
+    expect(listed.find((o) => o.id === orderId)!.dispatch!.courierLocation).toMatchObject({ lat: -29.231 });
+    // Va al comercio: el cliente todavía no ve dónde está.
+    expect((await tracking(orderId, trackingToken)).courierLocation).toBeNull();
+    // El repartidor no recibe ubicaciones en sus propios repartos.
+    const own = (await req("GET", "/v1/courier/deliveries", { token: c3 })).json() as Array<{ id: string; courierLocation: unknown }>;
+    expect(own.find((d) => d.id === deliveryId)!.courierLocation).toBeNull();
+
+    await courierStatus(c3, deliveryId, "PICKED_UP");
+    await share(c3, { lat: -29.235, lng: -61.775, accuracyM: 8 });
+    const t = await tracking(orderId, trackingToken);
+    expect(t.status).toBe("PICKED_UP");
+    expect(t.courierLocation).toMatchObject({ lat: -29.235, lng: -61.775, accuracyM: 8 });
+
+    // Un punto que llega tarde (más viejo que el guardado) no lo pisa; uno de hace más de 5 min se ignora.
+    await share(c3, { lat: -29.1, lng: -61.1, ageMs: 60_000 });
+    await share(c3, { lat: -29.2, lng: -61.2, ageMs: 6 * 60_000 });
+    expect((await tracking(orderId, trackingToken)).courierLocation).toMatchObject({ lat: -29.235 });
+
+    await courierStatus(c3, deliveryId, "DELIVERED");
+    expect(await stored()).toHaveLength(0);
+    expect((await tracking(orderId, trackingToken)).courierLocation).toBeNull();
+    expect((await share(c3, { lat: -29.235, lng: -61.775 })).json()).toEqual({ sharing: false });
+  });
+
+  it("un punto viejo no se muestra y el barrido lo borra", async () => {
+    const { orderId, trackingToken, deliveryId } = await assignedToC3();
+    await courierStatus(c3, deliveryId, "PICKED_UP");
+    await share(c3, { lat: -29.24, lng: -61.78 });
+    await ctx.db.execute(sql`update courier_locations set recorded_at = now() - interval '11 minutes' where courier_id = ${c3Id}`);
+    expect((await tracking(orderId, trackingToken)).courierLocation).toBeNull();
+    expect((await merchantView(deliveryId)).courierLocation).toBeNull();
+    expect(await purgeStaleCourierLocations(ctx.db)).toBeGreaterThanOrEqual(1);
+    expect(await stored()).toHaveLength(0);
+
+    // Si vuelve a mandar, se ve de nuevo.
+    await share(c3, { lat: -29.25, lng: -61.79 });
+    expect((await tracking(orderId, trackingToken)).courierLocation).toMatchObject({ lat: -29.25 });
+    await courierStatus(c3, deliveryId, "DELIVERED");
+    expect(await stored()).toHaveLength(0);
   });
 });

@@ -88,6 +88,13 @@ const merchantOrderSchema = orderSchema.extend({
     .describe("Comisión Pedilo congelada al crear el pedido (ADR 0012)"),
 });
 
+const courierLocationSchema = z.object({
+  lat: z.number(),
+  lng: z.number(),
+  accuracyM: z.number().int().nullable().describe("Precisión del GPS en metros"),
+  recordedAt: z.string().describe("Cuándo se tomó el punto (hora del servidor)"),
+});
+
 const deliverySchema = z.object({
   id: z.uuid(),
   orderId: z.uuid().nullable(),
@@ -105,6 +112,7 @@ const deliverySchema = z.object({
   pinRequired: z.boolean().describe("Para marcar entregado hay que ingresar el PIN del cliente"),
   pin: z.string().nullable().describe("Solo para el comercio; el repartidor nunca lo recibe"),
   pinLocked: z.boolean().describe("Demasiados intentos: el comercio tiene que desbloquearlo"),
+  courierLocation: courierLocationSchema.nullable().describe("Última ubicación del repartidor con el reparto en curso (ADR 0022)"),
   offerExpiresAt: z.string().nullable(),
   statusReason: z.string().nullable(),
   assignedAt: z.string().nullable(),
@@ -125,6 +133,9 @@ const customerOrderSchema = orderSchema.extend({
       status: z.string(),
       pin: z.string().nullable().describe("Dáselo al repartidor al recibir el pedido"),
       courier: z.object({ name: z.string(), vehicle: z.string() }).nullable(),
+      courierLocation: courierLocationSchema
+        .nullable()
+        .describe("Dónde está el repartidor: solo con el pedido ya retirado y un punto de los últimos minutos (ADR 0022)"),
     })
     .nullable(),
 });

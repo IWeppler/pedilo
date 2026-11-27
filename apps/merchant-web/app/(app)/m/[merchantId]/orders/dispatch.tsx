@@ -92,6 +92,20 @@ function DispatchStatus({ merchantId, d }: { merchantId: string; d: Dispatch }) 
           <a href={`tel:${d.courier.phone.replace(/[^\d+]/g, "")}`} className="underline underline-offset-2">
             {d.courier.phone}
           </a>
+          {d.courierLocation && (
+            <>
+              {" · "}
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${d.courierLocation.lat},${d.courierLocation.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                ver dónde está
+              </a>
+              <span className="text-muted-foreground"> ({locationAge(d.courierLocation.recordedAt)})</span>
+            </>
+          )}
         </p>
       )}
       {d.pin && status !== "DELIVERED" && (
@@ -140,4 +154,10 @@ function DispatchStatus({ merchantId, d }: { merchantId: string; d: Dispatch }) 
       {cancelState.message && <p className="text-xs text-destructive">{cancelState.message}</p>}
     </div>
   );
+}
+
+/** Antigüedad de la ubicación del repartidor (ADR 0022). Se recalcula con cada recarga del tablero. */
+function locationAge(recordedAt: string): string {
+  const min = Math.round((Date.now() - new Date(recordedAt).getTime()) / 60_000);
+  return min < 1 ? "recién" : `hace ${min} min`;
 }

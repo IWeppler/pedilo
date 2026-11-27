@@ -7640,6 +7640,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -7939,6 +7948,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -8130,6 +8148,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -8238,6 +8265,146 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/courier/location": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Compartir mi ubicación durante un reparto
+         * @description Seguimiento en vivo (ADR 0022). Solo se guarda el último punto y solo con un reparto en curso; sin repartos activos se borra y responde `sharing: false` (la app deja de mandar). `ageMs`: antigüedad del punto según el teléfono (no su hora, por si el reloj está mal).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        lat: number;
+                        lng: number;
+                        accuracyM?: number | null;
+                        ageMs?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            sharing: boolean;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/merchants/{merchantId}/deliveries": {
         parameters: {
             query?: never;
@@ -8303,6 +8470,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -8491,6 +8667,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -8676,6 +8861,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -8855,6 +9049,15 @@ export interface paths {
                             pin: string | null;
                             /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                             pinLocked: boolean;
+                            /** @description Última ubicación del repartidor con el reparto en curso. Solo para el comercio (ADR 0022) */
+                            courierLocation: {
+                                lat: number;
+                                lng: number;
+                                /** @description Precisión del GPS en metros */
+                                accuracyM: number | null;
+                                /** @description Cuándo se tomó el punto (hora del servidor) */
+                                recordedAt: string;
+                            } | null;
                             offerExpiresAt: string | null;
                             statusReason: string | null;
                             assignedAt: string | null;
@@ -12601,6 +12804,15 @@ export interface paths {
                                     name: string;
                                     vehicle: string;
                                 } | null;
+                                /** @description Dónde está el repartidor: solo con el pedido ya retirado y un punto de los últimos minutos (ADR 0022) */
+                                courierLocation: {
+                                    lat: number;
+                                    lng: number;
+                                    /** @description Precisión del GPS en metros */
+                                    accuracyM: number | null;
+                                    /** @description Cuándo se tomó el punto (hora del servidor) */
+                                    recordedAt: string;
+                                } | null;
                             } | null;
                         };
                     };
@@ -13137,6 +13349,15 @@ export interface paths {
                                 pin: string | null;
                                 /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                                 pinLocked: boolean;
+                                /** @description Última ubicación del repartidor con el reparto en curso (ADR 0022) */
+                                courierLocation: {
+                                    lat: number;
+                                    lng: number;
+                                    /** @description Precisión del GPS en metros */
+                                    accuracyM: number | null;
+                                    /** @description Cuándo se tomó el punto (hora del servidor) */
+                                    recordedAt: string;
+                                } | null;
                                 offerExpiresAt: string | null;
                                 statusReason: string | null;
                                 assignedAt: string | null;
@@ -13863,6 +14084,15 @@ export interface paths {
                                 pin: string | null;
                                 /** @description Demasiados intentos: el comercio tiene que desbloquearlo */
                                 pinLocked: boolean;
+                                /** @description Última ubicación del repartidor con el reparto en curso (ADR 0022) */
+                                courierLocation: {
+                                    lat: number;
+                                    lng: number;
+                                    /** @description Precisión del GPS en metros */
+                                    accuracyM: number | null;
+                                    /** @description Cuándo se tomó el punto (hora del servidor) */
+                                    recordedAt: string;
+                                } | null;
                                 offerExpiresAt: string | null;
                                 statusReason: string | null;
                                 assignedAt: string | null;

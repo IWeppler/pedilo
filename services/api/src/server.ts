@@ -8,7 +8,7 @@ import { createExpoPushSender } from "./modules/notifications/expo-push-sender";
 import { createWebPushSender } from "./modules/notifications/web-push-sender";
 import { closeSettlementWeek } from "./modules/billing/settlements";
 import { escalateOverdueClaims } from "./modules/claims/service";
-import { expireOffers } from "./modules/deliveries/service";
+import { expireOffers, purgeStaleCourierLocations } from "./modules/deliveries/service";
 import { expireOverdueOrders, expireUnpaidOrders } from "./modules/orders/service";
 import { createMercadoPagoGateway } from "./modules/payments/gateway";
 import { type PaymentsContext, processRefunds } from "./modules/payments/service";
@@ -57,6 +57,8 @@ const workers = [
     ? [startIntervalWorker({ name: "refunds", intervalMs: 30_000, log: app.log, run: () => processRefunds(db, paymentsCtx) })]
     : []),
   startIntervalWorker({ name: "offer-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOffers(db) }),
+  // Ubicaciones de repartidores que dejaron de mandar (ADR 0022: retención limitada).
+  startIntervalWorker({ name: "courier-locations", intervalMs: 5 * 60 * 1000, log: app.log, run: () => purgeStaleCourierLocations(db) }),
   // Reclamos sin respuesta del comercio a tiempo → Pedilo (ADR 0019).
   startIntervalWorker({ name: "claim-escalation", intervalMs: 5 * 60 * 1000, log: app.log, run: () => escalateOverdueClaims(db) }),
   // Liquidación semanal (ADR 0013): idempotente, así que alcanza con intentarlo cada tanto.

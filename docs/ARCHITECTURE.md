@@ -202,7 +202,7 @@ Pantallas (Expo Router, `src/app/`):
 | `/merchant/[slug]` | Menú del comercio (`GET /v1/public/merchants/:slug`): estado abierto/cerrado, dirección, envío, secciones y búsqueda |
 | `/product/[slug]/[productId]` | Modal del producto: variante, opciones, aclaraciones, cantidad y precio en vivo con `priceSelection`; agrega al carrito |
 | `/cart` | Checkout: líneas editables, retiro o envío (zona, dirección), datos de contacto, total y «Confirmar pedido» (`POST /v1/public/orders` con `Idempotency-Key`) |
-| `/order/[id]` | Seguimiento con el token guardado: estado, pasos, motivo de rechazo, cancelar antes de la aceptación. Se refresca cada 10 s |
+| `/order/[id]` | Seguimiento con el token guardado: estado, pasos, motivo de rechazo, cancelar antes de la aceptación. Con el pedido retirado, mapa con el repartidor (`components/courier-map.tsx`, ADR 0022). Se refresca cada 10 s (5 s con el repartidor en camino) |
 | `/orders` | Pedidos hechos desde este teléfono |
 
 - **Carrito** (`src/lib/cart.tsx`): un solo comercio (agregar de otro pide reemplazarlo), guardado en el teléfono. Los precios son estimados; la API los recalcula.

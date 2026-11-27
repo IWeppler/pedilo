@@ -1,6 +1,6 @@
 import type { CourierStatus, DeliverySource, DeliveryStatus, Vehicle } from "@pedilo/domain";
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, doublePrecision, index, integer, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timestamps } from "../../lib/timestamps";
 // Solo para FKs (excepción documentada en ARCHITECTURE §4). `orders` NO se referencia: el reparto
@@ -155,6 +155,31 @@ export const deliveryDeclines = pgTable(
   (t) => [primaryKey({ columns: [t.deliveryId, t.courierId] })],
 );
 
+/**
+ * Última ubicación del repartidor mientras tiene un reparto en curso (ADR 0022). Una fila por
+ * repartidor, sin historial: se pisa con cada punto y se borra cuando no le queda ningún reparto
+ * activo (SPEC §9.2: ubicación con consentimiento y retención limitada).
+ */
+export const courierLocations = pgTable(
+  "courier_locations",
+  {
+    courierId: uuid("courier_id")
+      .primaryKey()
+      .references(() => courierProfiles.id, { onDelete: "cascade" }),
+    lat: doublePrecision("lat").notNull(),
+    lng: doublePrecision("lng").notNull(),
+    /** Precisión informada por el GPS, en metros. */
+    accuracyM: integer("accuracy_m"),
+    /** Cuándo se tomó el punto, en hora del servidor (el teléfono manda la antigüedad, no su reloj). */
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("courier_locations_lat_lng_check", sql`${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180`),
+    check("courier_locations_accuracy_check", sql`${t.accuracyM} IS NULL OR ${t.accuracyM} >= 0`),
+  ],
+);
+
 export const CourierMerchantEntryKind = {
   /** El comercio le debe al repartidor el pago del envío (+ propina). */
   DELIVERY_FEE: "DELIVERY_FEE",
@@ -200,6 +225,7 @@ export const courierMerchantEntries = pgTable(
 );
 
 export type CourierMerchantEntryRow = typeof courierMerchantEntries.$inferSelect;
+export type CourierLocationRow = typeof courierLocations.$inferSelect;
 export type CourierProfileRow = typeof courierProfiles.$inferSelect;
 export type DeliveryRow = typeof deliveries.$inferSelect;
 export type DeliveryEventRow = typeof deliveryEvents.$inferSelect;

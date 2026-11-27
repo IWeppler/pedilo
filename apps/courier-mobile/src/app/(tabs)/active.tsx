@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/icon";
 import { Badge, Card } from "@/components/ui";
 import { type Delivery, useMyDeliveries } from "@/lib/api";
+import { backgroundSupported, useLocationSharing } from "@/lib/location";
 import { type PendingAction, useOutbox } from "@/lib/outbox";
 import { radius, space, useTheme } from "@/lib/theme";
 
@@ -32,6 +33,8 @@ export default function ActiveScreen() {
         }
       >
         <Text style={[styles.title, { color: t.text }]}>En curso</Text>
+
+        {list.length > 0 && <LocationNotice />}
 
         {pending.length > 0 && (
           <View style={[styles.notice, { backgroundColor: t.primarySoft }]} accessibilityLiveRegion="polite">
@@ -60,6 +63,44 @@ export default function ActiveScreen() {
         ))}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+/** Si el cliente puede seguir el envío y, si no, qué hacer para que pueda (ADR 0022). */
+function LocationNotice() {
+  const t = useTheme();
+  const { state, canUpgrade, requestBackground, openSettings, retry } = useLocationSharing();
+  if (state === "off") return null;
+
+  const ok = state === "background" || state === "foreground";
+  const text = {
+    background: "Compartís tu ubicación con el comercio y el cliente hasta que termines el envío.",
+    foreground: backgroundSupported
+      ? "Compartís tu ubicación solo con la app abierta. Con la pantalla apagada el cliente deja de verte."
+      : "Compartís tu ubicación solo con la app abierta (en Expo Go no hay segundo plano).",
+    denied: "Sin permiso de ubicación el cliente no puede seguir el envío.",
+    gpsOff: "Prendé la ubicación del teléfono para que el cliente pueda seguir el envío.",
+    unsupported: "Desde la web no se comparte la ubicación: usá la app.",
+  }[state];
+  const action =
+    state === "foreground" && canUpgrade
+      ? { label: "Permitir siempre", onPress: () => void requestBackground() }
+      : state === "denied"
+        ? { label: "Abrir ajustes", onPress: openSettings }
+        : state === "gpsOff"
+          ? { label: "Reintentar", onPress: retry }
+          : null;
+
+  return (
+    <View style={[styles.notice, { backgroundColor: ok ? t.successBg : t.dangerBg }]} accessibilityLiveRegion="polite">
+      <Icon name={ok ? "location" : "warning"} size={18} color={ok ? t.success : t.danger} />
+      <Text style={{ color: ok ? t.success : t.danger, flex: 1, fontWeight: "600" }}>{text}</Text>
+      {action && (
+        <Pressable onPress={action.onPress} accessibilityRole="button" hitSlop={6}>
+          <Text style={{ color: ok ? t.success : t.danger, fontWeight: "800", textDecorationLine: "underline" }}>{action.label}</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 

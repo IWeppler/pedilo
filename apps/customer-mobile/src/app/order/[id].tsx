@@ -1,5 +1,5 @@
 import { ApiError, type Order, unwrap } from "@pedilo/api-client";
-import { customerCanCancel, formatARS, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
+import { CUSTOMER_TRACKING_STATUSES, customerCanCancel, type DeliveryStatus, formatARS, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useEffect, useState } from "react";
@@ -9,9 +9,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/text";
 import { Icon, type IconName } from "@/components/icon";
 import { ClaimSection } from "@/components/claim-section";
+import { CourierMap } from "@/components/courier-map";
 import { describeSlot } from "@/components/slot-picker";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { api, useOrder } from "@/lib/api";
+import { locationAgeLabel } from "@/lib/courier-location";
 import { openCardPayment } from "@/lib/card-payment";
 import { useMyOrders } from "@/lib/my-orders";
 import { registerOrderForPush } from "@/lib/push";
@@ -156,6 +158,20 @@ export default function OrderScreen() {
                   Te lo lleva {o.tracking.courier.name} ({VEHICLE_LABELS[o.tracking.courier.vehicle as Vehicle].toLowerCase()})
                 </Text>
               </View>
+            )}
+            {/* Seguimiento en vivo (ADR 0022): desde que el repartidor retiró el pedido. */}
+            {o.tracking.courier && o.tracking.courierLocation ? (
+              <View style={{ gap: space.xs }}>
+                <CourierMap location={o.tracking.courierLocation} courierName={o.tracking.courier.name} />
+                <Text style={[styles.meta, { color: t.muted }]}>
+                  Ubicación de {o.tracking.courier.name} {locationAgeLabel(o.tracking.courierLocation.recordedAt)}
+                </Text>
+              </View>
+            ) : (
+              o.tracking.courier &&
+              CUSTOMER_TRACKING_STATUSES.includes(o.tracking.status as DeliveryStatus) && (
+                <Text style={[styles.meta, { color: t.muted }]}>Ya está en camino. Cuando tengamos su ubicación la vas a ver acá en el mapa.</Text>
+              )
             )}
             {o.tracking.pin && (
               <View style={{ gap: 4 }}>

@@ -8,7 +8,12 @@
     "scheme": "pedilo-courier",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "location"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -34,7 +39,17 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Pedilo Repartidor usa tu ubicación durante un envío para que el comercio y el cliente sepan por dónde va el pedido.",
+          "locationAlwaysAndWhenInUsePermission": "Pedilo Repartidor usa tu ubicación durante un envío, también con la pantalla apagada, para que el cliente siga su pedido. Deja de compartirla al terminar.",
+          "locationAlwaysPermission": "Pedilo Repartidor usa tu ubicación durante un envío, también con la pantalla apagada, para que el cliente siga su pedido. Deja de compartirla al terminar.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

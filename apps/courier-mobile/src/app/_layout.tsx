@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { Loading } from "@/components/ui";
 import { AuthProvider, useAuth } from "@/lib/auth";
+// Registra la tarea de ubicación en segundo plano al arrancar (ADR 0022).
+import "@/lib/location";
 import { OutboxProvider } from "@/lib/outbox";
 import { useTheme } from "@/lib/theme";
 

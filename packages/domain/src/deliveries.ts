@@ -60,6 +60,20 @@ export const ACTIVE_COURIER_STATUSES: readonly DeliveryStatus[] = [
 ];
 
 /**
+ * Seguimiento en vivo (ADR 0022). El repartidor comparte su ubicación mientras tiene un reparto
+ * en `ACTIVE_COURIER_STATUSES`; el comercio la ve todo ese tiempo y el cliente solo desde que
+ * el paquete salió del comercio.
+ */
+export const CUSTOMER_TRACKING_STATUSES: readonly DeliveryStatus[] = [S.PICKED_UP, S.ARRIVING_DROPOFF];
+
+/** Un punto más viejo que esto no se muestra: el repartidor perdió señal o cerró la app. */
+export const COURIER_LOCATION_MAX_AGE_MS = 10 * 60 * 1000;
+
+/** Cada cuánto manda su ubicación la app del repartidor (y a partir de cuántos metros). */
+export const COURIER_LOCATION_INTERVAL_MS = 15_000;
+export const COURIER_LOCATION_DISTANCE_M = 10;
+
+/**
  * ¿Se puede exponer la dirección exacta de entrega al repartidor?
  * Nunca antes de la asignación (SPEC §9.2).
  */

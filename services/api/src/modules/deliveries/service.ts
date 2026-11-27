@@ -3,8 +3,10 @@ import { randomInt } from "node:crypto";
 import {
   ACTIVE_COURIER_STATUSES,
   canRevealDropoffAddress,
+  COURIER_LOCATION_MAX_AGE_MS,
   courierDeliveryActions,
   CourierStatus,
+  CUSTOMER_TRACKING_STATUSES,
   deliveryStateMachine,
   DeliveryStatus,
   type Vehicle,
@@ -16,6 +18,7 @@ import { badRequest, conflict, forbidden, isUniqueViolation, notFound } from "..
 import { type Actor, recordAudit } from "../audit/service";
 import { getMerchantAccess, getMerchantNames } from "../merchants/service";
 import {
+  courierLocations,
   courierMerchantEntries,
   type CourierMerchantEntryKind,
   courierProfiles,
@@ -82,6 +85,8 @@ async function changeStatus(
     reason: actor.reason ?? null,
     eventId: actor.eventId ?? null,
   });
+  // Terminó (o soltó) su último reparto activo: deja de compartir ubicación (ADR 0022).
+  if (row.courierId && !ACTIVE_COURIER_STATUSES.includes(to)) await clearLocationIfIdle(tx, row.courierId);
   for (const listener of listeners) {
     await listener(tx, { deliveryId: row.id, orderId: row.orderId, from: row.status, to, reason: actor.reason ?? null });
   }
@@ -164,6 +169,8 @@ export interface DeliveryDto {
   /** Solo para el comercio: el repartidor nunca lo ve. */
   pin: string | null;
   pinLocked: boolean;
+  /** Última ubicación del repartidor (solo para el comercio, con un reparto en curso; ADR 0022). */
+  courierLocation: CourierLocationDto | null;
   offerExpiresAt: string | null;
   statusReason: string | null;
   assignedAt: string | null;
@@ -174,7 +181,13 @@ export interface DeliveryDto {
 }
 
 /** `reveal`: mostrar destino y destinatario (comercio siempre; repartidor solo asignado). */
-function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, reveal: boolean, showPin: boolean): DeliveryDto {
+function toDeliveryDto(
+  d: DeliveryRow,
+  courier: CourierProfileRow | undefined,
+  reveal: boolean,
+  showPin: boolean,
+  location: CourierLocationDto | null = null,
+): DeliveryDto {
   return {
     id: d.id,
     orderId: d.orderId,
@@ -192,6 +205,7 @@ function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, r
     pinRequired: d.pinRequired,
     pin: showPin && d.pinRequired ? d.dropoffPin : null,
     pinLocked: d.pinRequired && d.pinAttempts >= MAX_PIN_ATTEMPTS,
+    courierLocation: location,
     offerExpiresAt: d.offerExpiresAt?.toISOString() ?? null,
     statusReason: d.statusReason,
     assignedAt: d.assignedAt?.toISOString() ?? null,
@@ -202,16 +216,28 @@ function toDeliveryDto(d: DeliveryRow, courier: CourierProfileRow | undefined, r
   };
 }
 
+/** `forMerchant`: incluye el PIN y la ubicación del repartidor. */
 async function withCouriers(
   db: DbOrTx,
   rows: DeliveryRow[],
   reveal: (d: DeliveryRow) => boolean,
-  showPin = false,
+  forMerchant = false,
 ): Promise<DeliveryDto[]> {
   const ids = [...new Set(rows.map((r) => r.courierId).filter((x): x is string => x !== null))];
-  const couriers = ids.length ? await db.select().from(courierProfiles).where(inArray(courierProfiles.id, ids)) : [];
+  const [couriers, locations] = await Promise.all([
+    ids.length ? db.select().from(courierProfiles).where(inArray(courierProfiles.id, ids)) : [],
+    forMerchant ? freshLocations(db, ids) : new Map<string, CourierLocationDto>(),
+  ]);
   const byId = new Map(couriers.map((c) => [c.id, c]));
-  return rows.map((r) => toDeliveryDto(r, r.courierId ? byId.get(r.courierId) : undefined, reveal(r), showPin));
+  return rows.map((r) =>
+    toDeliveryDto(
+      r,
+      r.courierId ? byId.get(r.courierId) : undefined,
+      reveal(r),
+      forMerchant,
+      r.courierId && ACTIVE_COURIER_STATUSES.includes(r.status) ? (locations.get(r.courierId) ?? null) : null,
+    ),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -666,23 +692,129 @@ export async function resetPinAttempts(db: Db, merchantId: string, deliveryId: s
 }
 
 /** Lo que el cliente ve del reparto de su pedido: PIN (mientras no se entregó) y quién lo lleva. */
-export async function getCustomerDeliveryInfo(
-  db: DbOrTx,
-  orderId: string,
-): Promise<{ status: DeliveryStatus; pin: string | null; courier: { name: string; vehicle: Vehicle } | null } | null> {
+export interface CustomerDeliveryInfo {
+  status: DeliveryStatus;
+  pin: string | null;
+  courier: { name: string; vehicle: Vehicle } | null;
+  /** Dónde está el repartidor: solo con el paquete ya retirado y un punto reciente (ADR 0022). */
+  courierLocation: CourierLocationDto | null;
+}
+
+export async function getCustomerDeliveryInfo(db: DbOrTx, orderId: string): Promise<CustomerDeliveryInfo | null> {
   const [row] = await db
     .select()
     .from(deliveries)
     .where(and(eq(deliveries.orderId, orderId), notInArray(deliveries.status, [DeliveryStatus.CANCELLED])));
   if (!row) return null;
-  const [courier] = row.courierId ? await db.select().from(courierProfiles).where(eq(courierProfiles.id, row.courierId)) : [];
+  const tracking = row.courierId !== null && CUSTOMER_TRACKING_STATUSES.includes(row.status);
+  const [[courier], locations] = await Promise.all([
+    row.courierId ? db.select().from(courierProfiles).where(eq(courierProfiles.id, row.courierId)) : [],
+    tracking ? freshLocations(db, [row.courierId!]) : new Map<string, CourierLocationDto>(),
+  ]);
   const open = !["DELIVERED", "DELIVERY_FAILED"].includes(row.status);
   return {
     status: row.status,
     pin: row.pinRequired && open ? row.dropoffPin : null,
     // Solo el primer nombre: el cliente no necesita el teléfono del repartidor.
     courier: courier ? { name: courier.displayName.split(" ")[0]!, vehicle: courier.vehicle } : null,
+    courierLocation: tracking ? (locations.get(row.courierId!) ?? null) : null,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Seguimiento en vivo (ADR 0022)
+// ---------------------------------------------------------------------------
+
+export interface CourierLocationDto {
+  lat: number;
+  lng: number;
+  accuracyM: number | null;
+  /** Cuándo se tomó el punto (hora del servidor). */
+  recordedAt: string;
+}
+
+/** Un punto que llega con más antigüedad que esto ya no sirve para seguir el envío: se ignora. */
+export const MAX_LOCATION_INPUT_AGE_MS = 5 * 60 * 1000;
+
+/** Últimas ubicaciones recientes de varios repartidores (las viejas no se muestran). */
+async function freshLocations(db: DbOrTx, courierIds: string[], now = new Date()): Promise<Map<string, CourierLocationDto>> {
+  if (courierIds.length === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(courierLocations)
+    .where(
+      and(
+        inArray(courierLocations.courierId, courierIds),
+        gt(courierLocations.recordedAt, new Date(now.getTime() - COURIER_LOCATION_MAX_AGE_MS)),
+      ),
+    );
+  return new Map(
+    rows.map((l) => [l.courierId, { lat: l.lat, lng: l.lng, accuracyM: l.accuracyM, recordedAt: l.recordedAt.toISOString() }]),
+  );
+}
+
+/** Si al repartidor no le queda ningún reparto activo, se borra su ubicación. */
+async function clearLocationIfIdle(db: DbOrTx, courierId: string): Promise<void> {
+  const [active] = await db
+    .select({ id: deliveries.id })
+    .from(deliveries)
+    .where(and(eq(deliveries.courierId, courierId), inArray(deliveries.status, [...ACTIVE_COURIER_STATUSES])))
+    .limit(1);
+  if (!active) await db.delete(courierLocations).where(eq(courierLocations.courierId, courierId));
+}
+
+/**
+ * El repartidor manda dónde está. Solo se guarda con un reparto en curso; si no tiene ninguno se
+ * borra lo que hubiera y se responde `sharing: false` para que la app deje de mandar.
+ *
+ * El teléfono manda la antigüedad del punto (`ageMs`), no su hora: un reloj mal puesto no rompe
+ * nada. Un punto más viejo que el guardado (llegó tarde, fuera de orden) no lo pisa.
+ */
+export async function updateCourierLocation(
+  db: Db,
+  userId: string,
+  input: { lat: number; lng: number; accuracyM?: number | null | undefined; ageMs?: number | undefined },
+  now = new Date(),
+): Promise<{ sharing: boolean }> {
+  const courier = await myCourier(db, userId);
+  assertApproved(courier);
+  const [active] = await db
+    .select({ id: deliveries.id })
+    .from(deliveries)
+    .where(and(eq(deliveries.courierId, courier.id), inArray(deliveries.status, [...ACTIVE_COURIER_STATUSES])))
+    .limit(1);
+  if (!active) {
+    await db.delete(courierLocations).where(eq(courierLocations.courierId, courier.id));
+    return { sharing: false };
+  }
+  const ageMs = Math.max(0, input.ageMs ?? 0);
+  if (ageMs > MAX_LOCATION_INPUT_AGE_MS) return { sharing: true };
+  const point = {
+    lat: input.lat,
+    lng: input.lng,
+    accuracyM: input.accuracyM == null ? null : Math.round(input.accuracyM),
+    recordedAt: new Date(now.getTime() - ageMs),
+    receivedAt: now,
+  };
+  await db
+    .insert(courierLocations)
+    .values({ courierId: courier.id, ...point })
+    .onConflictDoUpdate({
+      target: courierLocations.courierId,
+      set: point,
+      setWhere: sql`excluded.recorded_at > ${courierLocations.recordedAt}`,
+    });
+  await db.update(courierProfiles).set({ lastSeenAt: now }).where(eq(courierProfiles.id, courier.id));
+  return { sharing: true };
+}
+
+/** Red de seguridad: borra ubicaciones viejas que quedaron (la app dejó de mandar). */
+export async function purgeStaleCourierLocations(db: Db, now = new Date()): Promise<number> {
+  const rows = await db
+    .delete(courierLocations)
+    .where(lte(courierLocations.recordedAt, new Date(now.getTime() - COURIER_LOCATION_MAX_AGE_MS)))
+    .returning({ id: courierLocations.courierId });
+  return rows.length;
 }
 
 // ---------------------------------------------------------------------------
