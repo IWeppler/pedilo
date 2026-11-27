@@ -13,8 +13,11 @@ La app usa la API del mismo host que sirve Metro (puerto 4000). Para otra URL, `
 
 ## Login
 
-- **Con Supabase** (`EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, ver `.env.example`): código de 6 dígitos por email. La plantilla «Magic Link» de Supabase tiene que incluir `{{ .Token }}`.
-- **Desarrollo**: «Entrar con token de desarrollo» y pegar el de `npm run dev:token -w @pedilo/api -- --name Juan` (API en modo local).
+Solo con Supabase Auth (`EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, ver `.env.example`): email → código por email, sin contraseña.
+
+- La plantilla «Magic Link» de Supabase tiene que incluir `{{ .Token }}` (requiere SMTP propio).
+- El largo del código («Email OTP Length» en Supabase) tiene que coincidir con `EXPO_PUBLIC_OTP_LENGTH` (por defecto, 6).
+- Ya no hay ingreso con token de desarrollo.
 
 Después del login: registrarse como repartidor, aprobarlo en el admin (Repartidores) y ponerse «Disponible».
 

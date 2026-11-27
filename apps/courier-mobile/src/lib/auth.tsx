@@ -7,13 +7,13 @@ import { kv } from "./storage";
 
 /**
  * Sesión del repartidor (ADR 0004/0015).
- * - Producción: Supabase Auth con código por email (sin links ni deep links).
- * - Desarrollo: también se puede pegar un token de `npm run dev:token -w @pedilo/api`.
+ * Supabase Auth con código por email (sin links ni deep links ni contraseña).
  */
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-const DEV_TOKEN_KEY = "pedilo.courier.devToken";
+/** Donde versiones anteriores guardaban un token de desarrollo: se borra al abrir. */
+const LEGACY_DEV_TOKEN_KEY = "pedilo.courier.devToken";
 
 /** Supabase guarda la sesión en el teléfono (expo-sqlite kv) y la renueva sola. */
 const supabase: SupabaseClient | null =
@@ -31,19 +31,14 @@ const supabase: SupabaseClient | null =
 export const supabaseConfigured = supabase !== null;
 
 /**
- * Token para la API: el de desarrollo o el de la sesión de Supabase. Vive fuera de React porque
- * la tarea de ubicación en segundo plano (ADR 0022) corre aunque la app no tenga pantallas.
+ * Token de la sesión para la API. Vive fuera de React porque la tarea de ubicación en segundo
+ * plano (ADR 0022) corre aunque la app no tenga pantallas.
  */
-let devTokenCache: string | null | undefined; // undefined = todavía no se leyó del teléfono
 async function currentToken(): Promise<string | null> {
-  if (devTokenCache === undefined) devTokenCache = await kv.get(DEV_TOKEN_KEY);
-  if (devTokenCache) return devTokenCache;
   const { data } = (await supabase?.auth.getSession()) ?? { data: { session: null } };
   return data.session?.access_token ?? null;
 }
 setTokenSource(currentToken);
-/** El login con token pegado solo existe en desarrollo o si no hay Supabase configurado. */
-export const devLoginAllowed = __DEV__ || !supabase;
 
 type Status = "loading" | "signedOut" | "signedIn";
 
@@ -52,7 +47,6 @@ interface AuthValue {
   email: string | null;
   sendCode: (email: string) => Promise<string | null>;
   verifyCode: (email: string, code: string) => Promise<string | null>;
-  signInWithDevToken: (token: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -64,12 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const stored = await kv.get(DEV_TOKEN_KEY);
-      const session = stored ? null : (await supabase?.auth.getSession())?.data.session;
+      void kv.remove(LEGACY_DEV_TOKEN_KEY).catch(() => null);
+      const session = (await supabase?.auth.getSession())?.data.session;
       if (cancelled) return;
-      devTokenCache = stored;
       setEmail(session?.user.email ?? null);
-      setStatus(stored || session ? "signedIn" : "signedOut");
+      setStatus(session ? "signedIn" : "signedOut");
     })();
     const sub = supabase?.auth.onAuthStateChange((_event, session) => {
       setEmail(session?.user.email ?? null);
@@ -91,31 +84,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!supabase) return "El login por email no está configurado en esta versión.";
     const { error } = await supabase.auth.signInWithOtp({ email: address, options: { shouldCreateUser: true } });
     if (!error) return null;
-    return error.status === 429 ? "Pediste demasiados códigos. Esperá unos minutos." : "No pudimos enviar el código. Probá de nuevo.";
+    return error.status === 429 ? "Pediste muchos códigos seguidos. Esperá un minuto y pedí otro." : "No se pudo enviar el código. Revisá el email y probá de nuevo.";
   }, []);
 
   const verifyCode = useCallback(async (address: string, code: string) => {
     if (!supabase) return "El login por email no está configurado en esta versión.";
     const { error } = await supabase.auth.verifyOtp({ email: address, token: code, type: "email" });
-    return error ? "El código no es correcto o venció." : null;
-  }, []);
-
-  const signInWithDevToken = useCallback(async (token: string) => {
-    await kv.set(DEV_TOKEN_KEY, token);
-    devTokenCache = token;
-    setStatus("signedIn");
+    return error ? "Ese código no es correcto o ya venció. Revisá el último email o pedí otro." : null;
   }, []);
 
   const signOut = useCallback(async () => {
-    await kv.remove(DEV_TOKEN_KEY);
-    devTokenCache = null;
     await supabase?.auth.signOut();
     setStatus("signedOut");
   }, []);
 
   const value = useMemo(
-    () => ({ status, email, sendCode, verifyCode, signInWithDevToken, signOut }),
-    [status, email, sendCode, verifyCode, signInWithDevToken, signOut],
+    () => ({ status, email, sendCode, verifyCode, signOut }),
+    [status, email, sendCode, verifyCode, signOut],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

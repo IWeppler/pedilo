@@ -41,6 +41,7 @@ const ICONS = {
   bell: { ios: "bell.fill", android: "notifications" },
   person: { ios: "person.crop.circle", android: "account_circle" },
   phone: { ios: "phone.fill", android: "call" },
+  mail: { ios: "envelope.fill", android: "mail" },
   map: { ios: "map", android: "map" },
   logout: { ios: "rectangle.portrait.and.arrow.right", android: "logout" },
   sync: { ios: "arrow.triangle.2.circlepath", android: "sync" },
