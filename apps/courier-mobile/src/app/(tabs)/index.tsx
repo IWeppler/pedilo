@@ -3,13 +3,14 @@ import { formatARS } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Switch, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, StyleSheet, Switch, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text } from "@/components/text";
 import { Icon } from "@/components/icon";
 import { Card, Loading } from "@/components/ui";
 import { api, type Offer, useMe, useOffers } from "@/lib/api";
-import { radius, space, useTheme } from "@/lib/theme";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 const timeFormat = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
@@ -161,13 +162,13 @@ function Line({ icon, text }: { icon: "store" | "location" | "orders" | "cash"; 
 
 const styles = StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space.lg, paddingVertical: space.md },
-  title: { fontSize: 26, fontWeight: "800" },
+  title: { fontFamily: font.display, fontSize: 28, fontWeight: "800", letterSpacing: -0.4 },
   availability: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.pill, paddingLeft: space.md, paddingRight: 4 },
   notice: { flexDirection: "row", gap: space.sm, alignItems: "center", marginHorizontal: space.lg, borderRadius: radius.md, padding: space.md },
   empty: { flex: 1, justifyContent: "center", padding: space.xl },
   list: { padding: space.lg, gap: space.md },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" },
-  fee: { fontSize: 26, fontWeight: "800" },
+  fee: { fontFamily: font.display, fontSize: 28, fontWeight: "800", fontVariant: ["tabular-nums"] },
   line: { flexDirection: "row", gap: space.sm, alignItems: "flex-start" },
   actions: { flexDirection: "row", gap: space.md, marginTop: space.sm },
   secondary: { flex: 1, borderWidth: 1.5, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", paddingVertical: 14 },

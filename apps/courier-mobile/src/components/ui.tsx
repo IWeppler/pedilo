@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, type TextInputProps, View, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, type TextInputProps, View, type ViewStyle } from "react-native";
 
-import { cardShadow, radius, space, useTheme } from "@/lib/theme";
+import { Text, TextInput } from "@/components/text";
+import { radius, space, useTheme } from "@/lib/theme";
 
 /** Piezas chicas de UI reutilizadas en las pantallas. */
 
@@ -94,7 +95,8 @@ export function Button({
 
 export function Card({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   const t = useTheme();
-  return <View style={[styles.card, cardShadow(t), { backgroundColor: t.card }, style]}>{children}</View>;
+  // Sin sombras: la tarjeta se separa del fondo con una línea.
+  return <View style={[styles.card, { backgroundColor: t.card, borderColor: t.border }, style]}>{children}</View>;
 }
 
 /** Etiqueta + input con el estilo de la app. */
@@ -114,7 +116,7 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, padding: space.lg, gap: space.md },
+  card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.md },
   fieldLabel: { fontSize: 13, fontWeight: "600" },
   input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md, padding: space.xl },

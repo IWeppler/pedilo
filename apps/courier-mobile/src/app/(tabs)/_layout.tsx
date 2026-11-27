@@ -1,13 +1,14 @@
 import { Redirect, Tabs } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text } from "@/components/text";
 import { Icon } from "@/components/icon";
 import { Button, ErrorState, Loading } from "@/components/ui";
 import { useMe, useMyDeliveries } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { LocationSharingProvider } from "@/lib/location";
-import { space, useTheme } from "@/lib/theme";
+import { font, space, useTheme } from "@/lib/theme";
 
 /**
  * Pestañas: Ofertas, En curso y Perfil. Antes de mostrarlas: sin perfil → registro; perfil sin
@@ -43,7 +44,7 @@ export default function TabsLayout() {
           title: "En curso",
           tabBarIcon: ({ color }) => <Icon name="delivery" color={color} />,
           tabBarBadge: activeCount > 0 ? activeCount : undefined,
-          tabBarBadgeStyle: { backgroundColor: t.primary, color: t.primaryText, fontSize: 11 },
+          tabBarBadgeStyle: { backgroundColor: t.accent, color: t.accentText, fontSize: 11 },
         }}
       />
       <Tabs.Screen name="profile" options={{ title: "Perfil", tabBarIcon: ({ color }) => <Icon name="person" color={color} /> }} />
@@ -75,5 +76,5 @@ function NotApproved({ status, reason }: { status: string; reason: string | null
 const styles = StyleSheet.create({
   screen: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.lg, padding: space.xl },
   icon: { width: 88, height: 88, borderRadius: 999, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 20, fontWeight: "800", textAlign: "center" },
+  title: { fontFamily: font.display, fontSize: 22, fontWeight: "800", textAlign: "center" },
 });

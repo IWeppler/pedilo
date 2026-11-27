@@ -2,13 +2,14 @@ import { unwrap } from "@pedilo/api-client";
 import { formatARS, VEHICLE_LABELS } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text } from "@/components/text";
 import { Button, Card, Field, Loading } from "@/components/ui";
 import { api, useBalances, useMe, useMyDeliveries } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { space, useTheme } from "@/lib/theme";
+import { font, space, useTheme } from "@/lib/theme";
 
 const dateFormat = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
@@ -111,7 +112,7 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: space.lg, gap: space.md },
-  title: { fontSize: 26, fontWeight: "800" },
+  title: { fontFamily: font.display, fontSize: 28, fontWeight: "800", letterSpacing: -0.4 },
   name: { fontSize: 20, fontWeight: "800" },
   section: { fontSize: 18, fontWeight: "800", marginTop: space.sm },
   row: { flexDirection: "row", gap: space.sm, justifyContent: "space-between" },

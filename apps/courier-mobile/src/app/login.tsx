@@ -1,22 +1,11 @@
 import { type ComponentRef, useEffect, useRef, useState } from "react";
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { AccessibilityInfo, ActivityIndicator, Animated, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text, TextInput } from "@/components/text";
 import { Icon } from "@/components/icon";
 import { supabaseConfigured, useAuth } from "@/lib/auth";
-import { radius, space, useTheme } from "@/lib/theme";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Largo del código por email: tiene que coincidir con «Email OTP Length» de Supabase. */
@@ -25,9 +14,10 @@ const CODE_LENGTH = Number(process.env.EXPO_PUBLIC_OTP_LENGTH) || 6;
 const RESEND_SECONDS = 60;
 
 /**
- * Ingreso del repartidor: email → código por email (ADR 0015). Pensada para usar en la calle,
- * con una mano: letra grande, mucho contraste y botones altos. El código se manda solo al
- * completarlo; se puede pegar o dejar que el teléfono lo complete.
+ * Ingreso del repartidor: email → código por email (ADR 0015). Mismo sistema que la app del
+ * cliente: base blanca, tinta, Bricolage Grotesque en títulos y dígitos, Hanken Grotesk para leer,
+ * sin sombras; el rojo tomate solo en la marca y en el cursor del código. Pensada para la calle:
+ * letra grande, mucho contraste, botones altos. El código se manda solo al completarlo.
  */
 export default function LoginScreen() {
   const t = useTheme();
@@ -51,34 +41,38 @@ export default function LoginScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: t.primary }]}>
+    <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" bounces={false}>
-          <SafeAreaView edges={["top"]} style={styles.hero}>
-            <View style={[styles.mark, { backgroundColor: t.text }]}>
-              <Icon name="delivery" size={30} color={t.primary} />
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <View style={styles.brand} accessible accessibilityLabel="Pedilo Repartidor">
+            <View style={[styles.mark, { backgroundColor: t.accent }]}>
+              <Text style={[styles.markText, { color: t.accentText }]}>P</Text>
             </View>
+            <Text style={[styles.brandName, { color: t.text }]}>Pedilo Repartidor</Text>
+          </View>
+
+          <View style={styles.intro}>
             {step === "email" ? (
               <>
                 <Text style={[styles.headline, { color: t.text }]} accessibilityRole="header">
-                  Repartí con Pedilo
+                  Entrá para recibir envíos
                 </Text>
-                <Text style={[styles.lede, { color: t.text }]}>Ofertas de envío de los comercios de tu ciudad, en tu celular.</Text>
+                <Text style={[styles.lede, { color: t.muted }]}>Los comercios de tu ciudad te ofrecen envíos y vos elegís cuáles hacer.</Text>
               </>
             ) : (
               <>
                 <Text style={[styles.headline, { color: t.text }]} accessibilityRole="header">
                   Revisá tu email
                 </Text>
-                <Text style={[styles.lede, { color: t.text }]}>
-                  Te mandamos un código de {CODE_LENGTH} dígitos a{"\n"}
-                  <Text style={{ fontWeight: "800" }}>{address}</Text>
+                <Text style={[styles.lede, { color: t.muted }]}>
+                  Escribí el código de {CODE_LENGTH} dígitos que mandamos a{" "}
+                  <Text style={{ color: t.text, fontWeight: "700" }}>{address}</Text>
                 </Text>
               </>
             )}
-          </SafeAreaView>
+          </View>
 
-          <SafeAreaView edges={["bottom"]} style={[styles.sheet, { backgroundColor: t.background }]}>
+          <View style={styles.form}>
             {!supabaseConfigured ? (
               <Text style={[styles.body, { color: t.danger }]}>
                 Esta versión de la app no tiene configurado el ingreso. Falta EXPO_PUBLIC_SUPABASE_URL y su clave pública.
@@ -103,10 +97,10 @@ export default function LoginScreen() {
                 }}
               />
             )}
-          </SafeAreaView>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -132,8 +126,8 @@ function EmailStep({
         <Text style={[styles.label, { color: t.text }]} nativeID="email-label">
           Tu email
         </Text>
-        <View style={[styles.inputBox, { backgroundColor: t.card, borderColor: error ? t.danger : focused ? t.primary : t.border }]}>
-          <Icon name="mail" size={22} color={focused ? t.primary : t.muted} />
+        <View style={[styles.inputBox, { backgroundColor: t.surface, borderColor: error ? t.danger : focused ? t.text : t.surface }]}>
+          <Icon name="mail" size={22} color={focused ? t.text : t.muted} />
           <TextInput
             value={email}
             onChangeText={onChange}
@@ -161,7 +155,7 @@ function EmailStep({
       </View>
       <BigButton label="Enviarme el código" busyLabel="Enviando…" busy={busy} disabled={!valid} onPress={onSubmit} />
       <Text style={[styles.note, { color: t.muted }]}>
-        No hace falta contraseña: entrás con un código que llega a tu email. Si es la primera vez, después te pedimos tus datos.
+        Sin contraseña: cada vez que entres te mandamos un código. Si es la primera vez, después te pedimos tus datos.
       </Text>
     </>
   );
@@ -245,13 +239,13 @@ function CodeStep({
                   style={[
                     styles.cell,
                     {
-                      backgroundColor: digit ? t.surface : t.card,
-                      borderColor: error ? t.danger : active ? t.primary : digit ? t.surface : t.border,
+                      backgroundColor: t.surface,
+                      borderColor: error ? t.danger : active ? t.text : t.surface,
                     },
                   ]}
                 >
                   <Text style={[styles.digit, { color: t.text }]}>{digit ?? ""}</Text>
-                  {active && <View style={[styles.caret, { backgroundColor: t.primary }]} />}
+                  {active && <View style={[styles.caret, { backgroundColor: t.accent }]} />}
                 </View>
               );
             })}
@@ -332,7 +326,7 @@ function BigButton({
       accessibilityState={{ disabled: off, busy }}
       style={({ pressed }) => [
         styles.button,
-        { backgroundColor: disabled ? t.surface : t.primary, opacity: pressed ? 0.85 : 1 },
+        { backgroundColor: disabled ? t.surface : t.primary, opacity: pressed ? 0.8 : 1 },
       ]}
     >
       {busy && <ActivityIndicator color={t.primaryText} />}
@@ -343,31 +337,27 @@ function BigButton({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  hero: { paddingHorizontal: space.xl, paddingTop: space.xl, paddingBottom: 36, gap: space.md },
-  mark: { width: 56, height: 56, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", marginBottom: space.sm },
-  headline: { fontSize: 36, lineHeight: 40, fontWeight: "900", letterSpacing: -0.8 },
-  lede: { fontSize: 17, lineHeight: 24, fontWeight: "500", maxWidth: 340 },
-  sheet: {
-    flexGrow: 1,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: space.xl,
-    paddingTop: 28,
-    paddingBottom: space.xl,
-    gap: space.lg,
-  },
+  content: { flexGrow: 1, paddingHorizontal: space.xl, paddingTop: space.lg, paddingBottom: space.xl, gap: 40 },
+  brand: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  mark: { width: 36, height: 36, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  markText: { fontFamily: font.display, fontSize: 20, fontWeight: "800", marginTop: -2 },
+  brandName: { fontFamily: font.display, fontSize: 18, fontWeight: "700" },
+  intro: { gap: space.md, marginTop: space.xl },
+  headline: { fontFamily: font.display, fontSize: 36, lineHeight: 40, fontWeight: "800", letterSpacing: -0.9, maxWidth: 320 },
+  lede: { fontSize: 17, lineHeight: 25, maxWidth: 340 },
+  form: { gap: space.lg },
   label: { fontSize: 15, fontWeight: "700" },
   inputBox: { flexDirection: "row", alignItems: "center", gap: space.md, borderWidth: 2, borderRadius: radius.md, paddingHorizontal: space.lg, height: 60 },
   input: { flex: 1, fontSize: 18, height: "100%" },
   body: { fontSize: 15, lineHeight: 21, fontWeight: "600" },
   note: { fontSize: 14, lineHeight: 20 },
   cells: { flexDirection: "row", gap: space.sm, justifyContent: "space-between" },
-  cell: { flex: 1, maxWidth: 58, height: 68, borderRadius: radius.md, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  digit: { fontSize: 30, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  cell: { flex: 1, maxWidth: 58, height: 70, borderRadius: radius.md, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  digit: { fontFamily: font.display, fontSize: 32, fontWeight: "700", fontVariant: ["tabular-nums"] },
   caret: { position: "absolute", bottom: 12, width: 18, height: 3, borderRadius: 2 },
   hiddenInput: { ...StyleSheet.absoluteFill, opacity: 0, color: "transparent" },
   button: { height: 58, borderRadius: radius.pill, flexDirection: "row", gap: space.sm, alignItems: "center", justifyContent: "center" },
-  buttonText: { fontSize: 18, fontWeight: "800" },
+  buttonText: { fontSize: 17, fontWeight: "700" },
   links: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: space.md },
-  link: { fontSize: 15, fontWeight: "700", textDecorationLine: "underline", paddingVertical: space.xs },
+  link: { fontSize: 15, fontWeight: "600", textDecorationLine: "underline", paddingVertical: space.xs },
 });

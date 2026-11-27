@@ -3,13 +3,14 @@ import { type Vehicle, VEHICLE_LABELS } from "@pedilo/domain";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text } from "@/components/text";
 import { Button, Card, Chip, Field, Loading } from "@/components/ui";
 import { api, useCities } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { space, useTheme } from "@/lib/theme";
+import { font, space, useTheme } from "@/lib/theme";
 
 const VEHICLES: Vehicle[] = ["MOTO", "BIKE", "CAR", "WALK"];
 
@@ -100,7 +101,7 @@ export default function RegisterScreen() {
 
 const styles = StyleSheet.create({
   content: { padding: space.xl, gap: space.lg },
-  title: { fontSize: 24, fontWeight: "800" },
+  title: { fontFamily: font.display, fontSize: 26, fontWeight: "800", letterSpacing: -0.4 },
   label: { fontSize: 13, fontWeight: "600" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
 });

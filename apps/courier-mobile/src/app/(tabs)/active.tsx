@@ -1,14 +1,15 @@
 import { type CourierDeliveryAction, courierDeliveryActions, DELIVERY_STATUS_LABELS, type DeliveryStatus, formatARS } from "@pedilo/domain";
 import { useState } from "react";
-import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Text, TextInput } from "@/components/text";
 import { Icon, type IconName } from "@/components/icon";
 import { Badge, Card } from "@/components/ui";
 import { type Delivery, useMyDeliveries } from "@/lib/api";
 import { backgroundSupported, useLocationSharing } from "@/lib/location";
 import { type PendingAction, useOutbox } from "@/lib/outbox";
-import { radius, space, useTheme } from "@/lib/theme";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 /** Repartos asignados: retiro, entrega y acciones. Las acciones van por la cola (funcionan sin señal). */
 export default function ActiveScreen() {
@@ -297,10 +298,10 @@ function ActionButton({ label, tone, onPress, disabled }: { label: string; tone:
 
 const styles = StyleSheet.create({
   content: { padding: space.lg, gap: space.md },
-  title: { fontSize: 26, fontWeight: "800" },
+  title: { fontFamily: font.display, fontSize: 28, fontWeight: "800", letterSpacing: -0.4 },
   notice: { flexDirection: "row", gap: space.sm, alignItems: "center", borderRadius: radius.md, padding: space.md },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  reference: { fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"] },
+  reference: { fontFamily: font.display, fontSize: 18, fontWeight: "800", fontVariant: ["tabular-nums"] },
   stop: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
   stopActions: { flexDirection: "row", gap: space.sm },
   round: { width: 38, height: 38, borderRadius: 999, alignItems: "center", justifyContent: "center" },
