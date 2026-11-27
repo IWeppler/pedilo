@@ -17183,6 +17183,191 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/merchants/{merchantId}/reports/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ganancias del comercio por día y acumuladas
+         * @description Ventas de pedidos completados, comisión Pedilo y devoluciones por reclamos, día por día en la zona horaria de la liquidación. Incluye los totales del período anterior para comparar.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    days?: number;
+                };
+                header?: never;
+                path: {
+                    merchantId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Primer día del período (YYYY-MM-DD, zona horaria del comercio) */
+                            from: string;
+                            /** @description Último día del período (hoy) */
+                            to: string;
+                            timeZone: string;
+                            totals: {
+                                /** @description Pedidos completados (entregados o retirados) */
+                                orders: number;
+                                /** @description Total cobrado por esos pedidos: productos + envío */
+                                salesMinor: number;
+                                /** @description Parte de las ventas que corresponde a envíos */
+                                deliveryFeesMinor: number;
+                                /** @description Comisión Pedilo del período (devengos y ajustes del ledger) */
+                                commissionMinor: number;
+                                /** @description Devuelto a clientes en reclamos */
+                                refundsMinor: number;
+                                /** @description Ventas − comisión − devoluciones */
+                                netMinor: number;
+                                averageTicketMinor: number | null;
+                            };
+                            /** @description Mismos totales en el período anterior de igual duración, para comparar */
+                            previous: {
+                                /** @description Pedidos completados (entregados o retirados) */
+                                orders: number;
+                                /** @description Total cobrado por esos pedidos: productos + envío */
+                                salesMinor: number;
+                                /** @description Parte de las ventas que corresponde a envíos */
+                                deliveryFeesMinor: number;
+                                /** @description Comisión Pedilo del período (devengos y ajustes del ledger) */
+                                commissionMinor: number;
+                                /** @description Devuelto a clientes en reclamos */
+                                refundsMinor: number;
+                                /** @description Ventas − comisión − devoluciones */
+                                netMinor: number;
+                                averageTicketMinor: number | null;
+                            };
+                            salesByPaymentMethod: {
+                                CASH: number;
+                                TRANSFER: number;
+                                MERCADO_PAGO: number;
+                            };
+                            days: {
+                                date: string;
+                                orders: number;
+                                salesMinor: number;
+                                commissionMinor: number;
+                                refundsMinor: number;
+                                netMinor: number;
+                                /** @description Ganancia neta acumulada desde el primer día del período */
+                                cumulativeNetMinor: number;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/push/public-key": {
         parameters: {
             query?: never;

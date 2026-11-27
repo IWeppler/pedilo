@@ -36,6 +36,8 @@ import { menuRoutes } from "./modules/menu/routes";
 import { merchantRoutes } from "./modules/merchants/routes";
 import { notificationRoutes } from "./modules/notifications/routes";
 import { orderRoutes } from "./modules/orders/routes";
+import { reportRoutes } from "./modules/reports/routes";
+import { DEFAULT_SETTLEMENT_CONFIG } from "./modules/billing/settlements";
 import { applyRefundToClaim } from "./modules/claims/service";
 import { onPaidOrderCancelled } from "./modules/orders/service";
 import { payPageRoutes } from "./modules/payments/pay-page";
@@ -164,6 +166,7 @@ export async function buildApp({ config, db, tokenVerifier, payments = null }: A
     limits: config.limits,
   });
   await app.register(claimRoutes, { prefix: "/v1", db, orderTokenSecret: config.orderTokenSecret });
+  await app.register(reportRoutes, { prefix: "/v1", db, timeZone: (config.settlement ?? DEFAULT_SETTLEMENT_CONFIG).timeZone });
   await app.register(notificationRoutes, { prefix: "/v1", db, vapidPublicKey: config.push?.vapid?.publicKey ?? null });
   // Pedidos → pagos (pedido pagado que no sigue: devolución) y pagos → reclamos (devolución
   // confirmada o rechazada). Listeners para no crear ciclos entre módulos (ADR 0021).
