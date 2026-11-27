@@ -1,18 +1,19 @@
+import { formatARS, VEHICLE_LABELS } from "@pedilo/domain";
 import { Redirect, Tabs } from "expo-router";
-import { StyleSheet, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text } from "@/components/text";
 import { Icon } from "@/components/icon";
-import { Button, ErrorState, Loading } from "@/components/ui";
-import { useMe, useMyDeliveries } from "@/lib/api";
+import { ErrorState, Loading } from "@/components/ui";
+import { type Courier, useCities, useMe, useMyDeliveries } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { LocationSharingProvider } from "@/lib/location";
-import { font, space, useTheme } from "@/lib/theme";
+import { font, radius, space, useTheme } from "@/lib/theme";
 
 /**
  * Pestañas: Ofertas, En curso y Perfil. Antes de mostrarlas: sin perfil → registro; perfil sin
- * aprobar → pantalla de espera (no puede ver ofertas hasta que Pedilo lo habilite).
+ * aprobar → «Recibimos tus datos» (no puede ver ofertas hasta que Pedilo lo habilite).
  */
 export default function TabsLayout() {
   const t = useTheme();
@@ -22,7 +23,7 @@ export default function TabsLayout() {
   if (me.isPending) return <Loading />;
   if (me.isError) return <ErrorState message="No pudimos conectar con Pedilo. Revisá tu conexión." onRetry={() => void me.refetch()} />;
   if (me.data === null) return <Redirect href="/register" />;
-  if (me.data.status !== "APPROVED") return <NotApproved status={me.data.status} reason={me.data.statusReason} />;
+  if (me.data.status !== "APPROVED") return <NotApproved courier={me.data} />;
 
   const activeCount = active.data?.length ?? 0;
   return (
@@ -53,28 +54,71 @@ export default function TabsLayout() {
   );
 }
 
-function NotApproved({ status, reason }: { status: string; reason: string | null }) {
+/**
+ * Perfil sin habilitar. Recién enviado (o en revisión) muestra lo que se mandó y se actualiza
+ * solo cada 30 s (`useMe`): cuando Pedilo lo aprueba, aparecen las pestañas.
+ */
+function NotApproved({ courier }: { courier: Courier }) {
   const t = useTheme();
-  const { signOut } = useAuth();
-  const pending = status === "PENDING_REVIEW";
+  const { signOut, email } = useAuth();
+  const cities = useCities();
+  const pending = courier.status === "PENDING_REVIEW";
+  const cityName = cities.data?.find((c) => c.id === courier.cityId)?.name;
+  const rows: [string, string][] = [
+    ["Nombre", courier.displayName],
+    ["Celular", courier.phone],
+    ["Vehículo", VEHICLE_LABELS[courier.vehicle]],
+    ...(cityName ? ([["Ciudad", cityName]] as [string, string][]) : []),
+    ["Pago mínimo", courier.minFeeMinor > 0 ? formatARS(courier.minFeeMinor) : "Sin mínimo"],
+  ];
+
   return (
-    <SafeAreaView style={[styles.screen, { backgroundColor: t.background }]}>
-      <View style={[styles.icon, { backgroundColor: pending ? t.primarySoft : t.dangerBg }]}>
-        <Icon name={pending ? "clock" : "warning"} size={40} color={pending ? t.primary : t.danger} />
-      </View>
-      <Text style={[styles.title, { color: t.text }]}>
-        {pending ? "Estamos revisando tus datos" : status === "SUSPENDED" ? "Tu cuenta está suspendida" : "No pudimos aprobar tu registro"}
-      </Text>
-      <Text style={{ color: t.muted, textAlign: "center" }}>
-        {pending ? "Cuando Pedilo te habilite vas a poder recibir ofertas. Esta pantalla se actualiza sola." : (reason ?? "Escribinos para más información.")}
-      </Text>
-      <Button label="Salir" variant="outline" onPress={() => void signOut()} />
+    <SafeAreaView edges={["top", "bottom"]} style={{ flex: 1, backgroundColor: t.background }}>
+      <ScrollView contentContainerStyle={styles.screen}>
+        <View style={[styles.icon, { backgroundColor: pending ? t.successBg : t.dangerBg }]}>
+          <Icon name={pending ? "check" : "warning"} size={30} color={pending ? t.success : t.danger} />
+        </View>
+        <View style={{ gap: space.sm }}>
+          <Text style={[styles.title, { color: t.text }]} accessibilityRole="header">
+            {pending ? "Recibimos tus datos" : courier.status === "SUSPENDED" ? "Tu cuenta está suspendida" : "No pudimos aprobar tu registro"}
+          </Text>
+          <Text style={[styles.lede, { color: t.muted }]} accessibilityLiveRegion="polite">
+            {pending
+              ? "Pedilo los revisa y te habilita para recibir ofertas. No tenés que hacer nada más: cuando te aprueben, esta pantalla cambia sola."
+              : (courier.statusReason ?? "Escribinos para saber más.")}
+          </Text>
+        </View>
+
+        {pending && (
+          <View style={[styles.summary, { backgroundColor: t.surface }]}>
+            {rows.map(([label, value], i) => (
+              <View key={label} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
+                <Text style={[styles.rowLabel, { color: t.muted }]}>{label}</Text>
+                <Text style={[styles.rowValue, { color: t.text }]} selectable>
+                  {value}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        <Pressable onPress={() => void signOut()} accessibilityRole="button" hitSlop={8} style={styles.signOut}>
+          <Text style={[styles.signOutText, { color: t.muted }]}>{email ? `Salir de ${email}` : "Salir"}</Text>
+        </Pressable>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.lg, padding: space.xl },
-  icon: { width: 88, height: 88, borderRadius: 999, alignItems: "center", justifyContent: "center" },
-  title: { fontFamily: font.display, fontSize: 22, fontWeight: "800", textAlign: "center" },
+  screen: { flexGrow: 1, justifyContent: "center", gap: 28, padding: space.xl },
+  icon: { width: 56, height: 56, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  title: { fontFamily: font.display, fontSize: 32, lineHeight: 36, fontWeight: "800", letterSpacing: -0.7 },
+  lede: { fontSize: 16, lineHeight: 23, maxWidth: 360 },
+  summary: { borderRadius: radius.md, paddingHorizontal: space.lg },
+  row: { flexDirection: "row", justifyContent: "space-between", gap: space.lg, paddingVertical: 14 },
+  rowLabel: { fontSize: 15 },
+  rowValue: { fontSize: 15, fontWeight: "600", flexShrink: 1, textAlign: "right" },
+  signOut: { alignSelf: "flex-start", paddingVertical: space.xs },
+  signOutText: { fontSize: 14, fontWeight: "600", textDecorationLine: "underline" },
 });

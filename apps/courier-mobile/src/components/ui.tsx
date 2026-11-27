@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, type TextInputProps, View, type ViewStyle } from "react-native";
+import { type ReactNode, useState } from "react";
+import { ActivityIndicator, Platform, Pressable, StyleSheet, type TextInputProps, View, type ViewStyle } from "react-native";
 
 import { Text, TextInput } from "@/components/text";
 import { radius, space, useTheme } from "@/lib/theme";
@@ -99,26 +99,70 @@ export function Card({ children, style }: { children: ReactNode; style?: ViewSty
   return <View style={[styles.card, { backgroundColor: t.card, borderColor: t.border }, style]}>{children}</View>;
 }
 
-/** Etiqueta + input con el estilo de la app. */
-export function Field({ label, ...props }: { label: string } & TextInputProps) {
+/**
+ * Etiqueta + input con el estilo de la app: relleno gris que al enfocarse pasa a blanco con
+ * borde fino de tinta (el borde siempre existe, así no salta). `prefix` queda fijo a la
+ * izquierda («+54», «$»); `hint` explica el formato y `error` lo reemplaza en rojo.
+ */
+export function Field({
+  label,
+  prefix,
+  hint,
+  error,
+  ...props
+}: { label: string; prefix?: string; hint?: string; error?: string | null } & TextInputProps) {
   const t = useTheme();
+  const [focused, setFocused] = useState(false);
   return (
     <View style={{ gap: 6 }}>
-      <Text style={[styles.fieldLabel, { color: t.muted }]}>{label}</Text>
-      <TextInput
-        placeholderTextColor={t.muted}
-        accessibilityLabel={label}
-        {...props}
-        style={[styles.input, { backgroundColor: t.surface, color: t.text }, props.style]}
-      />
+      <Text style={[styles.fieldLabel, { color: t.text }]}>{label}</Text>
+      <View
+        style={[
+          styles.inputBox,
+          {
+            backgroundColor: focused ? t.background : t.surface,
+            borderColor: error ? t.danger : focused ? t.text : t.surface,
+          },
+          props.multiline && styles.inputBoxMultiline,
+        ]}
+      >
+        {prefix && <Text style={[styles.prefix, { color: t.text, borderColor: t.border }]}>{prefix}</Text>}
+        <TextInput
+          placeholderTextColor={t.muted}
+          accessibilityLabel={prefix ? `${label} (${prefix})` : label}
+          {...props}
+          onFocus={(e) => {
+            setFocused(true);
+            props.onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            props.onBlur?.(e);
+          }}
+          style={[styles.input, styles.noOutline, { color: t.text }, props.style]}
+        />
+      </View>
+      {error ? (
+        <Text style={[styles.hint, { color: t.danger, fontWeight: "600" }]} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      ) : hint ? (
+        <Text style={[styles.hint, { color: t.muted }]}>{hint}</Text>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, borderWidth: 1, padding: space.lg, gap: space.md },
-  fieldLabel: { fontSize: 13, fontWeight: "600" },
-  input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
+  fieldLabel: { fontSize: 15, fontWeight: "700" },
+  inputBox: { flexDirection: "row", alignItems: "center", borderWidth: 1.5, borderRadius: radius.md, minHeight: 56, paddingHorizontal: space.md },
+  inputBoxMultiline: { alignItems: "flex-start", paddingVertical: space.sm },
+  prefix: { fontSize: 17, fontWeight: "600", paddingRight: space.md, marginRight: space.md, borderRightWidth: 1, fontVariant: ["tabular-nums"] },
+  input: { flex: 1, fontSize: 17, paddingVertical: 14 },
+  // En web el navegador dibuja su propio contorno de foco: el foco ya lo marca la caja.
+  noOutline: Platform.select({ web: { outlineWidth: 0 } as object, default: {} }),
+  hint: { fontSize: 13, lineHeight: 18 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.md, padding: space.xl },
   body: { fontSize: 15 },
   badge: { borderRadius: 999, paddingHorizontal: space.sm, paddingVertical: 2, alignSelf: "flex-start" },
