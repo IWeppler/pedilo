@@ -126,7 +126,16 @@ function EmailStep({
         <Text style={[styles.label, { color: t.text }]} nativeID="email-label">
           Tu email
         </Text>
-        <View style={[styles.inputBox, { backgroundColor: t.surface, borderColor: error ? t.danger : focused ? t.text : t.surface }]}>
+        {/* Foco: de gris a blanco con borde fino de tinta (el borde siempre existe, así no salta). */}
+        <View
+          style={[
+            styles.inputBox,
+            {
+              backgroundColor: focused ? t.background : t.surface,
+              borderColor: error ? t.danger : focused ? t.text : t.surface,
+            },
+          ]}
+        >
           <Icon name="mail" size={22} color={focused ? t.text : t.muted} />
           <TextInput
             value={email}
@@ -144,7 +153,7 @@ function EmailStep({
             returnKeyType="send"
             accessibilityLabelledBy="email-label"
             accessibilityLabel="Tu email"
-            style={[styles.input, { color: t.text }]}
+            style={[styles.input, styles.noOutline, { color: t.text }]}
           />
         </View>
         {error && (
@@ -347,12 +356,14 @@ const styles = StyleSheet.create({
   lede: { fontSize: 17, lineHeight: 25, maxWidth: 340 },
   form: { gap: space.lg },
   label: { fontSize: 15, fontWeight: "700" },
-  inputBox: { flexDirection: "row", alignItems: "center", gap: space.md, borderWidth: 2, borderRadius: radius.md, paddingHorizontal: space.lg, height: 60 },
+  inputBox: { flexDirection: "row", alignItems: "center", gap: space.md, borderWidth: 1.5, borderRadius: radius.md, paddingHorizontal: space.lg, height: 60 },
   input: { flex: 1, fontSize: 18, height: "100%" },
+  // En web el navegador dibuja su propio contorno de foco dentro de la caja: el foco ya lo marca la caja.
+  noOutline: Platform.select({ web: { outlineWidth: 0 } as object, default: {} }),
   body: { fontSize: 15, lineHeight: 21, fontWeight: "600" },
   note: { fontSize: 14, lineHeight: 20 },
   cells: { flexDirection: "row", gap: space.sm, justifyContent: "space-between" },
-  cell: { flex: 1, maxWidth: 58, height: 70, borderRadius: radius.md, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  cell: { flex: 1, maxWidth: 58, height: 70, borderRadius: radius.md, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   digit: { fontFamily: font.display, fontSize: 32, fontWeight: "700", fontVariant: ["tabular-nums"] },
   caret: { position: "absolute", bottom: 12, width: 18, height: 3, borderRadius: 2 },
   hiddenInput: { ...StyleSheet.absoluteFill, opacity: 0, color: "transparent" },
