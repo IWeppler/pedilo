@@ -79,7 +79,13 @@ export async function buildApp({ config, db, tokenVerifier, payments = null }: A
   });
 
   await app.register(helmet, { contentSecurityPolicy: false });
-  await app.register(cors, { origin: config.corsOrigins, credentials: false });
+  // Métodos explícitos: @fastify/cors permite solo GET/HEAD/POST por defecto y el navegador
+  // frenaría los PATCH/PUT/DELETE (disponibilidad, ubicación del repartidor, paneles).
+  await app.register(cors, {
+    origin: config.corsOrigins,
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: false,
+  });
   // Límites por IP en memoria (ADR 0010): se activan por ruta con `config.rateLimit`.
   await app.register(rateLimit, {
     global: false,

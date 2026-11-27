@@ -33,7 +33,13 @@ export default function OffersScreen() {
       queryClient.setQueryData(["courier", "me"], data);
       void queryClient.invalidateQueries({ queryKey: ["courier", "offers"] });
     },
-    onError: () => setMessage("No pudimos cambiar tu disponibilidad. Revisá tu conexión."),
+    // Si la API respondió, su mensaje dice qué pasó; si no llegó a responder, es la conexión.
+    onError: (err) =>
+      setMessage(
+        err instanceof ApiError
+          ? `No se pudo cambiar tu disponibilidad: ${err.message}`
+          : "No se pudo cambiar tu disponibilidad: no hay conexión con Pedilo. Probá de nuevo.",
+      ),
   });
 
   const accept = useMutation({
