@@ -149,6 +149,7 @@ function DeliveryCard({ delivery: d, pending }: { delivery: Delivery; pending: P
         address={d.dropoff.address ?? d.dropoff.area}
         notes={d.dropoff.notes}
         phone={d.recipient?.phone ?? null}
+        point={d.dropoff.location}
       />
       <Text style={{ color: t.muted }}>{d.packageDescription}</Text>
       {d.cashToCollectMinor > 0 && (
@@ -222,6 +223,7 @@ function Stop({
   notes,
   phone,
   muted,
+  point,
 }: {
   icon: IconName;
   title: string;
@@ -230,6 +232,8 @@ function Stop({
   notes?: string | null;
   phone: string | null;
   muted?: boolean;
+  /** Punto exacto que marcó el cliente (ADR 0023): se navega ahí en vez de buscar la dirección. */
+  point?: { lat: number; lng: number } | null;
 }) {
   const t = useTheme();
   return (
@@ -240,12 +244,19 @@ function Stop({
         <Text style={{ color: t.text, fontWeight: "700" }}>{name}</Text>
         <Text style={{ color: t.text }}>{address}</Text>
         {notes && <Text style={{ color: t.muted }}>{notes}</Text>}
+        {point && <Text style={{ color: t.success, fontSize: 12, fontWeight: "700" }}>El cliente marcó su puerta en el mapa</Text>}
       </View>
       <View style={styles.stopActions}>
         <RoundButton
           icon="map"
           label={`Abrir ${address} en el mapa`}
-          onPress={() => void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`)}
+          onPress={() =>
+            void Linking.openURL(
+              point
+                ? `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lng}&travelmode=driving`
+                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`,
+            )
+          }
         />
         {phone && <RoundButton icon="phone" label={`Llamar a ${name}`} onPress={() => void Linking.openURL(`tel:${phone.replace(/[^\d+]/g, "")}`)} />}
       </View>

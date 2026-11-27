@@ -542,3 +542,45 @@ describe("seguimiento en vivo (ADR 0022)", () => {
     expect(await stored()).toHaveLength(0);
   });
 });
+
+describe("punto exacto de entrega (ADR 0023)", () => {
+  const order = (location: { lat: number; lng: number } | null) =>
+    req("POST", "/v1/public/orders", {
+      headers: { "idempotency-key": `pin-map-${++seq}-${Date.now()}` },
+      payload: {
+        merchantSlug: "pizzeria-centro",
+        branchId,
+        fulfillmentType: "DELIVERY",
+        deliveryZoneId: zoneId,
+        deliveryAddress: { line: DROPOFF, ...(location && { location }) },
+        customer: { name: "Dani", phone: `3491 900-${String(seq).padStart(3, "0")}` },
+        items: [{ productId, modifiers: [], quantity: 1 }],
+      },
+    });
+
+  it("se guarda en el pedido y llega al repartidor recién al aceptar", async () => {
+    // La sucursal en Tostado: un pin en Rosario (~300 km) se rechaza.
+    await req("PATCH", `/v1/merchants/${merchantId}/branches/${branchId}`, { token: owner, payload: { lat: -29.232, lng: -61.769 } });
+    const far = await order({ lat: -32.95, lng: -60.66 });
+    expect(far.statusCode).toBe(400);
+    expect(far.json().error.details).toMatchObject({ field: "deliveryAddress.location" });
+
+    const placed = await order({ lat: -29.2401, lng: -61.7755 });
+    expect(placed.statusCode).toBe(201);
+    const { order: o, trackingToken } = placed.json();
+    expect(o.delivery.location).toEqual({ lat: -29.2401, lng: -61.7755 });
+    const tracked = (await req("GET", `/v1/public/orders/${o.id}`, { headers: { "x-order-token": trackingToken } })).json();
+    expect(tracked.delivery.location).toEqual({ lat: -29.2401, lng: -61.7755 });
+
+    await transition(o.id, "ACCEPTED");
+    const deliveryId = (await requestCourier(o.id)).json().dispatch.id as string;
+    const offer = ((await offers(c2)).json() as Array<Record<string, unknown>>).find((x) => x.id === deliveryId)!;
+    expect(JSON.stringify(offer)).not.toContain("-29.2401");
+    expect((await accept(c2, deliveryId)).json().dropoff.location).toEqual({ lat: -29.2401, lng: -61.7755 });
+
+    // Sin pin, todo sigue igual.
+    const plain = (await order(null)).json().order;
+    expect(plain.delivery.location).toBeNull();
+    await req("PATCH", `/v1/merchants/${merchantId}/branches/${branchId}`, { token: owner, payload: { lat: null, lng: null } });
+  });
+});

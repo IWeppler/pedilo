@@ -194,6 +194,19 @@ function OrderCard({
             {o.delivery.addressLine}
             {o.delivery.addressNotes && ` (${o.delivery.addressNotes})`} · zona{" "}
             {o.delivery.zoneName}
+            {o.delivery.location && (
+              <>
+                {" · "}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${o.delivery.location.lat},${o.delivery.location.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline underline-offset-2"
+                >
+                  ver en el mapa
+                </a>
+              </>
+            )}
           </p>
         )}
         <ul className="grid gap-1.5">

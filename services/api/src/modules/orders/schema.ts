@@ -1,6 +1,6 @@
 import type { CommissionResult, FulfillmentType, MerchantCategory, OrderStatus, PaymentMethod, PaymentStatus, PlanCode } from "@pedilo/domain";
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { check, doublePrecision, index, integer, jsonb, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timestamps } from "../../lib/timestamps";
 // Solo para FKs (excepción documentada en ARCHITECTURE §4).
@@ -43,6 +43,9 @@ export const orders = pgTable(
     deliveryZoneName: text("delivery_zone_name"),
     deliveryAddressLine: text("delivery_address_line"),
     deliveryAddressNotes: text("delivery_address_notes"),
+    /** Punto exacto que marcó el cliente en el mapa (opcional, ADR 0023). */
+    deliveryLat: doublePrecision("delivery_lat"),
+    deliveryLng: doublePrecision("delivery_lng"),
     notes: text("notes"),
 
     subtotalMinor: integer("subtotal_minor").notNull(),
@@ -93,6 +96,10 @@ export const orders = pgTable(
     check(
       "orders_delivery_address_check",
       sql`${t.fulfillmentType} = 'PICKUP' OR (${t.deliveryAddressLine} IS NOT NULL AND ${t.deliveryZoneName} IS NOT NULL)`,
+    ),
+    check(
+      "orders_delivery_location_check",
+      sql`(${t.deliveryLat} IS NULL AND ${t.deliveryLng} IS NULL) OR (${t.deliveryLat} BETWEEN -90 AND 90 AND ${t.deliveryLng} BETWEEN -180 AND 180)`,
     ),
     check(
       "orders_amounts_check",

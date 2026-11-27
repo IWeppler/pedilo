@@ -15090,6 +15090,19 @@
                                   "null"
                                 ]
                               },
+                              "lat": {
+                                "description": "Ubicación de la sucursal, si la cargó (centra el mapa del punto de entrega)",
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "lng": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
                               "acceptsPickup": {
                                 "type": "boolean"
                               },
@@ -15260,6 +15273,8 @@
                               "cityId",
                               "addressLine",
                               "addressNotes",
+                              "lat",
+                              "lng",
                               "acceptsPickup",
                               "acceptsDelivery",
                               "timezone",
@@ -20605,12 +20620,41 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "location": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number",
+                                  "minimum": -90,
+                                  "maximum": 90
+                                },
+                                "lng": {
+                                  "type": "number",
+                                  "minimum": -180,
+                                  "maximum": 180
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lng"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                         }
                       },
                       "required": [
                         "area",
                         "address",
-                        "notes"
+                        "notes",
+                        "location"
                       ],
                       "additionalProperties": false
                     },
@@ -21378,12 +21422,41 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number",
+                                    "minimum": -90,
+                                    "maximum": 90
+                                  },
+                                  "lng": {
+                                    "type": "number",
+                                    "minimum": -180,
+                                    "maximum": 180
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lng"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                           }
                         },
                         "required": [
                           "area",
                           "address",
-                          "notes"
+                          "notes",
+                          "location"
                         ],
                         "additionalProperties": false
                       },
@@ -21974,12 +22047,41 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "location": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number",
+                                  "minimum": -90,
+                                  "maximum": 90
+                                },
+                                "lng": {
+                                  "type": "number",
+                                  "minimum": -180,
+                                  "maximum": 180
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lng"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                         }
                       },
                       "required": [
                         "area",
                         "address",
-                        "notes"
+                        "notes",
+                        "location"
                       ],
                       "additionalProperties": false
                     },
@@ -22792,12 +22894,41 @@
                               "string",
                               "null"
                             ]
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number",
+                                    "minimum": -90,
+                                    "maximum": 90
+                                  },
+                                  "lng": {
+                                    "type": "number",
+                                    "minimum": -180,
+                                    "maximum": 180
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lng"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                           }
                         },
                         "required": [
                           "area",
                           "address",
-                          "notes"
+                          "notes",
+                          "location"
                         ],
                         "additionalProperties": false
                       },
@@ -23363,12 +23494,41 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "location": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number",
+                                  "minimum": -90,
+                                  "maximum": 90
+                                },
+                                "lng": {
+                                  "type": "number",
+                                  "minimum": -180,
+                                  "maximum": 180
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lng"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                         }
                       },
                       "required": [
                         "area",
                         "address",
-                        "notes"
+                        "notes",
+                        "location"
                       ],
                       "additionalProperties": false
                     },
@@ -23928,12 +24088,41 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "location": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number",
+                                  "minimum": -90,
+                                  "maximum": 90
+                                },
+                                "lng": {
+                                  "type": "number",
+                                  "minimum": -180,
+                                  "maximum": 180
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lng"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                         }
                       },
                       "required": [
                         "area",
                         "address",
-                        "notes"
+                        "notes",
+                        "location"
                       ],
                       "additionalProperties": false
                     },
@@ -24473,12 +24662,41 @@
                             "string",
                             "null"
                           ]
+                        },
+                        "location": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "lat": {
+                                  "type": "number",
+                                  "minimum": -90,
+                                  "maximum": 90
+                                },
+                                "lng": {
+                                  "type": "number",
+                                  "minimum": -180,
+                                  "maximum": 180
+                                }
+                              },
+                              "required": [
+                                "lat",
+                                "lng"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                         }
                       },
                       "required": [
                         "area",
                         "address",
-                        "notes"
+                        "notes",
+                        "location"
                       ],
                       "additionalProperties": false
                     },
@@ -33405,6 +33623,33 @@
                             "type": "null"
                           }
                         ]
+                      },
+                      "location": {
+                        "description": "Punto exacto marcado en el mapa (opcional, ADR 0023). 400 si queda a más de 30 km de la sucursal",
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "lat": {
+                                "type": "number",
+                                "minimum": -90,
+                                "maximum": 90
+                              },
+                              "lng": {
+                                "type": "number",
+                                "minimum": -180,
+                                "maximum": 180
+                              }
+                            },
+                            "required": [
+                              "lat",
+                              "lng"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -33690,12 +33935,41 @@
                                     "string",
                                     "null"
                                   ]
+                                },
+                                "location": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "lat": {
+                                          "type": "number",
+                                          "minimum": -90,
+                                          "maximum": 90
+                                        },
+                                        "lng": {
+                                          "type": "number",
+                                          "minimum": -180,
+                                          "maximum": 180
+                                        }
+                                      },
+                                      "required": [
+                                        "lat",
+                                        "lng"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                                 }
                               },
                               "required": [
                                 "zoneName",
                                 "addressLine",
-                                "addressNotes"
+                                "addressNotes",
+                                "location"
                               ],
                               "additionalProperties": false
                             },
@@ -34483,12 +34757,41 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "location": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number",
+                                      "minimum": -90,
+                                      "maximum": 90
+                                    },
+                                    "lng": {
+                                      "type": "number",
+                                      "minimum": -180,
+                                      "maximum": 180
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                             }
                           },
                           "required": [
                             "zoneName",
                             "addressLine",
-                            "addressNotes"
+                            "addressNotes",
+                            "location"
                           ],
                           "additionalProperties": false
                         },
@@ -35364,12 +35667,41 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "location": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number",
+                                      "minimum": -90,
+                                      "maximum": 90
+                                    },
+                                    "lng": {
+                                      "type": "number",
+                                      "minimum": -180,
+                                      "maximum": 180
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                             }
                           },
                           "required": [
                             "zoneName",
                             "addressLine",
-                            "addressNotes"
+                            "addressNotes",
+                            "location"
                           ],
                           "additionalProperties": false
                         },
@@ -36045,12 +36377,41 @@
                                   "string",
                                   "null"
                                 ]
+                              },
+                              "location": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "lat": {
+                                        "type": "number",
+                                        "minimum": -90,
+                                        "maximum": 90
+                                      },
+                                      "lng": {
+                                        "type": "number",
+                                        "minimum": -180,
+                                        "maximum": 180
+                                      }
+                                    },
+                                    "required": [
+                                      "lat",
+                                      "lng"
+                                    ],
+                                    "additionalProperties": false
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                               }
                             },
                             "required": [
                               "zoneName",
                               "addressLine",
-                              "addressNotes"
+                              "addressNotes",
+                              "location"
                             ],
                             "additionalProperties": false
                           },
@@ -36433,12 +36794,41 @@
                                       "string",
                                       "null"
                                     ]
+                                  },
+                                  "location": {
+                                    "anyOf": [
+                                      {
+                                        "type": "object",
+                                        "properties": {
+                                          "lat": {
+                                            "type": "number",
+                                            "minimum": -90,
+                                            "maximum": 90
+                                          },
+                                          "lng": {
+                                            "type": "number",
+                                            "minimum": -180,
+                                            "maximum": 180
+                                          }
+                                        },
+                                        "required": [
+                                          "lat",
+                                          "lng"
+                                        ],
+                                        "additionalProperties": false
+                                      },
+                                      {
+                                        "type": "null"
+                                      }
+                                    ],
+                                    "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                                   }
                                 },
                                 "required": [
                                   "area",
                                   "address",
-                                  "notes"
+                                  "notes",
+                                  "location"
                                 ],
                                 "additionalProperties": false
                               },
@@ -37103,12 +37493,41 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "location": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number",
+                                      "minimum": -90,
+                                      "maximum": 90
+                                    },
+                                    "lng": {
+                                      "type": "number",
+                                      "minimum": -180,
+                                      "maximum": 180
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                             }
                           },
                           "required": [
                             "zoneName",
                             "addressLine",
-                            "addressNotes"
+                            "addressNotes",
+                            "location"
                           ],
                           "additionalProperties": false
                         },
@@ -37827,12 +38246,41 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "location": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number",
+                                      "minimum": -90,
+                                      "maximum": 90
+                                    },
+                                    "lng": {
+                                      "type": "number",
+                                      "minimum": -180,
+                                      "maximum": 180
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                             }
                           },
                           "required": [
                             "zoneName",
                             "addressLine",
-                            "addressNotes"
+                            "addressNotes",
+                            "location"
                           ],
                           "additionalProperties": false
                         },
@@ -38586,12 +39034,41 @@
                                 "string",
                                 "null"
                               ]
+                            },
+                            "location": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "lat": {
+                                      "type": "number",
+                                      "minimum": -90,
+                                      "maximum": 90
+                                    },
+                                    "lng": {
+                                      "type": "number",
+                                      "minimum": -180,
+                                      "maximum": 180
+                                    }
+                                  },
+                                  "required": [
+                                    "lat",
+                                    "lng"
+                                  ],
+                                  "additionalProperties": false
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Punto que marcó el cliente en el mapa (ADR 0023)"
                             }
                           },
                           "required": [
                             "zoneName",
                             "addressLine",
-                            "addressNotes"
+                            "addressNotes",
+                            "location"
                           ],
                           "additionalProperties": false
                         },
@@ -38974,12 +39451,41 @@
                                     "string",
                                     "null"
                                   ]
+                                },
+                                "location": {
+                                  "anyOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "lat": {
+                                          "type": "number",
+                                          "minimum": -90,
+                                          "maximum": 90
+                                        },
+                                        "lng": {
+                                          "type": "number",
+                                          "minimum": -180,
+                                          "maximum": 180
+                                        }
+                                      },
+                                      "required": [
+                                        "lat",
+                                        "lng"
+                                      ],
+                                      "additionalProperties": false
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ],
+                                  "description": "Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"
                                 }
                               },
                               "required": [
                                 "area",
                                 "address",
-                                "notes"
+                                "notes",
+                                "location"
                               ],
                               "additionalProperties": false
                             },

@@ -5493,6 +5493,9 @@ export interface paths {
                                     cityId: string;
                                     addressLine: string;
                                     addressNotes: string | null;
+                                    /** @description Ubicación de la sucursal, si la cargó (centra el mapa del punto de entrega) */
+                                    lat: number | null;
+                                    lng: number | null;
                                     acceptsPickup: boolean;
                                     acceptsDelivery: boolean;
                                     timezone: string;
@@ -7617,6 +7620,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -7925,6 +7933,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -8125,6 +8138,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -8447,6 +8465,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -8644,6 +8667,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -8838,6 +8866,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -9026,6 +9059,11 @@ export interface paths {
                                 area: string;
                                 address: string | null;
                                 notes: string | null;
+                                /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             };
                             recipient: {
                                 name: string;
@@ -12403,6 +12441,11 @@ export interface paths {
                         deliveryAddress?: {
                             line: string;
                             notes?: string | null;
+                            /** @description Punto exacto marcado en el mapa (opcional, ADR 0023). 400 si queda a más de 30 km de la sucursal */
+                            location?: {
+                                lat: number;
+                                lng: number;
+                            } | null;
                         };
                         customer: {
                             name: string;
@@ -12474,6 +12517,11 @@ export interface paths {
                                     zoneName: string;
                                     addressLine: string;
                                     addressNotes: string | null;
+                                    /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                    location: {
+                                        lat: number;
+                                        lng: number;
+                                    } | null;
                                 } | null;
                                 notes: string | null;
                                 items: {
@@ -12750,6 +12798,11 @@ export interface paths {
                                 zoneName: string;
                                 addressLine: string;
                                 addressNotes: string | null;
+                                /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             } | null;
                             notes: string | null;
                             items: {
@@ -13048,6 +13101,11 @@ export interface paths {
                                 zoneName: string;
                                 addressLine: string;
                                 addressNotes: string | null;
+                                /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             } | null;
                             notes: string | null;
                             items: {
@@ -13254,6 +13312,11 @@ export interface paths {
                                 zoneName: string;
                                 addressLine: string;
                                 addressNotes: string | null;
+                                /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             } | null;
                             notes: string | null;
                             items: {
@@ -13327,6 +13390,11 @@ export interface paths {
                                     area: string;
                                     address: string | null;
                                     notes: string | null;
+                                    /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                    location: {
+                                        lat: number;
+                                        lng: number;
+                                    } | null;
                                 };
                                 recipient: {
                                     name: string;
@@ -13540,6 +13608,11 @@ export interface paths {
                                 zoneName: string;
                                 addressLine: string;
                                 addressNotes: string | null;
+                                /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             } | null;
                             notes: string | null;
                             items: {
@@ -13759,6 +13832,11 @@ export interface paths {
                                 zoneName: string;
                                 addressLine: string;
                                 addressNotes: string | null;
+                                /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             } | null;
                             notes: string | null;
                             items: {
@@ -13989,6 +14067,11 @@ export interface paths {
                                 zoneName: string;
                                 addressLine: string;
                                 addressNotes: string | null;
+                                /** @description Punto que marcó el cliente en el mapa (ADR 0023) */
+                                location: {
+                                    lat: number;
+                                    lng: number;
+                                } | null;
                             } | null;
                             notes: string | null;
                             items: {
@@ -14062,6 +14145,11 @@ export interface paths {
                                     area: string;
                                     address: string | null;
                                     notes: string | null;
+                                    /** @description Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado */
+                                    location: {
+                                        lat: number;
+                                        lng: number;
+                                    } | null;
                                 };
                                 recipient: {
                                     name: string;

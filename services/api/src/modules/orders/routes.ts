@@ -20,6 +20,8 @@ import {
   transitionMerchantOrder,
 } from "./service";
 
+const latLngSchema = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
+
 const statusSchema = z.enum(Object.values(OrderStatus) as [OrderStatus, ...OrderStatus[]]);
 
 const orderSchema = z.object({
@@ -33,7 +35,14 @@ const orderSchema = z.object({
   paymentMethod: z.enum(["MERCADO_PAGO", "CASH", "TRANSFER"]),
   paymentStatus: z.string(),
   customer: z.object({ name: z.string(), phone: z.string() }),
-  delivery: z.object({ zoneName: z.string(), addressLine: z.string(), addressNotes: z.string().nullable() }).nullable(),
+  delivery: z
+    .object({
+      zoneName: z.string(),
+      addressLine: z.string(),
+      addressNotes: z.string().nullable(),
+      location: latLngSchema.nullable().describe("Punto que marcó el cliente en el mapa (ADR 0023)"),
+    })
+    .nullable(),
   notes: z.string().nullable(),
   items: z.array(
     z.object({
@@ -102,7 +111,12 @@ const deliverySchema = z.object({
   status: z.string().describe("DeliveryStatus (@pedilo/domain)"),
   version: z.number().int(),
   pickup: z.object({ name: z.string(), address: z.string(), phone: z.string().nullable() }),
-  dropoff: z.object({ area: z.string(), address: z.string().nullable(), notes: z.string().nullable() }),
+  dropoff: z.object({
+    area: z.string(),
+    address: z.string().nullable(),
+    notes: z.string().nullable(),
+    location: latLngSchema.nullable().describe("Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"),
+  }),
   recipient: z.object({ name: z.string(), phone: z.string() }).nullable(),
   packageDescription: z.string(),
   courierFeeMinor: z.number().int(),
@@ -155,7 +169,14 @@ const createOrderBody = z.object({
   fulfillmentType: z.enum(["PICKUP", "DELIVERY"]),
   deliveryZoneId: z.uuid().optional(),
   deliveryAddress: z
-    .object({ line: z.string().trim().min(3).max(160), notes: z.string().trim().max(200).nullable().optional() })
+    .object({
+      line: z.string().trim().min(3).max(160),
+      notes: z.string().trim().max(200).nullable().optional(),
+      location: latLngSchema
+        .nullable()
+        .optional()
+        .describe("Punto exacto marcado en el mapa (opcional, ADR 0023). 400 si queda a más de 30 km de la sucursal"),
+    })
     .optional(),
   customer: z.object({ name: z.string().trim().min(2).max(80), phone: phoneSchema }),
   notes: z.string().trim().max(500).nullable().optional(),

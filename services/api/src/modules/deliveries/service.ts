@@ -157,7 +157,8 @@ export interface DeliveryDto {
   status: DeliveryStatus;
   version: number;
   pickup: { name: string; address: string; phone: string | null };
-  dropoff: { area: string; address: string | null; notes: string | null };
+  /** `location`: punto exacto que marcó el cliente (ADR 0023); como la dirección, solo asignado. */
+  dropoff: { area: string; address: string | null; notes: string | null; location: { lat: number; lng: number } | null };
   recipient: { name: string; phone: string } | null;
   packageDescription: string;
   courierFeeMinor: number;
@@ -195,7 +196,12 @@ function toDeliveryDto(
     status: d.status,
     version: d.version,
     pickup: { name: d.pickupName, address: d.pickupAddress, phone: d.pickupPhone },
-    dropoff: { area: d.dropoffArea, address: reveal ? d.dropoffAddress : null, notes: reveal ? d.dropoffNotes : null },
+    dropoff: {
+      area: d.dropoffArea,
+      address: reveal ? d.dropoffAddress : null,
+      notes: reveal ? d.dropoffNotes : null,
+      location: reveal && d.dropoffLat !== null && d.dropoffLng !== null ? { lat: d.dropoffLat, lng: d.dropoffLng } : null,
+    },
     recipient: reveal ? { name: d.recipientName, phone: d.recipientPhone } : null,
     packageDescription: d.packageDescription,
     courierFeeMinor: d.courierFeeMinor,
@@ -251,7 +257,7 @@ export interface DeliveryRequest {
   branchId: string;
   cityId: string;
   pickup: { name: string; address: string; phone: string | null };
-  dropoff: { area: string; address: string; notes: string | null };
+  dropoff: { area: string; address: string; notes: string | null; location?: { lat: number; lng: number } | null };
   recipient: { name: string; phone: string };
   packageDescription: string;
   cashToCollectMinor: number;
@@ -286,6 +292,8 @@ export async function requestDelivery(
         dropoffArea: req.dropoff.area,
         dropoffAddress: req.dropoff.address,
         dropoffNotes: req.dropoff.notes,
+        dropoffLat: req.dropoff.location?.lat ?? null,
+        dropoffLng: req.dropoff.location?.lng ?? null,
         recipientName: req.recipient.name,
         recipientPhone: req.recipient.phone,
         packageDescription: req.packageDescription,

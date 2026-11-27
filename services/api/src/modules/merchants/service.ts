@@ -962,6 +962,8 @@ export interface PublicBranchDto {
   cityId: string;
   addressLine: string;
   addressNotes: string | null;
+  lat: number | null;
+  lng: number | null;
   acceptsPickup: boolean;
   acceptsDelivery: boolean;
   timezone: string;
@@ -1010,6 +1012,8 @@ function toPublicBranch(b: BranchDto, now: Date): PublicBranchDto {
     cityId: b.cityId,
     addressLine: b.addressLine,
     addressNotes: b.addressNotes,
+    lat: b.lat,
+    lng: b.lng,
     acceptsPickup: b.acceptsPickup,
     acceptsDelivery: b.acceptsDelivery,
     timezone: b.timezone,

@@ -6,7 +6,7 @@ import { type CourierLocation, googleMapsUrl } from "@/lib/courier-location";
 import { radius, space, useTheme } from "@/lib/theme";
 
 /** En web no hay mapa nativo (`react-native-maps` no corre en navegador): se abre Google Maps. */
-export function CourierMap({ location, courierName }: { location: CourierLocation; courierName: string }) {
+export function CourierMap({ location, courierName }: { location: CourierLocation; courierName: string; destination?: unknown }) {
   const t = useTheme();
   return (
     <Pressable

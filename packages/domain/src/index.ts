@@ -10,3 +10,4 @@ export * from "./schedule";
 export * from "./cuit";
 export * from "./menu";
 export * from "./settlements";
+export * from "./geo";

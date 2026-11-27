@@ -60,6 +60,8 @@ const offerSchema = z.object({
   expiresAt: z.string().describe("Hora del servidor"),
 });
 
+const latLngSchema = z.object({ lat: z.number().min(-90).max(90), lng: z.number().min(-180).max(180) });
+
 const courierLocationSchema = z.object({
   lat: z.number(),
   lng: z.number(),
@@ -74,7 +76,12 @@ const deliverySchema = z.object({
   status: deliveryStatusSchema,
   version: z.number().int(),
   pickup: z.object({ name: z.string(), address: z.string(), phone: z.string().nullable() }),
-  dropoff: z.object({ area: z.string(), address: z.string().nullable(), notes: z.string().nullable() }),
+  dropoff: z.object({
+    area: z.string(),
+    address: z.string().nullable(),
+    notes: z.string().nullable(),
+    location: latLngSchema.nullable().describe("Punto exacto que marcó el cliente (ADR 0023); solo con el reparto asignado"),
+  }),
   recipient: z.object({ name: z.string(), phone: z.string() }).nullable(),
   packageDescription: z.string(),
   courierFeeMinor: z.number().int(),

@@ -8,11 +8,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text, TextInput } from "@/components/text";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
+import { LocationPicker } from "@/components/location-picker";
 import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
 import { api, useBranchSlots, useMerchantCategories, useMerchantMenu } from "@/lib/api";
 import { openCardPayment } from "@/lib/card-payment";
 import { type CartLine, useCart } from "@/lib/cart";
+import { useCity } from "@/lib/city";
 import { useMyOrders } from "@/lib/my-orders";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
@@ -47,6 +49,10 @@ export default function CartScreen() {
   const [phone, setPhone] = useState(contact.phone);
   const [addressLine, setAddressLine] = useState(contact.addressLine);
   const [addressNotes, setAddressNotes] = useState(contact.addressNotes);
+  // Punto exacto en el mapa (ADR 0023): vale solo para la dirección con la que se marcó.
+  const [pin, setPin] = useState(contact.addressPin ?? null);
+  const [picking, setPicking] = useState(false);
+  const { city } = useCity();
   const [notes, setNotes] = useState("");
   const [idempotencyKey] = useState(newIdempotencyKey);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +70,7 @@ export default function CartScreen() {
   const mode = fulfillment ?? (branch?.acceptsPickup ? "PICKUP" : branch?.acceptsDelivery ? "DELIVERY" : null);
   const zone = branch?.zones.find((z) => z.id === zoneId) ?? branch?.zones[0];
   const deliveryFee = mode === "DELIVERY" ? (zone?.feeMinor ?? 0) : 0;
+  const validPin = pin && pin.forLine === addressLine.trim() ? pin : null;
   const belowMinimum = mode === "DELIVERY" && zone ? subtotalMinor < zone.minOrderMinor : false;
 
   const submit = useMutation({
@@ -77,7 +84,11 @@ export default function CartScreen() {
             fulfillmentType: mode!,
             ...(mode === "DELIVERY" && {
               deliveryZoneId: zone?.id,
-              deliveryAddress: { line: addressLine.trim(), notes: addressNotes.trim() || null },
+              deliveryAddress: {
+                line: addressLine.trim(),
+                notes: addressNotes.trim() || null,
+                location: validPin ? { lat: validPin.lat, lng: validPin.lng } : null,
+              },
             }),
             customer: { name: name.trim(), phone: phone.trim() },
             notes: notes.trim() || null,
@@ -95,7 +106,7 @@ export default function CartScreen() {
       ),
     onSuccess: ({ order, trackingToken }) => {
       save({ id: order.id, token: trackingToken, code: order.code, merchantName: order.merchant.name, createdAt: order.createdAt });
-      setContact({ name: name.trim(), phone: phone.trim(), addressLine: addressLine.trim(), addressNotes: addressNotes.trim() });
+      setContact({ name: name.trim(), phone: phone.trim(), addressLine: addressLine.trim(), addressNotes: addressNotes.trim(), addressPin: validPin });
       clear();
       router.replace({ pathname: "/order/[id]", params: { id: order.id } });
       // Con tarjeta el pedido espera el pago: se abre la pantalla de pago enseguida.
@@ -258,7 +269,35 @@ export default function CartScreen() {
                   <Card t={t} padded>
                     <Field label="Dirección" value={addressLine} onChange={setAddressLine} placeholder="Calle y número" autoComplete="street-address" />
                     <Field label="Indicaciones (opcional)" value={addressNotes} onChange={setAddressNotes} placeholder="Piso, timbre, referencia" />
+                    <Pressable
+                      accessibilityRole="button"
+                      disabled={addressLine.trim().length < 3}
+                      onPress={() => setPicking(true)}
+                      style={[styles.pinRow, { backgroundColor: validPin ? t.successBg : t.background, opacity: addressLine.trim().length < 3 ? 0.5 : 1 }]}
+                    >
+                      <Icon name={validPin ? "check" : "map"} size={20} color={validPin ? t.success : t.primary} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.infoText, { color: validPin ? t.success : t.text, fontWeight: "700" }]}>
+                          {validPin ? "Ubicación marcada en el mapa" : "Marcar en el mapa"}
+                        </Text>
+                        <Text style={[styles.meta, { color: t.muted }]}>
+                          {validPin ? "Tocá para corregirla" : addressLine.trim().length < 3 ? "Primero escribí la dirección" : "Así el repartidor llega justo a tu puerta"}
+                        </Text>
+                      </View>
+                      <Icon name="chevronRight" size={18} color={t.muted} />
+                    </Pressable>
                   </Card>
+                  <LocationPicker
+                    visible={picking}
+                    addressQuery={[addressLine.trim(), city?.name].filter(Boolean).join(", ")}
+                    initial={validPin}
+                    fallback={branch.lat !== null && branch.lng !== null ? { lat: branch.lat, lng: branch.lng } : null}
+                    onClose={() => setPicking(false)}
+                    onConfirm={(p) => {
+                      setPin({ ...p, forLine: addressLine.trim() });
+                      setPicking(false);
+                    }}
+                  />
                 </>
               )}
             </>
@@ -568,6 +607,7 @@ function SummaryRow({ label, value, strong }: { label: string; value: string; st
 }
 
 const styles = StyleSheet.create({
+  pinRow: { flexDirection: "row", alignItems: "center", gap: space.md, borderRadius: radius.md, padding: space.md },
   screen: { flex: 1 },
   content: { padding: space.lg, paddingTop: space.sm, gap: space.md, paddingBottom: space.xl },
 

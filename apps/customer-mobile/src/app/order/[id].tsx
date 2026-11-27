@@ -162,7 +162,7 @@ export default function OrderScreen() {
             {/* Seguimiento en vivo (ADR 0022): desde que el repartidor retiró el pedido. */}
             {o.tracking.courier && o.tracking.courierLocation ? (
               <View style={{ gap: space.xs }}>
-                <CourierMap location={o.tracking.courierLocation} courierName={o.tracking.courier.name} />
+                <CourierMap location={o.tracking.courierLocation} courierName={o.tracking.courier.name} destination={o.delivery?.location ?? null} />
                 <Text style={[styles.meta, { color: t.muted }]}>
                   Ubicación de {o.tracking.courier.name} {locationAgeLabel(o.tracking.courierLocation.recordedAt)}
                 </Text>

@@ -19,6 +19,8 @@ export interface CustomerContact {
   phone: string;
   addressLine: string;
   addressNotes: string;
+  /** Punto marcado en el mapa para `addressLine` (ADR 0023). Si cambia la dirección, no vale. */
+  addressPin?: { lat: number; lng: number; forLine: string } | null;
 }
 
 interface MyOrdersContextValue {

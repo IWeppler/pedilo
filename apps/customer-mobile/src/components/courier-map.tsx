@@ -1,3 +1,4 @@
+import type { LatLng } from "@pedilo/domain";
 import * as Location from "expo-location";
 import { useEffect, useRef, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
@@ -14,7 +15,16 @@ const DELTA = 0.012;
  * Mapa con el repartidor (ADR 0022). Sigue al repartidor cuando se mueve. Muestra al cliente
  * solo si ya dio permiso de ubicación (no lo pide acá).
  */
-export function CourierMap({ location, courierName }: { location: CourierLocation; courierName: string }) {
+export function CourierMap({
+  location,
+  courierName,
+  destination = null,
+}: {
+  location: CourierLocation;
+  courierName: string;
+  /** Punto de entrega que marcó el cliente (ADR 0023): se encuadran los dos. */
+  destination?: LatLng | null;
+}) {
   const t = useTheme();
   const map = useRef<MapView>(null);
   const [showMe, setShowMe] = useState(false);
@@ -27,9 +37,21 @@ export function CourierMap({ location, courierName }: { location: CourierLocatio
       .catch(() => null);
   }, []);
 
+  const destLat = destination?.lat;
+  const destLng = destination?.lng;
   useEffect(() => {
-    map.current?.animateCamera({ center: { latitude: location.lat, longitude: location.lng } }, { duration: 600 });
-  }, [location.lat, location.lng]);
+    if (destLat !== undefined && destLng !== undefined) {
+      map.current?.fitToCoordinates(
+        [
+          { latitude: location.lat, longitude: location.lng },
+          { latitude: destLat, longitude: destLng },
+        ],
+        { edgePadding: { top: 48, right: 48, bottom: 48, left: 48 }, animated: true },
+      );
+    } else {
+      map.current?.animateCamera({ center: { latitude: location.lat, longitude: location.lng } }, { duration: 600 });
+    }
+  }, [location.lat, location.lng, destLat, destLng]);
 
   useEffect(() => {
     const id = setTimeout(() => setTracksView(false), 800);
@@ -43,7 +65,8 @@ export function CourierMap({ location, courierName }: { location: CourierLocatio
         style={StyleSheet.absoluteFill}
         provider={Platform.OS === "android" ? PROVIDER_GOOGLE : undefined}
         initialRegion={{ latitude: location.lat, longitude: location.lng, latitudeDelta: DELTA, longitudeDelta: DELTA }}
-        showsUserLocation={showMe}
+        // Con el punto de entrega marcado no hace falta el punto azul del teléfono.
+        showsUserLocation={showMe && !destination}
         showsMyLocationButton={false}
         toolbarEnabled={false}
         rotateEnabled={false}
@@ -60,6 +83,18 @@ export function CourierMap({ location, courierName }: { location: CourierLocatio
             <Icon name="delivery" size={20} color={t.primaryText} />
           </View>
         </Marker>
+        {destination && (
+          <Marker
+            coordinate={{ latitude: destination.lat, longitude: destination.lng }}
+            title="Tu dirección"
+            anchor={{ x: 0.5, y: 0.5 }}
+            tracksViewChanges={tracksView}
+          >
+            <View style={[styles.marker, { backgroundColor: t.text, borderColor: "#ffffff" }]}>
+              <Icon name="home" size={18} color={t.background} />
+            </View>
+          </Marker>
+        )}
       </MapView>
     </View>
   );

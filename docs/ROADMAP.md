@@ -69,6 +69,7 @@ Falta:
 - ⬜ Puerta **G2** en dispositivos reales: dos repartidores disputando una oferta, desconexión y recuperación (SPEC §9.3).
 - ✅ PIN de entrega y cuenta comercio↔repartidor ([ADR 0016](adr/0016-pin-de-entrega-y-cuenta-con-repartidores.md)).
 - ✅ Seguimiento en vivo: el repartidor comparte su ubicación solo durante el reparto (también en segundo plano con build propio); el comercio la ve en el panel y el cliente en un mapa desde que el pedido sale ([ADR 0022](adr/0022-seguimiento-en-vivo.md)). Falta la clave de Google Maps para los builds y probarlo en la calle (G2).
+- ✅ Punto exacto de entrega: el cliente confirma su puerta moviendo el mapa; el repartidor navega a ese punto y el seguimiento muestra casa y repartidor ([ADR 0023](adr/0023-punto-exacto-de-entrega.md)).
 - ⬜ Push FCM de ofertas, chat e incidencias.
 
 ## Fase 4 — Piloto Tostado (E8, E9, E10, E11)

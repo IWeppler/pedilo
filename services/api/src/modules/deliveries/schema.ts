@@ -75,6 +75,9 @@ export const deliveries = pgTable(
     dropoffArea: text("dropoff_area").notNull(),
     dropoffAddress: text("dropoff_address").notNull(),
     dropoffNotes: text("dropoff_notes"),
+    /** Punto exacto de entrega si el cliente lo marcó (ADR 0023). Como la dirección: solo asignado. */
+    dropoffLat: doublePrecision("dropoff_lat"),
+    dropoffLng: doublePrecision("dropoff_lng"),
     recipientName: text("recipient_name").notNull(),
     recipientPhone: text("recipient_phone").notNull(),
     packageDescription: text("package_description").notNull(),
@@ -108,6 +111,10 @@ export const deliveries = pgTable(
     index("deliveries_merchant_idx").on(t.merchantId, t.createdAt),
     check("deliveries_source_check", sql`${t.source} IN ('ORDER', 'MERCHANT_REQUEST')`),
     check("deliveries_order_check", sql`${t.source} <> 'ORDER' OR ${t.orderId} IS NOT NULL`),
+    check(
+      "deliveries_dropoff_location_check",
+      sql`(${t.dropoffLat} IS NULL AND ${t.dropoffLng} IS NULL) OR (${t.dropoffLat} BETWEEN -90 AND 90 AND ${t.dropoffLng} BETWEEN -180 AND 180)`,
+    ),
     check("deliveries_pin_check", sql`NOT ${t.pinRequired} OR ${t.dropoffPin} ~ '^[0-9]{4}$'`),
     check("deliveries_amounts_check", sql`${t.courierFeeMinor} >= 0 AND ${t.tipMinor} >= 0 AND ${t.cashToCollectMinor} >= 0`),
     check(

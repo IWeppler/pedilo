@@ -82,6 +82,8 @@ const publicMenuSchema = z.object({
         cityId: z.uuid(),
         addressLine: z.string(),
         addressNotes: z.string().nullable(),
+        lat: z.number().nullable().describe("Ubicación de la sucursal, si la cargó (centra el mapa del punto de entrega)"),
+        lng: z.number().nullable(),
         acceptsPickup: z.boolean(),
         acceptsDelivery: z.boolean(),
         timezone: z.string(),

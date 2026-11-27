@@ -7,7 +7,9 @@ import {
   isOrderFinal,
   ACTIVE_COURIER_STATUSES,
   DeliveryStatus,
+  distanceMeters,
   isSchedulableSlot,
+  MAX_DROPOFF_DISTANCE_M,
   orderStatusForDeliveryStatus,
   type OpeningRange,
   parseTime,
@@ -74,7 +76,13 @@ export interface OrderDto {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   customer: { name: string; phone: string };
-  delivery: { zoneName: string; addressLine: string; addressNotes: string | null } | null;
+  delivery: {
+    zoneName: string;
+    addressLine: string;
+    addressNotes: string | null;
+    /** Punto que marcó el cliente en el mapa, si lo marcó (ADR 0023). */
+    location: { lat: number; lng: number } | null;
+  } | null;
   notes: string | null;
   items: Array<{
     id: string;
@@ -132,7 +140,12 @@ function toOrderDto(
     customer: { name: o.customerName, phone: o.customerPhone },
     delivery:
       o.fulfillmentType === FulfillmentType.DELIVERY && o.deliveryAddressLine && o.deliveryZoneName
-        ? { zoneName: o.deliveryZoneName, addressLine: o.deliveryAddressLine, addressNotes: o.deliveryAddressNotes }
+        ? {
+            zoneName: o.deliveryZoneName,
+            addressLine: o.deliveryAddressLine,
+            addressNotes: o.deliveryAddressNotes,
+            location: o.deliveryLat !== null && o.deliveryLng !== null ? { lat: o.deliveryLat, lng: o.deliveryLng } : null,
+          }
         : null,
     notes: o.notes,
     items: items
@@ -259,7 +272,9 @@ export interface CreateOrderInput {
   branchId: string;
   fulfillmentType: FulfillmentType;
   deliveryZoneId?: string | undefined;
-  deliveryAddress?: { line: string; notes?: string | null | undefined } | undefined;
+  deliveryAddress?:
+    | { line: string; notes?: string | null | undefined; location?: { lat: number; lng: number } | null | undefined }
+    | undefined;
   customer: { name: string; phone: string };
   notes?: string | null | undefined;
   /** Efectivo por defecto. */
@@ -351,6 +366,10 @@ export async function createOrder(
     zone = branch.zones.find((z) => z.id === input.deliveryZoneId);
     if (!zone) throw badRequest("Elegí una zona de envío de la sucursal", { field: "deliveryZoneId" });
     if (!input.deliveryAddress?.line.trim()) throw badRequest("Falta la dirección de entrega", { field: "deliveryAddress" });
+    const pin = input.deliveryAddress.location;
+    if (pin && branch.lat !== null && branch.lng !== null && distanceMeters(pin, { lat: branch.lat, lng: branch.lng }) > MAX_DROPOFF_DISTANCE_M) {
+      throw badRequest("El punto marcado en el mapa queda demasiado lejos del comercio", { field: "deliveryAddress.location" });
+    }
   }
 
   // Precios y validación de cada ítem con las reglas de dominio.
@@ -445,6 +464,8 @@ export async function createOrder(
           deliveryZoneName: zone?.name ?? null,
           deliveryAddressLine: zone ? input.deliveryAddress!.line.trim() : null,
           deliveryAddressNotes: zone ? input.deliveryAddress?.notes?.trim() || null : null,
+          deliveryLat: zone ? (input.deliveryAddress?.location?.lat ?? null) : null,
+          deliveryLng: zone ? (input.deliveryAddress?.location?.lng ?? null) : null,
           notes: input.notes?.trim() || null,
           subtotalMinor,
           deliveryFeeMinor,
@@ -840,7 +861,12 @@ export async function requestOrderDelivery(
         branchId: row.branchId,
         cityId: branch.cityId,
         pickup: { name: row.merchantName, address: row.branchAddress, phone: branch.phone },
-        dropoff: { area: row.deliveryZoneName ?? "—", address: row.deliveryAddressLine, notes: row.deliveryAddressNotes },
+        dropoff: {
+          area: row.deliveryZoneName ?? "—",
+          address: row.deliveryAddressLine,
+          notes: row.deliveryAddressNotes,
+          location: row.deliveryLat !== null && row.deliveryLng !== null ? { lat: row.deliveryLat, lng: row.deliveryLng } : null,
+        },
         recipient: { name: row.customerName, phone: row.customerPhone },
         packageDescription: description.length > 300 ? `${description.slice(0, 297)}…` : description,
         // Efectivo sin cobrar: lo cobra el repartidor al entregar y se lo debe al comercio (SPEC §8.3).
