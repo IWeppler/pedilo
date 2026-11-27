@@ -7,7 +7,7 @@ import { kv } from "./storage";
 
 /**
  * Sesión del repartidor (ADR 0004/0015).
- * - Producción: Supabase Auth con código de 6 dígitos por email (sin links ni deep links).
+ * - Producción: Supabase Auth con código por email (sin links ni deep links).
  * - Desarrollo: también se puede pegar un token de `npm run dev:token -w @pedilo/api`.
  */
 

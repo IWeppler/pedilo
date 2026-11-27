@@ -9,7 +9,7 @@ import { space, useTheme } from "@/lib/theme";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Ingreso con un código de 6 dígitos que llega por email. */
+/** Ingreso con el código que llega por email (6 a 10 dígitos, según la configuración de Supabase). */
 export default function LoginScreen() {
   const t = useTheme();
   const { sendCode, verifyCode, signInWithDevToken } = useAuth();
@@ -70,14 +70,14 @@ export default function LoginScreen() {
                   <Field
                     label="Código"
                     value={code}
-                    onChangeText={(v) => setCode(v.replace(/[^0-9]/g, "").slice(0, 6))}
-                    placeholder="123456"
+                    onChangeText={(v) => setCode(v.replace(/[^0-9]/g, "").slice(0, 10))}
+                    placeholder="Código del email"
                     keyboardType="number-pad"
                     autoComplete="one-time-code"
                   />
                   <Button
                     label={busy ? "Verificando…" : "Entrar"}
-                    disabled={busy || code.length !== 6}
+                    disabled={busy || code.length < 6}
                     onPress={() => void run(() => verifyCode(email.trim().toLowerCase(), code))}
                   />
                   <Pressable onPress={() => setSent(false)} accessibilityRole="button">
