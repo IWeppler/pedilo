@@ -4,27 +4,46 @@ import { MerchantForm } from "@/components/merchant-form";
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { ImageUpload } from "@/components/image-upload";
+import { MercadoPagoCard } from "@/components/mercado-pago-card";
 import { PaymentSettingsForm } from "@/components/payment-settings-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getMyMerchant, getReferenceData, operationsLocked } from "@/lib/api";
+import { getMyMerchant, getReferenceData, merchantCall, operationsLocked } from "@/lib/api";
 
-import { removeMerchantImage, savePaymentSettings, updateProfile, uploadMerchantImage } from "../actions";
+import {
+  connectMercadoPago,
+  disconnectMercadoPago,
+  removeMerchantImage,
+  savePaymentSettings,
+  updateProfile,
+  uploadMerchantImage,
+} from "../actions";
 
-export default function ProfilePage({ params }: PageProps<"/m/[merchantId]/profile">) {
+export default function ProfilePage({ params, searchParams }: PageProps<"/m/[merchantId]/profile">) {
   return (
     <>
       <PageHeader title="Datos del comercio" />
       <Suspense fallback={<TableSkeleton rows={6} />}>
-        <Profile params={params} />
+        <Profile params={params} searchParams={searchParams} />
       </Suspense>
     </>
   );
 }
 
-async function Profile({ params }: { params: PageProps<"/m/[merchantId]/profile">["params"] }) {
+async function Profile({
+  params,
+  searchParams,
+}: {
+  params: PageProps<"/m/[merchantId]/profile">["params"];
+  searchParams: PageProps<"/m/[merchantId]/profile">["searchParams"];
+}) {
   const { merchantId } = await params;
-  const [merchant, { rubros }] = await Promise.all([getMyMerchant(merchantId), getReferenceData()]);
+  const { mp } = await searchParams;
+  const [merchant, { rubros }, mpConnection] = await Promise.all([
+    getMyMerchant(merchantId),
+    getReferenceData(),
+    merchantCall((api) => api.GET("/v1/merchants/{merchantId}/mercadopago", { params: { path: { merchantId } } })),
+  ]);
   const locked = operationsLocked(merchant.status);
   if (locked) {
     return (
@@ -74,6 +93,13 @@ async function Profile({ params }: { params: PageProps<"/m/[merchantId]/profile"
           <PaymentSettingsForm action={savePaymentSettings.bind(null, merchant.id)} payment={merchant.payment} />
         </CardContent>
       </Card>
+
+      <MercadoPagoCard
+        connection={mpConnection}
+        result={typeof mp === "string" ? mp : undefined}
+        connect={connectMercadoPago.bind(null, merchant.id)}
+        disconnect={disconnectMercadoPago.bind(null, merchant.id)}
+      />
     </>
   );
 }

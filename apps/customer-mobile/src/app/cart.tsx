@@ -10,6 +10,7 @@ import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
 import { api, useBranchSlots, useMerchantCategories, useMerchantMenu } from "@/lib/api";
+import { openCardPayment } from "@/lib/card-payment";
 import { type CartLine, useCart } from "@/lib/cart";
 import { useMyOrders } from "@/lib/my-orders";
 import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
@@ -50,13 +51,14 @@ export default function CartScreen() {
   const [error, setError] = useState<string | null>(null);
   const [when, setWhen] = useState<"NOW" | "LATER" | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
-  const [payWith, setPayWith] = useState<"CASH" | "TRANSFER" | null>(null);
+  const [payWith, setPayWith] = useState<"CASH" | "TRANSFER" | "MERCADO_PAGO" | null>(null);
 
   // Valores efectivos (defaults según lo que ofrece la sucursal).
   const canSchedule = Boolean(branch?.scheduling.enabled);
   const timing = when ?? (branch && !branch.openNow && canSchedule ? "LATER" : "NOW");
   const payments = menu.data?.merchant.payment;
-  const paymentMethod = payWith ?? (payments?.cash === false && payments.transfer ? "TRANSFER" : "CASH");
+  const paymentMethod =
+    payWith ?? (payments?.cash === false ? (payments.transfer ? "TRANSFER" : payments.card ? "MERCADO_PAGO" : "CASH") : "CASH");
   const slots = useBranchSlots(cart?.merchantSlug ?? "", branch?.id, canSchedule && timing === "LATER");
   const mode = fulfillment ?? (branch?.acceptsPickup ? "PICKUP" : branch?.acceptsDelivery ? "DELIVERY" : null);
   const zone = branch?.zones.find((z) => z.id === zoneId) ?? branch?.zones[0];
@@ -95,6 +97,8 @@ export default function CartScreen() {
       setContact({ name: name.trim(), phone: phone.trim(), addressLine: addressLine.trim(), addressNotes: addressNotes.trim() });
       clear();
       router.replace({ pathname: "/order/[id]", params: { id: order.id } });
+      // Con tarjeta el pedido espera el pago: se abre la pantalla de pago enseguida.
+      if (paymentMethod === "MERCADO_PAGO") void openCardPayment(order.id, trackingToken);
     },
     onError: (err) => {
       if (err instanceof ApiError && err.code === "CONFLICT") {
@@ -290,7 +294,7 @@ export default function CartScreen() {
           )}
 
           {/* Pago */}
-          {payments?.transfer && (
+          {(payments?.transfer || payments?.card) && (
             <>
               <SectionTitle t={t}>¿Cómo pagás?</SectionTitle>
               <View style={styles.modes}>
@@ -303,13 +307,24 @@ export default function CartScreen() {
                     onPress={() => setPayWith("CASH")}
                   />
                 )}
-                <ModeOption
-                  icon="bank"
-                  label="Transferencia"
-                  detail="Te pasamos el alias"
-                  selected={paymentMethod === "TRANSFER"}
-                  onPress={() => setPayWith("TRANSFER")}
-                />
+                {payments.transfer && (
+                  <ModeOption
+                    icon="bank"
+                    label="Transferencia"
+                    detail="Te pasamos el alias"
+                    selected={paymentMethod === "TRANSFER"}
+                    onPress={() => setPayWith("TRANSFER")}
+                  />
+                )}
+                {payments.card && (
+                  <ModeOption
+                    icon="card"
+                    label="Tarjeta"
+                    detail="Con Mercado Pago"
+                    selected={paymentMethod === "MERCADO_PAGO"}
+                    onPress={() => setPayWith("MERCADO_PAGO")}
+                  />
+                )}
               </View>
             </>
           )}
@@ -330,10 +345,12 @@ export default function CartScreen() {
             <View style={[styles.divider, { backgroundColor: t.border }]} />
             <SummaryRow label="Total" value={formatARS(total)} strong />
             <View style={[styles.payment, { backgroundColor: t.surface }]}>
-              <Icon name={paymentMethod === "TRANSFER" ? "bank" : "cash"} size={18} color={t.success} />
+              <Icon name={paymentMethod === "TRANSFER" ? "bank" : paymentMethod === "MERCADO_PAGO" ? "card" : "cash"} size={18} color={t.success} />
               <Text style={[styles.meta, { color: t.text, flex: 1 }]}>
                 {paymentMethod === "TRANSFER"
                   ? "Pagás por transferencia: al confirmar te mostramos los datos de la cuenta"
+                  : paymentMethod === "MERCADO_PAGO"
+                  ? "Pagás con tarjeta al confirmar. El comercio recibe el pedido cuando se aprueba el pago"
                   : "Pagás en efectivo al recibir o retirar"}
               </Text>
             </View>

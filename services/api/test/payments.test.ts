@@ -175,6 +175,8 @@ describe("cobro con split", () => {
     expect(created.order.status).toBe("PENDING_PAYMENT");
     const pulse = (await req("GET", `/v1/merchants/${merchantId}/orders/pulse`, { token: owner })).json();
     expect(JSON.stringify(pulse)).not.toContain(created.order.id);
+    const listed = (await req("GET", `/v1/merchants/${merchantId}/orders`, { token: owner })).json();
+    expect(JSON.stringify(listed)).not.toContain(created.order.id);
 
     fake.state.nextStatus = "approved";
     const key = `att-fixed-${Date.now()}`;
@@ -195,6 +197,8 @@ describe("cobro con split", () => {
     const [order] = await ctx.db.select().from(orders).where(eq(orders.id, created.order.id));
     expect(order).toMatchObject({ paymentStatus: "APPROVED" });
     expect(order!.acceptDeadlineAt).not.toBeNull();
+    const after = (await req("GET", `/v1/merchants/${merchantId}/orders`, { token: owner })).json();
+    expect(JSON.stringify(after)).toContain(created.order.id);
   });
 
   it("un rechazo deja reintentar con otra tarjeta", async () => {
@@ -228,6 +232,18 @@ describe("cobro con split", () => {
     expect(await expireUnpaidOrders(ctx.db, new Date(Date.now() + UNPAID_ORDER_TTL_MS + 1000))).toBeGreaterThanOrEqual(1);
     const [row] = await ctx.db.select().from(orders).where(eq(orders.id, order.id));
     expect(row).toMatchObject({ status: "EXPIRED", paymentStatus: "CANCELLED" });
+  });
+});
+
+describe("pantalla de pago", () => {
+  it("se sirve sin caché, sin referrer y con la public key pedida aparte (no incrustada)", async () => {
+    const res = await req("GET", "/pay/00000000-0000-0000-0000-000000000000");
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/html");
+    expect(res.headers["cache-control"]).toContain("no-store");
+    expect(res.headers["referrer-policy"]).toBe("no-referrer");
+    expect(res.body).toContain("cardPayment");
+    expect(res.body).not.toContain("public-key-de-prueba");
   });
 });
 

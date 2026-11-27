@@ -678,17 +678,19 @@ export async function listMerchantOrders(
 ): Promise<Array<OrderDto & { dispatch: DeliveryDto | null }>> {
   await getMerchantAccess(db, merchantId, userId);
   const finals = Object.values(OrderStatus).filter(isOrderFinal);
+  // Pedidos con tarjeta nunca pagados (esperando el pago o vencidos sin pagar): el comercio no los ve.
+  const seen = sql`not (${orders.paymentMethod} = ${PaymentMethod.MERCADO_PAGO} and ${orders.paymentConfirmedAt} is null)`;
   const rows =
     scope === "active"
       ? await db
           .select()
           .from(orders)
-          .where(and(eq(orders.merchantId, merchantId), notInArray(orders.status, finals)))
+          .where(and(eq(orders.merchantId, merchantId), notInArray(orders.status, finals), seen))
           .orderBy(asc(orders.createdAt))
       : await db
           .select()
           .from(orders)
-          .where(and(eq(orders.merchantId, merchantId), inArray(orders.status, finals)))
+          .where(and(eq(orders.merchantId, merchantId), inArray(orders.status, finals), seen))
           .orderBy(desc(orders.updatedAt))
           .limit(50);
   const [list, byOrder] = await Promise.all([loadOrders(db, rows), getDeliveriesForOrders(db, rows.map((r) => r.id))]);

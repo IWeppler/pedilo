@@ -337,3 +337,18 @@ export async function updateZone(
   revalidatePath(`${home(merchantId)}/branches/${branchId}`);
   redirect(`${home(merchantId)}/branches/${branchId}#zonas`);
 }
+
+// --- Mercado Pago (ADR 0021) ---
+
+/** Pide la URL de autorización a la API y manda al dueño a Mercado Pago. Vuelve a Perfil. */
+export async function connectMercadoPago(merchantId: string): Promise<void> {
+  const { url } = await merchantCall((api) =>
+    api.POST("/v1/merchants/{merchantId}/mercadopago/connect", { params: { path: { merchantId } } }),
+  );
+  redirect(url);
+}
+
+export async function disconnectMercadoPago(merchantId: string): Promise<void> {
+  await merchantCall((api) => api.DELETE("/v1/merchants/{merchantId}/mercadopago", { params: { path: { merchantId } } }));
+  revalidatePath(`${home(merchantId)}/profile`);
+}

@@ -38,6 +38,7 @@ import { notificationRoutes } from "./modules/notifications/routes";
 import { orderRoutes } from "./modules/orders/routes";
 import { applyRefundToClaim } from "./modules/claims/service";
 import { onPaidOrderCancelled } from "./modules/orders/service";
+import { payPageRoutes } from "./modules/payments/pay-page";
 import { paymentRoutes } from "./modules/payments/routes";
 import { onRefundSettled, type PaymentsContext, refundCancelledOrder } from "./modules/payments/service";
 import type { TokenVerifier } from "./modules/identity/token-verifier";
@@ -176,6 +177,8 @@ export async function buildApp({ config, db, tokenVerifier, payments = null }: A
     webhookSecret: payments?.webhookSecret ?? null,
     panelUrl: payments?.panelUrl ?? "http://localhost:3000",
   });
+  // Pantalla de pago (Card Payment Brick): fuera de /v1 porque es HTML, no API.
+  await app.register(payPageRoutes);
 
   return app;
 }

@@ -33,6 +33,7 @@ const ICONS = {
   trash: { ios: "trash", android: "delete" },
   cash: { ios: "banknote", android: "payments" },
   bank: { ios: "building.columns", android: "account_balance" },
+  card: { ios: "creditcard.fill", android: "credit_card" },
   calendar: { ios: "calendar", android: "calendar_month" },
   bolt: { ios: "bolt.fill", android: "bolt" },
   warning: { ios: "exclamationmark.triangle.fill", android: "warning" },

@@ -11,6 +11,7 @@ import { ClaimSection } from "@/components/claim-section";
 import { describeSlot } from "@/components/slot-picker";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
 import { api, useOrder } from "@/lib/api";
+import { openCardPayment } from "@/lib/card-payment";
 import { useMyOrders } from "@/lib/my-orders";
 import { registerOrderForPush } from "@/lib/push";
 import { cardShadow, radius, space, type Theme, useTheme } from "@/lib/theme";
@@ -135,6 +136,14 @@ export default function OrderScreen() {
           </View>
         </View>
         {!final && <Text style={[styles.autoRefresh, { color: t.muted }]}>Se actualiza solo · deslizá para refrescar</Text>}
+
+        {/* Pago con tarjeta pendiente (ADR 0021): el comercio lo recibe cuando se aprueba. */}
+        {o.status === "PENDING_PAYMENT" && (
+          <Button
+            label="Pagar con tarjeta"
+            onPress={() => void openCardPayment(o.id, token).then(() => order.refetch())}
+          />
+        )}
 
         {/* Repartidor de Pedilo y PIN de entrega (ADR 0016) */}
         {o.tracking && (o.tracking.pin || o.tracking.courier) && (
@@ -308,6 +317,8 @@ function TransferRow({ t, label, value }: { t: Theme; label: string; value: stri
 function statusMessage(o: Order): string | null {
   if (FAILED.includes(o.status)) return o.statusReason ? `Motivo: ${o.statusReason}` : null;
   switch (o.status) {
+    case "PENDING_PAYMENT":
+      return `Falta pagar con tarjeta. ${o.merchant.name} recibe el pedido cuando se aprueba el pago (tenés 30 minutos).`;
     case "PLACED":
       return o.scheduledFor
         ? `Pedido programado para ${describeSlot(o.scheduledFor, ORDER_TIMEZONE)}. Esperando que ${o.merchant.name} lo confirme.`

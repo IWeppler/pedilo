@@ -15,5 +15,9 @@ SPEC §8: el cliente paga con tarjeta, el dinero va al comercio y Pedilo cobra s
 - Con tarjeta la comisión **no** se devenga como deuda del comercio (ya la retuvo el split).
 - Módulos sin ciclos: pedidos emite «pedido pagado que no sigue» y pagos emite «reembolso resuelto»; `app.ts` conecta los listeners.
 
+- **Pantalla de pago**: la API sirve `/pay/{orderId}#t={token}` (Card Payment Brick, 1 cuota). El token de seguimiento va en el fragmento; la public key (la de la app de Pedilo, como indica la guía de marketplace) se pide sin caché a `/v1/payments/config`. La app la abre con `expo-web-browser` y la página vuelve a `pedilo://order/{id}`.
+- **Panel**: «Tarjeta con Mercado Pago» en Perfil (conectar/desconectar; solo el dueño). Los pedidos con tarjeta nunca pagados no aparecen en la lista del comercio.
+
 ## Consecuencias
-- Pendiente: pantalla de pago (Card Payment Brick), conexión en el panel, verificar si el token de tarjeta debe generarse con la public key del comercio, webhook con URL pública https, prueba real con usuarios de prueba.
+- Pendiente: webhook con URL pública https y `MP_WEBHOOK_SECRET`; prueba de punta a punta con un vendedor y un comprador de prueba.
+- La comisión de un reembolso la reparte Mercado Pago en proporción; si el comercio no tiene saldo, el reembolso falla y va a revisión.
