@@ -3,26 +3,24 @@
 Seguimiento del roadmap del [SPEC §13](SPEC.md#13-roadmap-hitos-y-puertas-de-salida). Se actualiza al cerrar cada tanda de trabajo.
 Leyenda: ✅ hecho · 🟡 parcial · ⬜ pendiente · ⛔ bloqueado.
 
-**Última actualización:** 2026-11-25
+**Última actualización:** 2026-11-26
 
 ## Resumen
 
 | Fase | Estado | Puerta |
 |---|---|---|
-| 0 — Viabilidad | ⬜ No empezada (es trabajo fuera del código) | G0 ⛔ bloquea pagos reales |
+| 0 — Viabilidad | ✅ Dada por cerrada (2026-11-26) | G0 ✅ |
 | 1 — Plataforma y catálogo | 🟡 Casi completa | — |
 | 2 — Primer pedido real | 🟡 Pedido sin dinero funcionando | G1 ⬜ · G3 ⬜ |
 | 3 — Reparto | 🟡 backend y app listos, falta probar en dispositivos | G2 🟡 (probado en API) |
 | 4 — Piloto Tostado | ⬜ | G4 ⬜ |
 | 5 — Lanzamiento público | ⬜ | G5 ⬜ |
 
-## Fase 0 — Viabilidad (bloqueante para dinero real)
+## Fase 0 — Viabilidad
 
-- ⬜ Prueba real de Mercado Pago Checkout API + Split 1:1: liquidación, reembolso total/parcial, saldo insuficiente.
-- ⬜ Revisión legal y fiscal puntual (términos, privacidad, rol del marketplace, reclamos, repartidores).
-- ⬜ Entrevistas con 3–5 comercios y repartidores de Tostado; simulación de pricing por rubro.
+Dada por cerrada el 2026-11-26: no se sigue como tarea pendiente. La prueba real de Mercado Pago pasó a la Fase 2 y el ADR de hosting a la Fase 4.
+
 - ✅ ADRs técnicos iniciales: [0001](adr/0001-monorepo-npm-workspaces.md)–[0007](adr/0007-pedidos-invitado-sin-dinero.md).
-- ⬜ ADRs pendientes: hosting de la API (realtime por SSE cuando se decida el hosting).
 
 ## Fase 1 — Plataforma y catálogo (E1, E2)
 
@@ -41,7 +39,7 @@ Falta:
 - ✅ CI en GitHub Actions (`.github/workflows/ci.yml`): typecheck, lint, contrato de la API al día, tests y build de los paneles en cada push a main y cada PR.
 - ✅ Fotos de productos, logo y portada: subida desde el panel, reprocesadas a WebP sin metadatos, disco local en desarrollo y Supabase Storage en producción ([ADR 0017](adr/0017-fotos-y-almacenamiento.md)). Falta crear el bucket en Supabase.
 - ✅ Cierres excepcionales por sucursal: feriados y vacaciones ([ADR 0018](adr/0018-cierres-excepcionales.md)). ✅ Suspender y reactivar comercios desde el admin.
-- ⬜ Invitar operadores al comercio.
+- Fuera del MVP: invitar operadores al comercio (un solo usuario por comercio en el MVP).
 - ⬜ Asignar categoría global a productos desde el panel (la API ya lo soporta).
 
 ## Fase 2 — Primer pedido real (E3, E4, E5, E7)
@@ -59,7 +57,7 @@ Falta:
 - ✅ Rate limiting de pedidos anónimos: por IP (en memoria) y por teléfono (en la base) ([ADR 0010](adr/0010-limites-anti-abuso-pedidos.md)).
 - ✅ Pedidos programados: franjas de 30 min dentro del horario, anticipación mínima, días hacia adelante y cupo por franja ([ADR 0011](adr/0011-pedidos-programados-y-transferencia.md)).
 - ✅ Transferencia como medio de pago: alias/CBU del comercio copiado al pedido y confirmación manual del cobro en el panel ([ADR 0011](adr/0011-pedidos-programados-y-transferencia.md)). Pendiente: comprobante opcional del cliente.
-- ⛔ Pago con Mercado Pago y reembolsos (E5) — bloqueado por G0 → puerta **G1**.
+- 🟡 Pago con Mercado Pago y reembolsos (E5): Split 1:1 con OAuth, cobro, webhook y reembolsos en la API, Card Payment Brick en la app y conexión en el panel ([ADR 0021](adr/0021-mercado-pago-split.md)). Falta la prueba real con túnel https: liquidación, reembolso total/parcial y saldo insuficiente → puerta **G1**.
 - ✅ Planes, comisiones y ledger (E9): pricing versionado en la base, plan por comercio con historial, comisión por tramos y tope congelada en cada pedido, devengo al completar, ajustes del admin, simulador ([ADR 0012](adr/0012-planes-comisiones-y-ledger.md)).
 - ✅ Liquidación semanal: corte los lunes, vencimiento, pagos parciales registrados por el admin, estado derivado y todo append-only ([ADR 0013](adr/0013-liquidacion-semanal.md)).
 - ⬜ Mora escalonada (SPEC §8.4, requiere validación legal), anulación de pagos, cobro de la mensualidad.
@@ -79,6 +77,8 @@ Falta:
 - ⬜ Chat por pedido (SPEC §11.1).
 - ✅ Comisión por tramos aplicada a pedidos + simulador para el comercio (ADR 0012).
 - ⬜ Cupones básicos.
+- ⬜ ADR de hosting de la API (y realtime por SSE).
+- ⬜ Builds de prueba de las apps (APK por EAS, distribución interna) hasta subirlas a Play Store.
 - ⬜ Operación: monitoreo, backups probados, soporte → puerta **G4** (5–10 comercios piloto).
 
 ## Próximos pasos sugeridos (en orden)
@@ -90,7 +90,7 @@ Falta:
 5. 🟡 **Supabase Auth:** login de comercio/admin hecho (falta prueba con email real); pendiente login del cliente con OTP y asociar pedidos al usuario.
 6. 🟡 **Avisos al comercio:** alarma, notificación, Web Push y vencimientos hechos. Sigue: prueba en campo con comercios reales → G3.
 7. **CI.**
-8. En paralelo, fuera del código: **Fase 0** (prueba de Mercado Pago, legal, entrevistas).
+8. **Prueba real de Mercado Pago** con túnel https → G1.
 
 ## Detalles menores anotados
 
