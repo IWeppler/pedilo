@@ -3,6 +3,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useM
 import { AppState } from "react-native";
 
 import { setTokenSource } from "./api";
+import { unregisterForOffers } from "./push";
 import { kv } from "./storage";
 
 /**
@@ -94,6 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Antes de perder la sesión: este celular deja de recibir ofertas de esta cuenta.
+    await unregisterForOffers();
     await supabase?.auth.signOut();
     setStatus("signedOut");
   }, []);

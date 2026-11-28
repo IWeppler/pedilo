@@ -3,6 +3,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 
 import { fontAssets } from "@/components/text";
 import { Loading } from "@/components/ui";
@@ -10,6 +11,7 @@ import { AuthProvider, useAuth } from "@/lib/auth";
 // Registra la tarea de ubicación en segundo plano al arrancar (ADR 0022).
 import "@/lib/location";
 import { OutboxProvider } from "@/lib/outbox";
+import { OfferNotificationRouter } from "@/lib/push";
 import { useTheme } from "@/lib/theme";
 
 // La pantalla de inicio queda hasta que cargan las tipografías.
@@ -53,6 +55,8 @@ function Routes() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="register" />
       </Stack.Protected>
+      {/* Los avisos push solo existen en el celular; en web esta API no está. */}
+      {signedIn && Platform.OS !== "web" && <OfferNotificationRouter />}
     </Stack>
   );
 }

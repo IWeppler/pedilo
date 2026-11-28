@@ -9,6 +9,7 @@ import { ErrorState, Loading } from "@/components/ui";
 import { type Courier, useCities, useMe, useMyDeliveries } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { LocationSharingProvider } from "@/lib/location";
+import { OfferPushProvider } from "@/lib/push";
 import { font, radius, space, useTheme } from "@/lib/theme";
 
 /**
@@ -28,6 +29,7 @@ export default function TabsLayout() {
   const activeCount = active.data?.length ?? 0;
   return (
     <LocationSharingProvider active={activeCount > 0}>
+    <OfferPushProvider>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -50,6 +52,7 @@ export default function TabsLayout() {
       />
       <Tabs.Screen name="profile" options={{ title: "Perfil", tabBarIcon: ({ color }) => <Icon name="person" color={color} /> }} />
     </Tabs>
+    </OfferPushProvider>
     </LocationSharingProvider>
   );
 }

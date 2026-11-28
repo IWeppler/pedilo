@@ -10,6 +10,7 @@ import { Text } from "@/components/text";
 import { Icon } from "@/components/icon";
 import { Card, Loading } from "@/components/ui";
 import { api, type Offer, useMe, useOffers } from "@/lib/api";
+import { useOfferPush } from "@/lib/push";
 import { font, radius, space, useTheme } from "@/lib/theme";
 
 const timeFormat = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -25,6 +26,7 @@ export default function OffersScreen() {
   const me = useMe();
   const available = me.data?.available ?? false;
   const offers = useOffers(available);
+  const push = useOfferPush();
   const [message, setMessage] = useState<string | null>(null);
 
   const toggle = useMutation({
@@ -90,6 +92,20 @@ export default function OffersScreen() {
         <Pressable onPress={() => setMessage(null)} style={[styles.notice, { backgroundColor: t.dangerBg }]} accessibilityLiveRegion="polite">
           <Icon name="warning" size={18} color={t.danger} />
           <Text style={{ color: t.danger, fontWeight: "600", flex: 1 }}>{message}</Text>
+        </Pressable>
+      )}
+
+      {available && push.status === "denied" && (
+        <Pressable
+          onPress={push.askAgain}
+          accessibilityRole="button"
+          style={[styles.notice, { backgroundColor: t.surface }]}
+          accessibilityLiveRegion="polite"
+        >
+          <Icon name="bell" size={18} color={t.text} />
+          <Text style={{ color: t.text, flex: 1 }}>
+            Con las notificaciones apagadas solo ves ofertas con la app abierta. <Text style={{ fontWeight: "700", textDecorationLine: "underline" }}>Activarlas</Text>
+          </Text>
         </Pressable>
       )}
 
