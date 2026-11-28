@@ -51,6 +51,7 @@ async function CategoriesSection({ searchParams }: { searchParams: SearchParams 
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   {kind === "MERCHANT" && <TableHead>Comisión</TableHead>}
+                  {kind === "PRODUCT" && <TableHead>En el inicio</TableHead>}
                   <TableHead className="hidden sm:table-cell">Orden</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="w-0">
@@ -69,6 +70,11 @@ async function CategoriesSection({ searchParams }: { searchParams: SearchParams 
                       </div>
                     </TableCell>
                     {kind === "MERCHANT" && <TableCell>{commissionShortLabel(c.commissionCategory)}</TableCell>}
+                    {kind === "PRODUCT" && (
+                      <TableCell className="tabular-nums">
+                        {c.featuredOrder != null ? c.featuredOrder : <span className="text-muted-foreground">No</span>}
+                      </TableCell>
+                    )}
                     <TableCell className="hidden tabular-nums sm:table-cell">{c.sortOrder}</TableCell>
                     <TableCell>
                       <StatusBadge active={c.active} />

@@ -119,6 +119,25 @@ export function CategoryForm({
         />
       </FormField>
 
+      {kind === "PRODUCT" && (
+        <FormField
+          id="featuredOrder"
+          label="Posición en el inicio de la app"
+          error={err.featuredOrder}
+          hint="Aparece como tipo de comida (Hamburguesas, Pizzas…) para filtrar comercios. Menor número = más a la izquierda. Vacío = no aparece."
+        >
+          <Input
+            {...fieldA11y("featuredOrder", err.featuredOrder, true)}
+            type="number"
+            min={0}
+            max={1000}
+            step={1}
+            defaultValue={value("featuredOrder", category?.featuredOrder != null ? String(category.featuredOrder) : "")}
+            className="w-32"
+          />
+        </FormField>
+      )}
+
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" name="active" defaultChecked={active} className="size-4 accent-primary" />
         Activa (si la desactivás, se oculta también toda su rama)
