@@ -83,6 +83,7 @@ Falta:
 - ⬜ Chat por pedido (SPEC §11.1).
 - ✅ Comisión por tramos aplicada a pedidos + simulador para el comercio (ADR 0012).
 - ✅ Promociones del comercio: ofertas automáticas y cupones con código, cupo atómico y reversa en cancelaciones ([ADR 0030](adr/0030-promociones-del-comercio.md)). ⬜ Promos pagadas por Pedilo, BOGO y combos.
+- ✅ Calificaciones de comercios: una por pedido terminado, 14 días de plazo y promedio público desde 5 ([ADR 0031](adr/0031-calificaciones-de-comercios.md)). ⬜ Calificar repartidores y el retiro.
 - 🟡 Hosting ([ADR 0024](adr/0024-hosting.md)): API en Fly.io São Paulo, en `https://pedilo.fly.dev` desde el 2026-11-27 (deploy a mano con `fly deploy`). Faltan: secretos de Mercado Pago, paneles en Vercel (y `CORS_ORIGINS`), deploy desde CI. Realtime por SSE pendiente.
 - ⬜ Builds de prueba de las apps (APK por EAS, distribución interna) hasta subirlas a Play Store.
 - ⬜ Operación: monitoreo, backups probados, soporte → puerta **G4** (5–10 comercios piloto).

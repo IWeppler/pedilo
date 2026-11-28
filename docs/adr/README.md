@@ -34,6 +34,7 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0028](0028-inicio-de-la-app-del-cliente.md) | Inicio de la app del cliente: platos, volver a pedir y una sola lista | Aceptada |
 | [0029](0029-tiempo-estimado-apertura-y-nuevos.md) | Tiempo estimado, próxima apertura y comercios nuevos | Aceptada |
 | [0030](0030-promociones-del-comercio.md) | Promociones del comercio: ofertas y cupones | Aceptada |
+| [0031](0031-calificaciones-de-comercios.md) | Calificaciones de comercios | Aceptada |
 
 Pendientes (SPEC §17): realtime (SSE).
 
