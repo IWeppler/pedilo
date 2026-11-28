@@ -39,7 +39,7 @@ async function EditZone({ params }: { params: Props["params"] }) {
     <ZoneForm
       action={updateZone.bind(null, merchantId, branchId, zoneId)}
       zone={zone}
-      cancelHref={`/m/${merchantId}/branches/${branchId}#zonas`}
+      cancelHref={`/m/${merchantId}/local#zonas`}
     />
   );
 }

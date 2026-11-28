@@ -24,6 +24,8 @@ function nullableText(formData: FormData, key: string): string | null | undefine
 }
 
 const home = (merchantId: string) => `/m/${merchantId}`;
+/** «Local y entregas»: dirección, horarios, cierres, programados y zonas. */
+const local = (merchantId: string) => `/m/${merchantId}/local`;
 
 // --- Perfil y envío a revisión ---
 
@@ -44,11 +46,26 @@ export async function updateProfile(merchantId: string, _prev: FormState, formDa
         },
       }),
     );
+    // El local lleva el nombre del comercio (aparece en los pedidos): se mantiene igual.
+    const displayName = optionalText(formData, "displayName");
+    if (displayName) await renameLocations(merchantId, displayName);
   } catch (err) {
     return errorToFormState(err, values);
   }
   revalidatePath(home(merchantId));
   redirect(home(merchantId));
+}
+
+async function renameLocations(merchantId: string, name: string) {
+  const merchant = await merchantCall((api) => api.GET("/v1/merchants/{merchantId}", { params: { path: { merchantId } } }));
+  for (const b of merchant.branches.filter((b) => b.name !== name)) {
+    await merchantCall((api) =>
+      api.PATCH("/v1/merchants/{merchantId}/branches/{branchId}", {
+        params: { path: { merchantId, branchId: b.id } },
+        body: { name },
+      }),
+    );
+  }
 }
 
 export async function submitForReview(merchantId: string): Promise<FormState> {
@@ -65,7 +82,7 @@ export async function submitForReview(merchantId: string): Promise<FormState> {
   redirect(home(merchantId));
 }
 
-// --- Sucursales ---
+// --- Local (por detrás, la única sucursal del comercio) ---
 
 function branchBody(formData: FormData) {
   return {
@@ -81,21 +98,19 @@ function branchBody(formData: FormData) {
 
 export async function createBranch(merchantId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const values = formValues(formData);
-  let branchId: string;
   try {
-    const branch = await merchantCall((api) =>
+    await merchantCall((api) =>
       api.POST("/v1/merchants/{merchantId}/branches", {
         params: { path: { merchantId } },
         body: branchBody(formData),
       }),
     );
-    branchId = branch.id;
   } catch (err) {
     return errorToFormState(err, values);
   }
   revalidatePath(home(merchantId));
-  // Siguiente paso natural: cargar horarios y zonas de la sucursal nueva.
-  redirect(`${home(merchantId)}/branches/${branchId}`);
+  revalidatePath(local(merchantId));
+  return { saved: true };
 }
 
 export async function updateBranch(
@@ -115,7 +130,7 @@ export async function updateBranch(
   } catch (err) {
     return errorToFormState(err, values);
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  revalidatePath(local(merchantId));
   return { saved: true };
 }
 
@@ -148,7 +163,26 @@ export async function saveScheduling(
   } catch (err) {
     return errorToFormState(err, values);
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  revalidatePath(local(merchantId));
+  return { saved: true };
+}
+
+// --- Tiempo de preparación (ADR 0029) ---
+
+export async function savePrepTime(merchantId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const values = formValues(formData);
+  try {
+    await merchantCall((api) =>
+      api.PATCH("/v1/merchants/{merchantId}", {
+        params: { path: { merchantId } },
+        // Vacío = sin tiempo cargado (la app deja de mostrarlo).
+        body: { prepMinutes: optionalInt(formData, "prepMinutes") ?? null },
+      }),
+    );
+  } catch (err) {
+    return errorToFormState(err, values);
+  }
+  revalidatePath(local(merchantId));
   return { saved: true };
 }
 
@@ -215,7 +249,7 @@ export async function addClosure(merchantId: string, branchId: string, _prev: Fo
   } catch (err) {
     return errorToFormState(err, values);
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  revalidatePath(local(merchantId));
   return { saved: true };
 }
 
@@ -229,7 +263,7 @@ export async function removeClosure(merchantId: string, branchId: string, closur
   } catch (err) {
     return errorToFormState(err, {});
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  revalidatePath(local(merchantId));
   return { saved: true };
 }
 
@@ -272,7 +306,7 @@ export async function saveHours(
     }
     return errorToFormState(err, {});
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
+  revalidatePath(local(merchantId));
   return { saved: true };
 }
 
@@ -312,8 +346,8 @@ export async function createZone(
   } catch (err) {
     return moneyFieldErrors(errorToFormState(err, values));
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
-  redirect(`${home(merchantId)}/branches/${branchId}#zonas`);
+  revalidatePath(local(merchantId));
+  redirect(`${local(merchantId)}#zonas`);
 }
 
 export async function updateZone(
@@ -334,8 +368,8 @@ export async function updateZone(
   } catch (err) {
     return moneyFieldErrors(errorToFormState(err, values));
   }
-  revalidatePath(`${home(merchantId)}/branches/${branchId}`);
-  redirect(`${home(merchantId)}/branches/${branchId}#zonas`);
+  revalidatePath(local(merchantId));
+  redirect(`${local(merchantId)}#zonas`);
 }
 
 // --- Mercado Pago (ADR 0021) ---

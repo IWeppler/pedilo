@@ -1,17 +1,18 @@
 import type { MerchantDetail } from "@pedilo/api-client";
 import { formatCuit } from "@pedilo/domain";
-import { formatDateTime, ONBOARDING_ISSUE_LABELS } from "@pedilo/web-utils";
-import { CheckCircle2, Circle } from "lucide-react";
+import { formatDateTime } from "@pedilo/web-utils";
 import Link from "next/link";
 import { Suspense } from "react";
 
 import { MerchantStatusBadge } from "@/components/merchant-status-badge";
+import { OnboardingSteps } from "@/components/onboarding-steps";
 import { PageHeader } from "@/components/page-header";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getMyMerchant, getReferenceData } from "@/lib/api";
+import { mainLocation } from "@/lib/location";
 
 import { AlertSettings } from "./order-alerts";
 import { PushSetup } from "./orders/push-setup";
@@ -49,7 +50,7 @@ async function MerchantHome({ params }: { params: Params }) {
             <CardTitle>Para enviar a revisión</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <Checklist merchant={merchant} />
+            <OnboardingSteps merchant={merchant} />
             {merchant.onboarding.ready ? (
               <SubmitForReview merchantId={merchant.id} resubmit={merchant.status === "REJECTED"} />
             ) : (
@@ -110,51 +111,7 @@ async function MerchantHome({ params }: { params: Params }) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <CardTitle>Sucursales</CardTitle>
-          {editable && (
-            <Link href={`${base}/branches/new`} className={buttonVariants({ size: "sm" })}>
-              Agregar sucursal
-            </Link>
-          )}
-        </CardHeader>
-        <CardContent className="grid gap-3">
-          {merchant.branches.length === 0 && (
-            <p className="text-sm text-muted-foreground">Todavía no cargaste ninguna sucursal.</p>
-          )}
-          {merchant.branches.map((b) => {
-            const issues = merchant.onboarding.problems.filter((p) => p.branchId === b.id);
-            return (
-              <Link
-                key={b.id}
-                href={`${base}/branches/${b.id}`}
-                className="grid gap-1 rounded-lg border p-3 text-sm transition-colors hover:bg-muted"
-              >
-                <span className="flex flex-wrap items-center gap-2 font-medium">
-                  {b.name}
-                  {!b.active && <span className="text-xs font-normal text-muted-foreground">(inactiva)</span>}
-                </span>
-                <span className="text-muted-foreground">
-                  {b.addressLine}, {cityName.get(b.cityId) ?? ""}
-                </span>
-                <span className="text-muted-foreground">
-                  {[b.acceptsPickup && "Retiro", b.acceptsDelivery && `Envío (${b.zones.filter((z) => z.active).length} zonas)`]
-                    .filter(Boolean)
-                    .join(" · ") || "Sin formas de entrega"}
-                  {" · "}
-                  {b.hours.length ? "Horario cargado" : "Sin horario"}
-                </span>
-                {issues.map((p, i) => (
-                  <span key={i} className="text-destructive">
-                    {ONBOARDING_ISSUE_LABELS[p.issue]}
-                  </span>
-                ))}
-              </Link>
-            );
-          })}
-        </CardContent>
-      </Card>
+      <LocationSummary merchant={merchant} cityName={cityName} editable={editable} />
     </>
   );
 }
@@ -186,7 +143,7 @@ function StatusMessage({ merchant }: { merchant: MerchantDetail }) {
         <Alert>
           <AlertTitle>Tu comercio está aprobado</AlertTitle>
           <AlertDescription>
-            Ya aparece en la app. Podés seguir ajustando el catálogo, sucursales, horarios y zonas.
+            Ya aparece en la app. Podés seguir ajustando el catálogo, el local, los horarios y las zonas.
           </AlertDescription>
         </Alert>
       );
@@ -203,31 +160,50 @@ function StatusMessage({ merchant }: { merchant: MerchantDetail }) {
   }
 }
 
-/** Los tres pasos del alta, marcados según lo que devuelve la API. */
-function Checklist({ merchant }: { merchant: MerchantDetail }) {
-  const issues = new Set(merchant.onboarding.problems.map((p) => p.issue));
-  const steps = [
-    { label: "Datos del comercio", done: true },
-    { label: "Una sucursal activa con horario", done: !issues.has("NO_ACTIVE_BRANCH") && !issues.has("BRANCH_WITHOUT_HOURS") },
-    {
-      label: "Retiro en el local o envío con al menos una zona",
-      done: !issues.has("NO_ACTIVE_BRANCH") && !issues.has("BRANCH_WITHOUT_FULFILLMENT"),
-    },
-  ];
+/** Resumen del local (dirección, entregas, horario) con el acceso a «Local y entregas». */
+function LocationSummary({
+  merchant,
+  cityName,
+  editable,
+}: {
+  merchant: MerchantDetail;
+  cityName: Map<string, string>;
+  editable: boolean;
+}) {
+  const branch = mainLocation(merchant);
+  const href = `/m/${merchant.id}/local`;
+
   return (
-    <ol className="grid gap-2 text-sm">
-      {steps.map((s) => (
-        <li key={s.label} className="flex items-center gap-2">
-          {s.done ? (
-            <CheckCircle2 className="size-4 text-primary" aria-hidden />
-          ) : (
-            <Circle className="size-4 text-muted-foreground" aria-hidden />
-          )}
-          <span className={s.done ? "" : "text-muted-foreground"}>{s.label}</span>
-          <span className="sr-only">{s.done ? "(completo)" : "(pendiente)"}</span>
-        </li>
-      ))}
-    </ol>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
+        <div className="grid gap-1">
+          <CardTitle>Local y entregas</CardTitle>
+          <CardDescription>Dirección, formas de entrega, horario y zonas de envío.</CardDescription>
+        </div>
+        <Link href={href} className={buttonVariants({ variant: branch ? "outline" : "default", size: "sm" })}>
+          {!editable ? "Ver" : branch ? "Editar" : "Cargar"}
+        </Link>
+      </CardHeader>
+      <CardContent className="grid gap-1 text-sm">
+        {!branch ? (
+          <p className="text-muted-foreground">Todavía no cargaste la dirección del local.</p>
+        ) : (
+          <>
+            <span>
+              {branch.addressLine}, {cityName.get(branch.cityId) ?? ""}
+              {!branch.active && <span className="text-muted-foreground"> · no está recibiendo pedidos</span>}
+            </span>
+            <span className="text-muted-foreground">
+              {[branch.acceptsPickup && "Retiro en el local", branch.acceptsDelivery && `Envío (${branch.zones.filter((z) => z.active).length} zonas)`]
+                .filter(Boolean)
+                .join(" · ") || "Sin formas de entrega"}
+              {" · "}
+              {branch.hours.length ? "Horario cargado" : "Sin horario"}
+            </span>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

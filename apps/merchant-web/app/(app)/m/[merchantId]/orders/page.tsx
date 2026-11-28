@@ -242,10 +242,11 @@ function OrderCard({
             Nota del cliente: «{o.notes}»
           </p>
         )}
-        {o.deliveryFeeMinor > 0 && (
+        {(o.deliveryFeeMinor > 0 || o.discountMinor > 0) && (
           <p className="text-muted-foreground">
-            Subtotal {formatARS(o.subtotalMinor)} + envío{" "}
-            {formatARS(o.deliveryFeeMinor)}
+            Subtotal {formatARS(o.subtotalMinor)}
+            {o.discountMinor > 0 && ` − ${o.promotion?.code ? `cupón ${o.promotion.code}` : (o.promotion?.title ?? "promoción")} ${formatARS(o.discountMinor)}`}
+            {o.deliveryFeeMinor > 0 && ` + envío ${formatARS(o.deliveryFeeMinor)}`}
           </p>
         )}
         {o.transfer && o.paymentStatus === "PENDING" && (

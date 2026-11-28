@@ -11,7 +11,7 @@ export function FormField({
   children,
 }: {
   id: string;
-  label: string;
+  label: ReactNode;
   hint?: ReactNode;
   error?: string | undefined;
   children: ReactNode;

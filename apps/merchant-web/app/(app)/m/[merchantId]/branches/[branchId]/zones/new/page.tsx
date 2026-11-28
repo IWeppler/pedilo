@@ -37,7 +37,7 @@ async function NewZone({ params }: { params: Props["params"] }) {
   return (
     <ZoneForm
       action={createZone.bind(null, merchantId, branchId)}
-      cancelHref={`/m/${merchantId}/branches/${branchId}#zonas`}
+      cancelHref={`/m/${merchantId}/local#zonas`}
     />
   );
 }

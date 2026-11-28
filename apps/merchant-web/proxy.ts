@@ -44,5 +44,6 @@ function toLogin(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!login|auth/|_next/static|_next/image|favicon.ico|sw.js|media/).*)"],
+  // Fuera del chequeo: login, vuelta de auth, estáticos y las imágenes de `public/` (la foto del login).
+  matcher: ["/((?!login|auth/|_next/static|_next/image|favicon.ico|sw.js|media/|.*\\.(?:jpg|jpeg|png|webp|avif|svg)$).*)"],
 };

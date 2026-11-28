@@ -1,12 +1,13 @@
 "use client";
 
-import type { Category, MerchantDetail } from "@pedilo/api-client";
+import type { Category, City, MerchantDetail } from "@pedilo/api-client";
 import { formatCuit } from "@pedilo/domain";
 import { formKey, type FormState, initialFormState } from "@pedilo/web-utils";
 import Link from "next/link";
 import { useActionState } from "react";
 
 import { FormField, fieldA11y } from "@/components/form-field";
+import { LocationFields } from "@/components/location-fields";
 import { NativeSelect } from "@/components/native-select";
 import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -16,16 +17,19 @@ import { Input } from "@/components/ui/input";
 /**
  * Datos del comercio. En alta y en borrador/rechazado se edita todo; aprobado solo nombre
  * visible y contacto (el resto aparece deshabilitado: no viaja en el FormData).
+ * Con `cities` (el registro) suma dónde está el local y cómo entrega, para cargarlo todo de una.
  */
 export function MerchantForm({
   action,
   rubros,
   merchant,
+  cities,
   cancelHref,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   rubros: Category[];
   merchant?: MerchantDetail;
+  cities?: City[];
   cancelHref: string;
 }) {
   const [state, formAction] = useActionState(action, initialFormState);
@@ -112,6 +116,17 @@ export function MerchantForm({
           defaultValue={value("contactEmail", merchant?.contactEmail ?? "")}
         />
       </FormField>
+
+      {cities && (
+        <fieldset className="grid gap-4 border-t pt-4">
+          <legend className="sr-only">Tu local</legend>
+          <div className="grid gap-1" aria-hidden>
+            <p className="text-base font-semibold">Tu local</p>
+            <p className="text-sm text-muted-foreground">Dónde estás y cómo entregás. Los horarios los cargás en el paso siguiente.</p>
+          </div>
+          <LocationFields cities={cities} values={v} errors={err} />
+        </fieldset>
+      )}
 
       {fiscalLocked && (
         <p className="text-sm text-muted-foreground">

@@ -41,6 +41,8 @@ interface Draft {
   name: string;
   description: string;
   sectionId: string;
+  /** Tipo de producto (categoría global): con eso aparece en los filtros de la app (ADR 0027). */
+  categoryId: string;
   price: string;
   available: boolean;
   active: boolean;
@@ -54,6 +56,7 @@ function fromProduct(p: MenuProduct | undefined, defaultSectionId: string | unde
       name: "",
       description: "",
       sectionId: defaultSectionId ?? "",
+      categoryId: "",
       price: "",
       available: true,
       active: true,
@@ -65,6 +68,7 @@ function fromProduct(p: MenuProduct | undefined, defaultSectionId: string | unde
     name: p.name,
     description: p.description ?? "",
     sectionId: p.sectionId ?? "",
+    categoryId: p.categoryId ?? "",
     price: minorToPesosInput(p.priceMinor),
     available: p.available,
     active: p.active,
@@ -102,6 +106,7 @@ function toBody(d: Draft): { body?: ProductBody; error?: string } {
     name: d.name.trim(),
     description: d.description.trim() || null,
     sectionId: d.sectionId || null,
+    categoryId: d.categoryId || null,
     // Con variantes el precio del producto no se usa: se guarda el de la primera variante como referencia.
     priceMinor: hasVariants ? 0 : num(money("Precio", d.price, true)),
     available: d.available,
@@ -130,15 +135,24 @@ function toBody(d: Draft): { body?: ProductBody; error?: string } {
   return errors.length ? { error: errors.join(". ") + "." } : { body };
 }
 
+/** Categoría global de producto, como la devuelve `GET /v1/categories?kind=PRODUCT`. */
+export interface ProductType {
+  id: string;
+  parentId: string | null;
+  name: string;
+}
+
 export function ProductEditor({
   action,
   sections,
+  productTypes,
   product,
   defaultSectionId,
   cancelHref,
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   sections: MenuSection[];
+  productTypes: ProductType[];
   product?: MenuProduct;
   defaultSectionId?: string | undefined;
   cancelHref: string;
@@ -218,6 +232,31 @@ export function ProductEditor({
                 </option>
               ))}
             </NativeSelect>
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="categoryId">Tipo de producto</Label>
+            <NativeSelect id="categoryId" value={draft.categoryId} onChange={(e) => set({ categoryId: e.target.value })} aria-describedby="categoryId-hint">
+              <option value="">Sin elegir</option>
+              {groupTypes(productTypes).map((g) =>
+                g.children.length === 0 ? (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ) : (
+                  <optgroup key={g.id} label={g.name}>
+                    <option value={g.id}>{g.name} (en general)</option>
+                    {g.children.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ),
+              )}
+            </NativeSelect>
+            <p id="categoryId-hint" className="text-sm text-muted-foreground">
+              Con esto tu comercio aparece cuando alguien busca «Hamburguesas», «Pizzas» o «Bebidas» en la app.
+            </p>
           </div>
           {draft.variants.length === 0 ? (
             <div className="grid gap-1.5">
@@ -366,4 +405,19 @@ export function ProductEditor({
       </div>
     </form>
   );
+}
+
+/** Grupos de primer nivel con sus categorías, para el select (dos niveles alcanzan para elegir). */
+function groupTypes(types: ProductType[]): Array<ProductType & { children: ProductType[] }> {
+  const roots = types.filter((t) => !t.parentId || !types.some((p) => p.id === t.parentId));
+  const rootIds = new Set(roots.map((r) => r.id));
+  const rootOf = (t: ProductType): string | null => {
+    let current: ProductType | undefined = t;
+    for (let depth = 0; current && depth < 20; depth++) {
+      if (rootIds.has(current.id)) return current.id;
+      current = types.find((p) => p.id === current!.parentId);
+    }
+    return null;
+  };
+  return roots.map((r) => ({ ...r, children: types.filter((t) => t.id !== r.id && rootOf(t) === r.id) }));
 }

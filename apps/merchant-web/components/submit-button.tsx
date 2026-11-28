@@ -9,14 +9,16 @@ export function SubmitButton({
   children,
   pendingText,
   variant,
+  size,
 }: {
   children: React.ReactNode;
   pendingText?: string;
   variant?: ComponentProps<typeof Button>["variant"];
+  size?: ComponentProps<typeof Button>["size"];
 }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending} aria-disabled={pending}>
+    <Button type="submit" variant={variant} size={size} disabled={pending} aria-disabled={pending}>
       {pending ? (pendingText ?? "Guardando…") : children}
     </Button>
   );

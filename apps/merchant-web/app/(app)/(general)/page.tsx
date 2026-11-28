@@ -32,7 +32,7 @@ async function MyMerchants() {
         <CardHeader>
           <CardTitle>Vendé con Pedilo</CardTitle>
           <CardDescription>
-            Registrá tu comercio, cargá tu sucursal con horarios y formas de entrega, y lo revisamos para que puedas
+            Registrá tu comercio, cargá tu local con horarios y formas de entrega, y lo revisamos para que puedas
             empezar a recibir pedidos.
           </CardDescription>
         </CardHeader>

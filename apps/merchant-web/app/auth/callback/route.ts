@@ -3,15 +3,18 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase";
 
 /**
- * Destino del link del email (flujo PKCE de Supabase): canjea el `code` por la sesión.
- * Tiene que abrirse en el mismo navegador donde se pidió el link.
+ * Vuelta del link de confirmación de cuenta y del ingreso con Google (flujo PKCE de Supabase): canjea el `code`
+ * por la sesión. Tiene que abrirse en el mismo navegador donde se empezó el ingreso.
  */
 export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code");
+  const params = request.nextUrl.searchParams;
+  const code = params.get("code");
   if (code) {
     const supabase = await createSupabaseServer();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) return NextResponse.redirect(new URL("/", request.url));
   }
-  return NextResponse.redirect(new URL("/login?reason=link", request.url));
+  // Google (o Supabase) devuelve `error` si el usuario canceló o el proveedor no está habilitado.
+  const reason = params.has("error") ? "oauth" : "link";
+  return NextResponse.redirect(new URL(`/login?reason=${reason}`, request.url));
 }

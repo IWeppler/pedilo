@@ -56,7 +56,9 @@ async function Sidebar({ params }: { params: Params }) {
   const enabled: NavKey[] = [
     ...(approved ? (["orders"] as const) : []),
     "menu",
-    ...(approved ? (["couriers", "reports"] as const) : []),
+    "promotions",
+    "local",
+    ...(approved ? (["couriers", "reports", "ratings"] as const) : []),
     ...(merchant.status !== "DRAFT" ? (["claims"] as const) : []),
     "store",
   ];

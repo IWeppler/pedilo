@@ -12,9 +12,9 @@ export default function OnboardingPage() {
     <>
       <PageHeader
         title="Registrá tu comercio"
-        description="Paso 1 de 3: tus datos. Después cargás la sucursal con horarios y formas de entrega, y lo enviás a revisión."
+        description="Paso 1 de 2: tus datos y tu local. Después cargás los horarios (y las zonas si hacés envíos) y lo enviás a revisión."
       />
-      <Suspense fallback={<TableSkeleton rows={6} />}>
+      <Suspense fallback={<TableSkeleton rows={8} />}>
         <RegisterForm />
       </Suspense>
     </>
@@ -22,6 +22,6 @@ export default function OnboardingPage() {
 }
 
 async function RegisterForm() {
-  const { rubros } = await getReferenceData();
-  return <MerchantForm action={registerMerchant} rubros={rubros} cancelHref="/" />;
+  const { rubros, cities } = await getReferenceData();
+  return <MerchantForm action={registerMerchant} rubros={rubros} cities={cities} cancelHref="/" />;
 }

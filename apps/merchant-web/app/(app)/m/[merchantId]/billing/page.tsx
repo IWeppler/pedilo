@@ -52,9 +52,7 @@ async function Billing({ params }: { params: Props["params"] }) {
               <Item label="Comisión base">{formatBps(b.plan.baseRateBps)}</Item>
               <Item label="Mensualidad">{formatARS(b.plan.monthlyFeeMinor)}</Item>
               <Item label="Tope por pedido">{formatARS(b.capMinor)}</Item>
-              <Item label="Sucursales / usuarios">
-                {b.plan.maxBranches} / {b.plan.maxUsers}
-              </Item>
+              <Item label="Usuarios">{b.plan.maxUsers}</Item>
             </dl>
             <p className="mt-3 text-xs text-muted-foreground">
               Para cambiar de plan, escribinos. El cambio rige desde ese momento: los pedidos anteriores no cambian.

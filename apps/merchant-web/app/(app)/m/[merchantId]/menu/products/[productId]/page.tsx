@@ -5,7 +5,7 @@ import { ImageUpload } from "@/components/image-upload";
 import { PageHeader } from "@/components/page-header";
 import { ProductEditor } from "@/components/product-editor";
 import { TableSkeleton } from "@/components/table-skeleton";
-import { merchantCall } from "@/lib/api";
+import { getProductTypes, merchantCall } from "@/lib/api";
 
 import { removeProductImage, saveProduct, uploadProductImage } from "../../actions";
 
@@ -24,10 +24,10 @@ export default function EditProductPage({ params }: Props) {
 
 async function EditProduct({ params }: { params: Props["params"] }) {
   const { merchantId, productId } = await params;
-  const menu = await merchantCall(
-    (api) => api.GET("/v1/merchants/{merchantId}/menu", { params: { path: { merchantId } } }),
-    { notFoundOn404: true },
-  );
+  const [menu, productTypes] = await Promise.all([
+    merchantCall((api) => api.GET("/v1/merchants/{merchantId}/menu", { params: { path: { merchantId } } }), { notFoundOn404: true }),
+    getProductTypes(),
+  ]);
   const product = menu.products.find((p) => p.id === productId);
   if (!product) notFound();
   return (
@@ -42,6 +42,7 @@ async function EditProduct({ params }: { params: Props["params"] }) {
       <ProductEditor
       action={saveProduct.bind(null, merchantId, product.id)}
       sections={menu.sections}
+      productTypes={productTypes}
       product={product}
       cancelHref={`/m/${merchantId}/menu`}
       />

@@ -14,7 +14,7 @@ type Closure = { id: string; startsOn: string; endsOn: string; reason: string };
 const dateFormat = new Intl.DateTimeFormat("es-AR", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 const pretty = (d: string) => dateFormat.format(new Date(`${d}T12:00:00Z`));
 
-/** Feriados y vacaciones (ADR 0018): días completos en los que la sucursal no recibe pedidos. */
+/** Feriados y vacaciones (ADR 0018): días completos en los que el comercio no recibe pedidos. */
 export function ClosuresEditor({
   closures,
   add,

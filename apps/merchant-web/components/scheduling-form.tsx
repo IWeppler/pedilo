@@ -9,7 +9,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 
-/** Pedidos programados de una sucursal (ADR 0011): anticipación, días y cupo por franja. */
+/** Pedidos programados del comercio (ADR 0011): anticipación, días y cupo por franja. */
 export function SchedulingForm({
   action,
   scheduling,
@@ -84,7 +84,7 @@ export function SchedulingForm({
         </div>
       )}
       <p className="text-xs text-muted-foreground">
-        El cliente elige una franja de 30 minutos dentro del horario de la sucursal, aunque ahora esté cerrada. Tenés hasta
+        El cliente elige una franja de 30 minutos dentro de tu horario, aunque ahora esté cerrada. Tenés hasta
         30 minutos antes de la franja para aceptarlo.
       </p>
 

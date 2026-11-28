@@ -78,7 +78,12 @@ export async function getReferenceData() {
   return { rubros, cities };
 }
 
-/** ¿Se pueden modificar datos operativos (sucursales, horarios, zonas)? */
+/** Tipos de producto (categorías globales) para el select del editor de productos (ADR 0027). */
+export function getProductTypes() {
+  return merchantCall((api) => api.GET("/v1/categories", { params: { query: { kind: "PRODUCT" } } }));
+}
+
+/** ¿Se pueden modificar datos operativos (local, horarios, zonas)? */
 export function operationsLocked(status: string): string | null {
   if (status === "PENDING_REVIEW") return "Tu comercio está en revisión. Vas a poder editar cuando el equipo de Pedilo responda.";
   if (status === "SUSPENDED") return "Tu comercio está suspendido. Contactá al equipo de Pedilo.";
