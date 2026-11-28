@@ -1,6 +1,6 @@
 # 0007 — Primeros pedidos: invitado con token de seguimiento, solo efectivo
 
-- **Estado:** Aceptada
+- **Estado:** Reemplazada en parte por [0026](0026-cuenta-del-cliente-google-apple.md): ya no se pide como invitado; el token de seguimiento sigue.
 - **Fecha:** 2026-11-23
 
 ## Contexto

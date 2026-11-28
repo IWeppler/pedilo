@@ -37,10 +37,11 @@ Falta:
 - ✅ Supabase como base: migraciones `0000`–`0004` aplicadas (18 tablas, RLS activado sin políticas para cerrar la Data API), `DATABASE_URL` por el session pooler (`aws-1-us-west-2`) y seed base cargado (Tostado + 5 rubros).
 - 🟡 Supabase Auth en los paneles de comercio y admin: login con link al email (PKCE), sesión refrescada en `proxy.ts`, API verificando tokens por JWKS (`SUPABASE_URL` activa). Sin las variables de Supabase los paneles siguen con token de desarrollo. Falta probarlo de punta a punta con un email real y cargar las Redirect URLs en Supabase.
 - ✅ CI en GitHub Actions (`.github/workflows/ci.yml`): typecheck, lint, contrato de la API al día, tests y build de los paneles en cada push a main y cada PR.
-- ✅ Fotos de productos, logo y portada: subida desde el panel, reprocesadas a WebP sin metadatos, disco local en desarrollo y Supabase Storage en producción ([ADR 0017](adr/0017-fotos-y-almacenamiento.md)). Falta crear el bucket en Supabase.
+- ✅ Fotos de productos, logo y portada: subida desde el panel, reprocesadas a WebP sin metadatos, disco local en desarrollo y Supabase Storage en producción ([ADR 0017](adr/0017-fotos-y-almacenamiento.md)). Bucket `media` creado en Supabase (público, solo WebP, hasta 2 MB), probado contra el proyecto real: subir, leer por URL pública y borrar.
 - ✅ Cierres excepcionales por sucursal: feriados y vacaciones ([ADR 0018](adr/0018-cierres-excepcionales.md)). ✅ Suspender y reactivar comercios desde el admin.
 - Fuera del MVP: invitar operadores al comercio (un solo usuario por comercio en el MVP).
-- ⬜ Asignar categoría global a productos desde el panel (la API ya lo soporta).
+- ✅ Tipo de producto (categoría global) al cargar cada producto en el panel; tipos de comida en el inicio de la app elegidos por el admin ([ADR 0027](adr/0027-tipos-de-comida.md)).
+- ⬜ **Emails del MVP**: proveedor de envío (Resend/Postmark) como SMTP de Supabase para confirmación y recuperación, y emails propios de la API por outbox (pedido confirmado, rechazado, reclamos). Hoy Supabase usa un SMTP de Gmail.
 
 ## Fase 2 — Primer pedido real (E3, E4, E5, E7)
 
@@ -51,7 +52,9 @@ Hecho:
 
 Falta:
 - ⬜ Probar la app en un celular real con Expo Go.
-- ⬜ Login del cliente con verificación de teléfono (OTP) — requiere Supabase.
+- 🟡 Cuenta del cliente con Google, Apple o email y contraseña ([ADR 0026](adr/0026-cuenta-del-cliente-google-apple.md)): obligatoria desde la primera pantalla, registro con nombre, teléfono y dirección; el checkout no pide datos. Identidad verificada por email (link de confirmación, sin SMS). Con «¿Olvidaste tu contraseña?» (link por email y pantalla para elegir la nueva). Falta activar Google y Apple y las Redirect URLs en Supabase y probarlo en dispositivos.
+- ✅ Montos sin decimales en la app del cliente (`formatARSWhole`).
+- ✅ Inicio de la app: platos para probar, volver a pedir, una sola lista con orden y filtros, pestaña «Cuenta» ([ADR 0028](adr/0028-inicio-de-la-app-del-cliente.md)). ✅ Tiempo estimado, «Abre 20:00 · Programá» y «Nuevo» ([ADR 0029](adr/0029-tiempo-estimado-apertura-y-nuevos.md)). ✅ Promos («Descuentos» y banner). calificaciones («Mejor puntuados», «4,5 o más»), «Lo más pedido».
 - 🟡 Avisos al comercio ([ADR 0008](adr/0008-avisos-comercio-y-vencimientos.md)): pulso cada 5 s, alarma con sonido, notificación del sistema y «Visto» en todas las páginas del comercio. Web Push con la pestaña cerrada y outbox durable ([ADR 0009](adr/0009-web-push-y-outbox.md)). Falta: prueba en campo (PC y Android con pantalla apagada), `notification_seen` y realtime → puerta **G3**.
 - ✅ Vencimiento automático de pedidos no aceptados: plazo por pedido (15 min por defecto) y worker en la API ([ADR 0008](adr/0008-avisos-comercio-y-vencimientos.md)).
 - ✅ Rate limiting de pedidos anónimos: por IP (en memoria) y por teléfono (en la base) ([ADR 0010](adr/0010-limites-anti-abuso-pedidos.md)).
@@ -70,7 +73,7 @@ Falta:
 - ✅ PIN de entrega y cuenta comercio↔repartidor ([ADR 0016](adr/0016-pin-de-entrega-y-cuenta-con-repartidores.md)).
 - ✅ Seguimiento en vivo: el repartidor comparte su ubicación solo durante el reparto (también en segundo plano con build propio); el comercio la ve en el panel y el cliente en un mapa desde que el pedido sale ([ADR 0022](adr/0022-seguimiento-en-vivo.md)). Falta la clave de Google Maps para los builds y probarlo en la calle (G2).
 - ✅ Punto exacto de entrega: el cliente confirma su puerta moviendo el mapa; el repartidor navega a ese punto y el seguimiento muestra casa y repartidor ([ADR 0023](adr/0023-punto-exacto-de-entrega.md)).
-- ⬜ Push FCM de ofertas, chat e incidencias.
+- 🟡 Push de ofertas al repartidor ([ADR 0025](adr/0025-push-de-ofertas-al-repartidor.md)): Expo Push (FCM) a los aprobados y disponibles que pueden tomarla, con la app cerrada; vence con la oferta y no se manda si ya la tomaron. Falta Firebase (`google-services.json` + clave FCM V1 en EAS), build propio y prueba con pantalla bloqueada (G2). ⬜ Push de chat e incidencias.
 - ⬜ Ingreso con Google en la app del repartidor: «Continuar con Google» como botón principal (Google Sign-In nativo + `signInWithIdToken` de Supabase; requiere build propio, no corre en Expo Go) y el código por email como alternativa. Falta crear los clientes OAuth (web y Android con el SHA-1 de EAS) y activar el proveedor en Supabase. Apple, cuando haya app de iOS.
 
 ## Fase 4 — Piloto Tostado (E8, E9, E10, E11)
@@ -79,8 +82,8 @@ Falta:
 - ✅ Avisos de reclamos (Web Push al comercio, Expo Push al cliente) y métricas por comercio ([ADR 0020](adr/0020-avisos-y-metricas-de-reclamos.md)). Falta build propio de la app (EAS) para que lleguen al cliente.
 - ⬜ Chat por pedido (SPEC §11.1).
 - ✅ Comisión por tramos aplicada a pedidos + simulador para el comercio (ADR 0012).
-- ⬜ Cupones básicos.
-- ⬜ ADR de hosting de la API (y realtime por SSE).
+- ✅ Promociones del comercio: ofertas automáticas y cupones con código, cupo atómico y reversa en cancelaciones ([ADR 0030](adr/0030-promociones-del-comercio.md)). ⬜ Promos pagadas por Pedilo, BOGO y combos.
+- 🟡 Hosting ([ADR 0024](adr/0024-hosting.md)): API en Fly.io São Paulo, en `https://pedilo.fly.dev` desde el 2026-11-27 (deploy a mano con `fly deploy`). Faltan: secretos de Mercado Pago, paneles en Vercel (y `CORS_ORIGINS`), deploy desde CI. Realtime por SSE pendiente.
 - ⬜ Builds de prueba de las apps (APK por EAS, distribución interna) hasta subirlas a Play Store.
 - ⬜ Operación: monitoreo, backups probados, soporte → puerta **G4** (5–10 comercios piloto).
 

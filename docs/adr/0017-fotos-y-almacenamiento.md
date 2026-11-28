@@ -23,6 +23,6 @@ El menú, la lista de comercios y la página de cada comercio usaban íconos del
 - **App del cliente**: fotos con `expo-image` (caché en disco) en destacados, lista de comercios (logo), portada del comercio, productos y modal de producto; sin foto, el ícono del rubro como antes.
 
 ## Consecuencias
-- Para producción hay que crear el bucket público en Supabase y cargar `SUPABASE_SECRET_KEY` (secreta, solo en el servidor). La implementación de Supabase no está probada contra un proyecto real todavía.
+- El bucket lo crea la migración `0020_media_bucket` (en el Postgres local no hace nada); en producción falta cargar `SUPABASE_SECRET_KEY` (secreta, solo en el servidor). Bucket `media` creado (público, solo `image/webp`, hasta 2 MB) y probado el 2026-11-27: subir, leer por URL pública y borrar. Un archivo borrado puede seguir saliendo un tiempo por la caché de la CDN (`max-age` de un año); no importa porque cada subida usa una ruta nueva.
 - Las fotos de los datos de demo siguen sin imagen: se suben desde el panel.
 - **Pendiente:** varias fotos por producto, recorte manual en el panel, limpieza periódica de archivos huérfanos (si se cae el proceso entre subir y guardar), y CDN si el tráfico lo pide.

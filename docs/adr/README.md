@@ -10,7 +10,7 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0004](0004-auth-supabase.md) | Autenticación con Supabase Auth, roles en nuestra base | Aceptada |
 | [0005](0005-convenciones-api.md) | Convenciones de la API (versionado, errores, IDs, contrato) | Aceptada |
 | [0006](0006-catalogo-por-comercio.md) | Catálogo por comercio, precio único; variantes con precio propio | Aceptada |
-| [0007](0007-pedidos-invitado-sin-dinero.md) | Primeros pedidos: invitado con token de seguimiento, solo efectivo | Aceptada |
+| [0007](0007-pedidos-invitado-sin-dinero.md) | Primeros pedidos: invitado con token de seguimiento, solo efectivo | Reemplazada en parte por 0026 |
 | [0008](0008-avisos-comercio-y-vencimientos.md) | Avisos al comercio y vencimiento de pedidos (primera etapa) | Aceptada |
 | [0009](0009-web-push-y-outbox.md) | Web Push al comercio con outbox durable | Aceptada |
 | [0010](0010-limites-anti-abuso-pedidos.md) | Límites anti-abuso para pedidos anónimos | Aceptada |
@@ -24,8 +24,18 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0018](0018-cierres-excepcionales.md) | Cierres excepcionales (feriados y vacaciones) | Aceptada |
 | [0019](0019-reclamos.md) | Reclamos | Aceptada |
 | [0020](0020-avisos-y-metricas-de-reclamos.md) | Avisos y métricas de reclamos | Aceptada |
+| [0021](0021-mercado-pago-split.md) | Pagos con tarjeta: Mercado Pago Split 1:1 | Aceptada |
+| [0022](0022-seguimiento-en-vivo.md) | Seguimiento en vivo del repartidor | Aceptada |
+| [0023](0023-punto-exacto-de-entrega.md) | Punto exacto de entrega | Aceptada |
+| [0024](0024-hosting.md) | Hosting de la API y los paneles | Aceptada |
+| [0025](0025-push-de-ofertas-al-repartidor.md) | Push de ofertas al repartidor | Aceptada |
+| [0026](0026-cuenta-del-cliente-google-apple.md) | Cuenta del cliente (Google, Apple o email y contraseña) | Aceptada |
+| [0027](0027-tipos-de-comida.md) | Tipos de comida en el inicio de la app | Aceptada |
+| [0028](0028-inicio-de-la-app-del-cliente.md) | Inicio de la app del cliente: platos, volver a pedir y una sola lista | Aceptada |
+| [0029](0029-tiempo-estimado-apertura-y-nuevos.md) | Tiempo estimado, próxima apertura y comercios nuevos | Aceptada |
+| [0030](0030-promociones-del-comercio.md) | Promociones del comercio: ofertas y cupones | Aceptada |
 
-Pendientes (SPEC §17): realtime (SSE), hosting de `services/api`, storage de imágenes.
+Pendientes (SPEC §17): realtime (SSE).
 
 ## Plantilla
 
