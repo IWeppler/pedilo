@@ -3,7 +3,9 @@ import { createTokenVerifier } from "./auth";
 import { loadConfig } from "./config";
 import { createDb } from "./db/client";
 import { startIntervalWorker } from "./lib/interval-worker";
+import { processEmailOutbox } from "./modules/notifications/email";
 import { processOutbox } from "./modules/notifications/service";
+import { createResendSender } from "./modules/notifications/resend-sender";
 import { createExpoPushSender } from "./modules/notifications/expo-push-sender";
 import { createWebPushSender } from "./modules/notifications/web-push-sender";
 import { closeSettlementWeek } from "./modules/billing/settlements";
@@ -44,6 +46,8 @@ if (config.auth.mode === "local") {
 const pushSender = config.push.vapid ? createWebPushSender(config.push.vapid) : null;
 if (!pushSender) app.log.warn("Web Push sin configurar (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY): los avisos push se omiten.");
 const expoPushSender = config.expoPush.enabled ? createExpoPushSender({ accessToken: config.expoPush.accessToken }) : null;
+const emailSender = config.email.resend ? createResendSender(config.email.resend) : null;
+if (!emailSender) app.log.warn("Email sin configurar (RESEND_API_KEY/EMAIL_FROM): los emails al cliente se omiten.");
 const workers = [
   startIntervalWorker({ name: "order-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOverdueOrders(db) }),
   startIntervalWorker({
@@ -51,6 +55,12 @@ const workers = [
     intervalMs: config.push.outboxSweepMs,
     log: app.log,
     run: () => processOutbox(db, pushSender, new Date(), 20, expoPushSender),
+  }),
+  startIntervalWorker({
+    name: "email-outbox",
+    intervalMs: config.push.outboxSweepMs,
+    log: app.log,
+    run: () => processEmailOutbox(db, emailSender, { appUrl: config.email.customerAppUrl }),
   }),
   startIntervalWorker({ name: "unpaid-expiry", intervalMs: 60_000, log: app.log, run: () => expireUnpaidOrders(db) }),
   ...(paymentsCtx

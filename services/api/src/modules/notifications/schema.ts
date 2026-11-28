@@ -137,3 +137,63 @@ export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
 export type CourierPushTokenRow = typeof courierPushTokens.$inferSelect;
 export type CustomerPushTokenRow = typeof customerPushTokens.$inferSelect;
 export type NotificationOutboxRow = typeof notificationOutbox.$inferSelect;
+
+export const EmailKind = {
+  ORDER_ACCEPTED: "ORDER_ACCEPTED",
+  ORDER_REJECTED: "ORDER_REJECTED",
+  ORDER_CANCELLED: "ORDER_CANCELLED",
+  ORDER_EXPIRED: "ORDER_EXPIRED",
+  CLAIM_UPDATE: "CLAIM_UPDATE",
+} as const;
+export type EmailKind = (typeof EmailKind)[keyof typeof EmailKind];
+
+/**
+ * Outbox de emails al cliente (ADR 0032). Se escribe en la transacción del hecho con un snapshot de
+ * los datos; el texto y el destinatario (el email vigente del usuario) se resuelven al mandar. Un
+ * worker lo envía con reintentos, igual que los avisos push.
+ */
+export const emailOutbox = pgTable(
+  "email_outbox",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    kind: text("kind").$type<EmailKind>().notNull(),
+    userId: uuid("user_id").notNull(),
+    orderId: uuid("order_id"),
+    /** Datos del mensaje (snapshot del hecho); el texto se arma al mandarlo. */
+    data: jsonb("data").$type<EmailData>().notNull(),
+    status: text("status").$type<OutboxStatus>().notNull().default("PENDING"),
+    attempts: smallint("attempts").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }).notNull().defaultNow(),
+    lastError: text("last_error"),
+    /** Id del mensaje en el proveedor (para rastrearlo en Resend). */
+    providerId: text("provider_id"),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [
+    index("email_outbox_pending_idx").on(t.nextAttemptAt).where(sql`${t.status} = 'PENDING'`),
+    check("email_outbox_status_check", sql`${t.status} IN ('PENDING', 'SENT', 'FAILED', 'SKIPPED')`),
+  ],
+);
+
+export interface OrderEmailData {
+  code: string;
+  merchantName: string;
+  customerName: string;
+  fulfillmentType: "PICKUP" | "DELIVERY";
+  totalMinor: number;
+  items: Array<{ name: string; quantity: number }>;
+  reason: string | null;
+  /** Se pagó con tarjeta y hay que devolverlo (rechazo, cancelación o vencimiento). */
+  refund: boolean;
+}
+
+export interface ClaimEmailData {
+  orderCode: string;
+  title: string;
+  body: string;
+}
+
+export type EmailData = OrderEmailData | ClaimEmailData;
+
+export type EmailOutboxRow = typeof emailOutbox.$inferSelect;

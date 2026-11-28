@@ -19,6 +19,7 @@ import { badRequest, conflict, isUniqueViolation, notFound } from "../../lib/err
 import { media, mediaPath, mediaUrl, processImage } from "../../lib/media";
 import { type Actor, recordAudit } from "../audit/service";
 import { adjustCommissionForRefund } from "../billing/service";
+import { enqueueClaimEmail } from "../notifications/email";
 import { enqueueNotification } from "../notifications/service";
 import { type RefundSettledEvent, requestRefund } from "../payments/service";
 import { getMerchantAccess, getMerchantNames } from "../merchants/service";
@@ -117,7 +118,7 @@ async function event(
 
 /**
  * Aviso de novedad del reclamo (ADR 0020), en la misma transacción: al comercio por Web Push
- * (abre el reclamo en el panel) o al cliente por Expo Push (abre el seguimiento del pedido).
+ * (abre el reclamo en el panel) o al cliente por Expo Push (abre el seguimiento del pedido) y email.
  */
 async function notify(tx: Tx, row: ClaimRow, to: "MERCHANT" | "CUSTOMER", title: string, body: string, opened = false) {
   await enqueueNotification(tx, {
@@ -132,6 +133,13 @@ async function notify(tx: Tx, row: ClaimRow, to: "MERCHANT" | "CUSTOMER", title:
       tag: `claim-${row.id}`,
     },
   });
+  // Al cliente también por email (ADR 0032): el push solo le llega si tiene la app instalada.
+  if (to === "CUSTOMER") {
+    const order = await getOrderClaimSummary(tx, row.orderId);
+    if (order.customerUserId) {
+      await enqueueClaimEmail(tx, { userId: order.customerUserId, orderId: row.orderId, data: { orderCode: row.orderCode, title, body } });
+    }
+  }
 }
 
 async function move(tx: Tx, row: ClaimRow, to: ClaimStatus, set: Partial<typeof claims.$inferInsert> = {}): Promise<void> {

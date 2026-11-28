@@ -28,6 +28,7 @@ import type { Db, DbOrTx, Tx } from "../../db/client";
 import type { OrderLimits } from "../../config";
 import { AppError, badRequest, conflict, isUniqueViolation, notFound, tooManyRequests } from "../../lib/errors";
 import { getProductsForOrder } from "../menu/service";
+import { enqueueOrderEmail, type OrderEmailKind } from "../notifications/email";
 import { enqueueOrderPlaced, saveCustomerPushToken } from "../notifications/service";
 import { type Actor, recordAudit } from "../audit/service";
 import { accrueOrderCommission, quoteOrderCommission } from "../billing/service";
@@ -45,6 +46,7 @@ import {
   findApprovedMerchantBySlug,
   getBranchSummary,
   getMerchantAccess,
+  getMerchantNames,
   getTransferDetails,
   type PublicBranchDto,
 } from "../merchants/service";
@@ -119,7 +121,7 @@ export interface OrderDto {
     basisMinor: number;
     plan: string;
     pricingVersionId: string;
-    capMinor: number;
+    capMinor: number | null;
     capApplied: boolean;
   } | null;
   createdAt: string;
@@ -195,7 +197,7 @@ function toOrderDto(
             basisMinor: o.commissionBasisMinor,
             plan: o.commissionPlan,
             pricingVersionId: o.pricingVersionId,
-            capMinor: o.commissionDetail?.capMinor ?? 0,
+            capMinor: o.commissionDetail?.capMinor ?? null,
             capApplied: o.commissionDetail?.capApplied ?? false,
           }
         : null,
@@ -671,6 +673,8 @@ export interface OrderClaimSummary {
   id: string;
   code: string;
   merchantId: string;
+  /** Cuenta del cliente (null en pedidos viejos de invitado). */
+  customerUserId: string | null;
   status: OrderStatus;
   paymentMethod: PaymentMethod;
   subtotalMinor: number;
@@ -699,6 +703,7 @@ async function claimSummary(db: DbOrTx, row: OrderRow): Promise<OrderClaimSummar
     id: row.id,
     code: row.code,
     merchantId: row.merchantId,
+    customerUserId: row.customerUserId,
     status: row.status,
     paymentMethod: row.paymentMethod,
     subtotalMinor: row.subtotalMinor,
@@ -963,7 +968,52 @@ async function applyTransition(
   if (refundDigital) {
     for (const listener of paidCancelListeners) await listener(tx, { orderId: row.id, reason: actor.reason ?? `Pedido ${to.toLowerCase()}` });
   }
+  await enqueueStatusEmail(tx, row, to, actor, refundDigital);
   return updated!;
+}
+
+/**
+ * Email al cliente cuando el pedido se acepta o no sigue (ADR 0032). No cuando lo cancela él mismo,
+ * ni para un pago con tarjeta que nunca se completó (el pedido no llegó al comercio).
+ */
+async function enqueueStatusEmail(
+  tx: Tx,
+  row: OrderRow,
+  to: OrderStatus,
+  actor: { actorType: OrderActorType; reason: string | null },
+  refund: boolean,
+): Promise<void> {
+  if (!row.customerUserId || row.status === OrderStatus.PENDING_PAYMENT) return;
+  const kind: OrderEmailKind | null =
+    to === OrderStatus.ACCEPTED
+      ? "ORDER_ACCEPTED"
+      : to === OrderStatus.REJECTED
+        ? "ORDER_REJECTED"
+        : to === OrderStatus.EXPIRED
+          ? "ORDER_EXPIRED"
+          : to === OrderStatus.CANCELLED && actor.actorType !== "CUSTOMER"
+            ? "ORDER_CANCELLED"
+            : null;
+  if (!kind) return;
+  const [names, items] = await Promise.all([
+    getMerchantNames(tx, [row.merchantId]),
+    tx.select({ name: orderItems.productName, quantity: orderItems.quantity }).from(orderItems).where(eq(orderItems.orderId, row.id)),
+  ]);
+  await enqueueOrderEmail(tx, {
+    kind,
+    userId: row.customerUserId,
+    orderId: row.id,
+    data: {
+      code: row.code,
+      merchantName: names.get(row.merchantId) ?? "El comercio",
+      customerName: row.customerName,
+      fulfillmentType: row.fulfillmentType,
+      totalMinor: row.totalMinor,
+      items,
+      reason: kind === "ORDER_EXPIRED" ? null : actor.reason,
+      refund,
+    },
+  });
 }
 
 /** Estados del pedido que, con un repartidor de Pedilo, los mueve el reparto y no el comercio. */

@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { eq } from "drizzle-orm";
 
-import { customerPushTokens, notificationOutbox } from "../src/db/schema";
+import { customerPushTokens, emailOutbox, notificationOutbox } from "../src/db/schema";
 import { escalateOverdueClaims, openClaim } from "../src/modules/claims/service";
 import { type ExpoPushSender, processOutbox } from "../src/modules/notifications/service";
 import { bearer, createTestContext, type TestContext } from "./helpers";
@@ -145,9 +145,9 @@ describe("el comercio propone, el cliente responde", () => {
     const done = await merchantPost(claimId, "refunded", { note: "Transferido" });
     expect(done.json()).toMatchObject({ status: "RESOLVED", refundedMinor: 400_000 });
     const billing = (await req("GET", `/v1/merchants/${merchantId}/billing`, { token: owner })).json();
-    // Emprendedor 6% · tope kiosco $4.000: $10.000 → $600; base $6.000 → $360. Ajuste: −$240.
-    expect(billing.balanceMinor).toBe(before - 24_000);
-    expect(billing.entries[0]).toMatchObject({ kind: "ADJUSTMENT", amountMinor: -24_000, orderId: o.orderId });
+    // 3% plano (ADR 0033): $10.000 → $300; base $6.000 → $180. Ajuste: −$120.
+    expect(billing.balanceMinor).toBe(before - 12_000);
+    expect(billing.entries[0]).toMatchObject({ kind: "ADJUSTMENT", amountMinor: -12_000, orderId: o.orderId });
 
     expect((await merchantPost(claimId, "refunded", {})).statusCode).toBe(409);
     const kinds = (await customer(o.orderId, o.token).get()).json().claim.events.map((e: { kind: string }) => e.kind);
@@ -244,6 +244,10 @@ describe("avisos de reclamos (ADR 0020)", () => {
     ]);
     expect(rows[0]!.payload).toMatchObject({ url: `/m/${merchantId}/claims/${claimId}`, title: expect.stringMatching(/^Reclamo nuevo/) });
     expect(rows[1]!.payload).toMatchObject({ url: `/order/${o.orderId}`, body: expect.stringContaining("devolución parcial de $ 1.500") });
+    // Al cliente también por email (ADR 0032), con el mismo texto.
+    const emails = (await ctx.db.select().from(emailOutbox).where(eq(emailOutbox.orderId, o.orderId))).filter((e) => e.kind === "CLAIM_UPDATE");
+    expect(emails).toHaveLength(1);
+    expect(emails[0]!.data).toMatchObject({ title: "Respuesta a tu reclamo", body: expect.stringContaining("devolución parcial de $ 1.500") });
 
     // El worker manda el aviso del cliente a su celular; un token dado de baja se borra.
     const sent: string[] = [];

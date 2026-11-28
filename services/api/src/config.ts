@@ -54,6 +54,15 @@ const envSchema = z
       .transform((v) => v === "true"),
     EXPO_ACCESS_TOKEN: z.string().min(10).optional(),
     /**
+     * Emails al cliente (ADR 0032) por Resend. Sin RESEND_API_KEY quedan en la outbox como SKIPPED.
+     * EMAIL_FROM tiene que ser de un dominio verificado en Resend, p. ej. `Pedilo <avisos@pedilo.ar>`.
+     */
+    RESEND_API_KEY: z.string().min(10).optional(),
+    EMAIL_FROM: z.string().min(3).optional(),
+    EMAIL_REPLY_TO: z.email().optional(),
+    /** URL pública de la app del cliente (web): el email lleva un botón a `/order/{id}`. Sin esto, sin botón. */
+    CUSTOMER_APP_URL: z.url().optional(),
+    /**
      * Mercado Pago (ADR 0021). Sin MP_CLIENT_ID/MP_CLIENT_SECRET/MP_PUBLIC_KEY/MP_TOKEN_ENCRYPTION_KEY
      * los pagos con tarjeta quedan apagados (el resto funciona igual).
      */
@@ -88,6 +97,9 @@ const envSchema = z
     if (env.NODE_ENV === "production" && env.VAPID_PUBLIC_KEY && !env.VAPID_SUBJECT) {
       ctx.addIssue({ code: "custom", path: ["VAPID_SUBJECT"], message: "En producción VAPID_SUBJECT es obligatorio" });
     }
+    if (env.RESEND_API_KEY && !env.EMAIL_FROM) {
+      ctx.addIssue({ code: "custom", path: ["EMAIL_FROM"], message: "Con RESEND_API_KEY, EMAIL_FROM es obligatorio" });
+    }
     if (env.MEDIA_STORAGE === "supabase" && (!env.SUPABASE_URL || !env.SUPABASE_SECRET_KEY)) {
       ctx.addIssue({ code: "custom", path: ["SUPABASE_SECRET_KEY"], message: "MEDIA_STORAGE=supabase necesita SUPABASE_URL y SUPABASE_SECRET_KEY" });
     }
@@ -115,6 +127,7 @@ export interface Config {
   limits: OrderLimits;
   settlement: { timeZone: string; dueDays: number; sweepMs: number };
   expoPush: { enabled: boolean; accessToken?: string | undefined };
+  email: { resend: { apiKey: string; from: string; replyTo?: string | undefined } | null; customerAppUrl: string | null };
   mercadoPago: {
     appId: string;
     clientSecret: string;
@@ -194,6 +207,13 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
           }
         : null,
     expoPush: { enabled: env.EXPO_PUSH_ENABLED, ...(env.EXPO_ACCESS_TOKEN && { accessToken: env.EXPO_ACCESS_TOKEN }) },
+    email: {
+      resend:
+        env.RESEND_API_KEY && env.EMAIL_FROM
+          ? { apiKey: env.RESEND_API_KEY, from: env.EMAIL_FROM, ...(env.EMAIL_REPLY_TO && { replyTo: env.EMAIL_REPLY_TO }) }
+          : null,
+      customerAppUrl: env.CUSTOMER_APP_URL?.replace(/\/+$/, "") ?? null,
+    },
     media:
       env.MEDIA_STORAGE === "supabase"
         ? { driver: "supabase", url: env.SUPABASE_URL!.replace(/\/+$/, ""), secretKey: env.SUPABASE_SECRET_KEY!, bucket: env.SUPABASE_STORAGE_BUCKET }
