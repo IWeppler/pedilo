@@ -185,8 +185,8 @@ describe("cobro con split", () => {
     const key = `att-fixed-${Date.now()}`;
     const res = await pay(created.order.id, created.trackingToken, key);
     expect(res.json()).toMatchObject({ status: "APPROVED", providerStatus: "approved", orderStatus: "PLACED" });
-    // $10.000 · Emprendedor 6% → $600 de comisión retenida por Mercado Pago.
-    expect(fake.calls.create.at(-1)).toMatchObject({ token: "seller-token-ok", amount: 10_000, fee: 600, key });
+    // $10.000 · 3% (ADR 0033) → $300 de comisión retenida por Mercado Pago.
+    expect(fake.calls.create.at(-1)).toMatchObject({ token: "seller-token-ok", amount: 10_000, fee: 300, key });
 
     // Mismo Idempotency-Key: no se cobra dos veces.
     const before = fake.calls.create.length;

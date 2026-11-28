@@ -28,6 +28,7 @@ const planSchema = z.enum(Object.values(PlanCode) as [PlanCode, ...PlanCode[]]);
 const categorySchema = z.enum(Object.values(MerchantCategory) as [MerchantCategory, ...MerchantCategory[]]);
 const minor = z.number().int().min(0).max(1_000_000_000);
 const bps = z.number().int().min(0).max(10_000);
+const capSchema = minor.nullable();
 
 const planTermsSchema = z.object({
   monthlyFeeMinor: minor.describe("Mensualidad en centavos"),
@@ -51,9 +52,11 @@ const pricingFields = {
     )
     .min(1)
     .max(10),
-  capsByCategory: z.object(
-    Object.fromEntries(Object.values(MerchantCategory).map((c) => [c, minor])) as Record<MerchantCategory, typeof minor>,
-  ),
+  capsByCategory: z
+    .object(
+      Object.fromEntries(Object.values(MerchantCategory).map((c) => [c, capSchema])) as Record<MerchantCategory, typeof capSchema>,
+    )
+    .describe("Tope de comisión por pedido según el rubro; null = sin tope"),
   plans: z.object(
     Object.fromEntries(Object.values(PlanCode).map((p) => [p, planTermsSchema])) as Record<PlanCode, typeof planTermsSchema>,
   ),
@@ -109,7 +112,7 @@ const billingSchema = z.object({
   plan: planTermsSchema.extend({ code: planSchema, since: z.string().nullable().describe("null = nunca asignado (Emprendedor)") }),
   category: categorySchema,
   categoryDefaulted: z.boolean().describe("El rubro no tiene categoría de comisión: se usa la de emprendedores"),
-  capMinor: z.number().int(),
+  capMinor: z.number().int().nullable().describe("Tope por pedido del rubro; null = sin tope"),
   pricing: pricingSchema,
   balanceMinor: z.number().int().describe("Lo que el comercio debe: asientos − pagos"),
   unsettledMinor: z.number().int().describe("Parte del saldo que todavía no entró en una liquidación"),

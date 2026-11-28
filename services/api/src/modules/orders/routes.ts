@@ -99,7 +99,7 @@ const merchantOrderSchema = orderSchema.extend({
       basisMinor: z.number().int(),
       plan: z.string(),
       pricingVersionId: z.string(),
-      capMinor: z.number().int(),
+      capMinor: z.number().int().nullable().describe("null = sin tope"),
       capApplied: z.boolean(),
     })
     .nullable()

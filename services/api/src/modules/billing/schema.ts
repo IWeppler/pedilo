@@ -14,7 +14,8 @@ import { orders } from "../orders/schema";
 export const pricingVersions = pgTable("pricing_versions", {
   id: text("id").primaryKey(),
   brackets: jsonb("brackets").$type<CommissionBracket[]>().notNull(),
-  capsByCategory: jsonb("caps_by_category").$type<Record<MerchantCategory, MinorUnits>>().notNull(),
+  /** `null` en un rubro = sin tope. */
+  capsByCategory: jsonb("caps_by_category").$type<Record<MerchantCategory, MinorUnits | null>>().notNull(),
   plans: jsonb("plans").$type<Record<PlanCode, PlanTerms>>().notNull(),
   /** Desde cuándo rige. La vigente es la de mayor `effective_from` que ya empezó. */
   effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull(),

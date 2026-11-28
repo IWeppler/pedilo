@@ -1,7 +1,9 @@
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { commissionEntries } from "../src/db/schema";
+import { LAUNCH_PRICING_HYPOTHESIS } from "@pedilo/domain";
+
+import { commissionEntries, pricingVersions } from "../src/db/schema";
 import { accrueOrderCommission, getActivePricing } from "../src/modules/billing/service";
 import { closeSettlementWeek, listSettlementsForAdmin } from "../src/modules/billing/settlements";
 import { bearer, createTestContext, type TestContext } from "./helpers";
@@ -88,15 +90,23 @@ beforeAll(async () => {
 afterAll(() => ctx.close());
 
 describe("pricing versionado", () => {
-  it("la migración siembra la hipótesis v0.4 y es la vigente", async () => {
+  it("las migraciones dejan vigente el 3% plano, sin mensualidad ni tope (ADR 0033)", async () => {
     const res = await req("GET", "/v1/pricing/current", { token: owner });
     expect(res.statusCode).toBe(200);
+    const flat = { baseRateBps: 300, monthlyFeeMinor: 0 };
     expect(res.json()).toMatchObject({
-      id: "v0.4-hypothesis",
-      plans: { EMPRENDEDOR: { baseRateBps: 600, monthlyFeeMinor: 0 }, NEGOCIO: { baseRateBps: 400 }, PRO: { baseRateBps: 250 } },
-      capsByCategory: { GASTRONOMY: 500000, ELECTRONICS: 700000 },
+      id: "v1-3pct",
+      brackets: [{ upToMinor: null, rateFactorBps: 10000 }],
+      plans: { EMPRENDEDOR: flat, NEGOCIO: flat, PRO: flat },
+      capsByCategory: { GASTRONOMY: null, ELECTRONICS: null },
     });
     expect((await req("GET", "/v1/pricing/current")).statusCode).toBe(401);
+
+    // 50 × $9.000 = $450.000 → 3% = $13.500, sin tope.
+    const id = (await order(50)).json().order.id;
+    const list = (await req("GET", `/v1/merchants/${merchantId}/orders`, { token: owner })).json() as Array<{ id: string; commission: unknown }>;
+    expect(list.find((o) => o.id === id)!.commission).toMatchObject({ amountMinor: 1_350_000, pricingVersionId: "v1-3pct", capMinor: null, capApplied: false });
+    await req("POST", `/v1/merchants/${merchantId}/orders/${id}/transition`, { token: owner, payload: { to: "REJECTED", reason: "Prueba" } });
   });
 
   it("una versión nueva solo hacia adelante, con tramos válidos e id único", async () => {
@@ -120,11 +130,12 @@ describe("pricing versionado", () => {
     expect(created.statusCode).toBe(201);
     expect((await post(body({}))).statusCode).toBe(409);
 
-    // Todavía no rige: la vigente sigue siendo la v0.4; desde su fecha, la nueva.
-    expect((await getActivePricing(ctx.db)).id).toBe("v0.4-hypothesis");
+    // Todavía no rige: la vigente sigue siendo la v1; desde su fecha, la nueva.
+    expect((await getActivePricing(ctx.db)).id).toBe("v1-3pct");
     expect((await getActivePricing(ctx.db, new Date(Date.now() + 8 * 86_400_000))).id).toBe("v0.5");
     expect((await req("GET", "/v1/admin/pricing-versions", { token: admin })).json().map((v: { id: string }) => v.id)).toEqual([
       "v0.5",
+      "v1-3pct",
       "v0.4-hypothesis",
     ]);
   });
@@ -132,6 +143,19 @@ describe("pricing versionado", () => {
 
 describe("comisión por pedido y ledger", () => {
   let firstOrderId: string;
+
+  // La mecánica de planes, tramos y topes se prueba con los precios de la v0.4, que la tienen toda.
+  // Rige desde ahora (después de la v1), sin pasar por la regla de «solo hacia adelante» de la API.
+  beforeAll(async () => {
+    const { id: _id, ...v04 } = LAUNCH_PRICING_HYPOTHESIS;
+    await ctx.db.insert(pricingVersions).values({
+      id: "test-tramos",
+      brackets: [...v04.brackets],
+      capsByCategory: { ...v04.capsByCategory },
+      plans: { ...v04.plans },
+      effectiveFrom: new Date(),
+    });
+  });
 
   it("sin plan asignado: Emprendedor 6%, congelada en el pedido; el cliente no la ve", async () => {
     const res = await order(1); // $9.000 → 6% = $540
@@ -144,7 +168,7 @@ describe("comisión por pedido y ledger", () => {
       amountMinor: 54000,
       basisMinor: 900000,
       plan: "EMPRENDEDOR",
-      pricingVersionId: "v0.4-hypothesis",
+      pricingVersionId: "test-tramos",
       capMinor: 500000,
       capApplied: false,
     });

@@ -309,7 +309,7 @@ export interface BillingDto {
   category: MerchantCategory;
   /** El rubro no tiene categoría de comisión: se usa el tope por defecto. */
   categoryDefaulted: boolean;
-  capMinor: number;
+  capMinor: number | null;
   pricing: PricingVersionDto;
   /** Lo que el comercio debe: asientos − pagos de liquidaciones. */
   balanceMinor: number;

@@ -1,7 +1,7 @@
 "use client";
 
 import type { MerchantBilling } from "@pedilo/api-client";
-import { formatARS } from "@pedilo/domain";
+import { formatARS, hasSinglePlan } from "@pedilo/domain";
 import { COMMISSION_ENTRY_LABELS, formatBps, formatDateTime, formKey, initialFormState, PLAN_LABELS } from "@pedilo/web-utils";
 import { useActionState } from "react";
 
@@ -19,14 +19,17 @@ export function BillingCard({ merchantId, billing: b }: { merchantId: string; bi
   const [planState, planAction] = useActionState(changePlan.bind(null, merchantId), initialFormState);
   const [adjState, adjAction] = useActionState(addAdjustment.bind(null, merchantId), initialFormState);
   const err = adjState.fieldErrors ?? {};
+  // Con la comisión plana (ADR 0033) los tres planes cobran lo mismo: no hay plan que cambiar.
+  const singlePlan = hasSinglePlan(b.pricing);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Plan y comisiones</CardTitle>
         <CardDescription>
-          Plan {PLAN_LABELS[b.plan.code]} ({formatBps(b.plan.baseRateBps)}, {formatARS(b.plan.monthlyFeeMinor)}/mes) · tope{" "}
-          {formatARS(b.capMinor)} · pricing {b.pricing.id}
+          {singlePlan ? "Comisión" : `Plan ${PLAN_LABELS[b.plan.code]}`} ({formatBps(b.plan.baseRateBps)},{" "}
+          {b.plan.monthlyFeeMinor ? `${formatARS(b.plan.monthlyFeeMinor)}/mes` : "sin mensualidad"}) ·{" "}
+          {b.capMinor === null ? "sin tope" : `tope ${formatARS(b.capMinor)}`} · pricing {b.pricing.id}
           {b.categoryDefaulted && " · el rubro no tiene categoría de comisión: se usa la de emprendedores"}
         </CardDescription>
       </CardHeader>
@@ -36,6 +39,7 @@ export function BillingCard({ merchantId, billing: b }: { merchantId: string; bi
         </p>
 
         <div className="grid gap-6 md:grid-cols-2">
+          {!singlePlan && (
           <form key={formKey(planState.values)} action={planAction} className="grid content-start gap-3">
             <h3 className="text-sm font-medium">Cambiar plan</h3>
             {planState.message && (
@@ -60,6 +64,7 @@ export function BillingCard({ merchantId, billing: b }: { merchantId: string; bi
               <SubmitButton pendingText="Guardando…">Cambiar plan</SubmitButton>
             </div>
           </form>
+          )}
 
           <form key={formKey(adjState.values)} action={adjAction} className="grid content-start gap-3">
             <h3 className="text-sm font-medium">Ajuste manual</h3>

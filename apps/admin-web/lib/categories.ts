@@ -1,5 +1,5 @@
 import type { Category, CategoryKind, CommissionCategory } from "@pedilo/api-client";
-import { formatARS, LAUNCH_PRICING_HYPOTHESIS } from "@pedilo/domain";
+import { FLAT_PRICING, formatARS } from "@pedilo/domain";
 
 export const KIND_LABELS: Record<CategoryKind, string> = {
   MERCHANT: "Rubros de comercio",
@@ -30,10 +30,10 @@ export const COMMISSION_OPTIONS = (Object.keys(COMMISSION_NAMES) as CommissionCa
   label: commissionLabel(value),
 }));
 
-/** "Supermercados (tope $ 5.000,00 por pedido)". Topes de la hipótesis de pricing v0.4 (SPEC §6.2). */
+/** "Supermercados", o "Supermercados (tope $ 5.000,00 por pedido)" si el pricing vigente tiene tope (ADR 0033: hoy no). */
 export function commissionLabel(value: CommissionCategory): string {
-  const cap = LAUNCH_PRICING_HYPOTHESIS.capsByCategory[value];
-  return `${COMMISSION_NAMES[value]} (tope ${formatARS(cap)} por pedido)`;
+  const cap = FLAT_PRICING.capsByCategory[value];
+  return cap === null ? COMMISSION_NAMES[value] : `${COMMISSION_NAMES[value]} (tope ${formatARS(cap)} por pedido)`;
 }
 
 export function commissionShortLabel(value: CommissionCategory | null): string {

@@ -1,4 +1,4 @@
-import { formatARS, SETTLEMENT_STATUS_LABELS } from "@pedilo/domain";
+import { formatARS, hasSinglePlan, SETTLEMENT_STATUS_LABELS } from "@pedilo/domain";
 import { COMMISSION_ENTRY_LABELS, formatBps, formatDateTime, PLAN_LABELS } from "@pedilo/web-utils";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -28,11 +28,13 @@ async function Billing({ params }: { params: Props["params"] }) {
     (api) => api.GET("/v1/merchants/{merchantId}/billing", { params: { path: { merchantId } } }),
     { notFoundOn404: true },
   );
+  // Comisión plana (ADR 0033): los planes cobran lo mismo, así que no se muestran ni se comparan.
+  const singlePlan = hasSinglePlan(b.pricing);
 
   return (
     <>
       <PageHeader
-        title="Plan y comisiones"
+        title={singlePlan ? "Comisiones" : "Plan y comisiones"}
         description="Pedilo cobra una comisión por pedido completado. El cliente no paga cargos de Pedilo."
         actions={
           <Link href={`/m/${merchantId}`} className={buttonVariants({ variant: "outline" })}>
@@ -44,18 +46,26 @@ async function Billing({ params }: { params: Props["params"] }) {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Plan {PLAN_LABELS[b.plan.code]}</CardTitle>
-            <CardDescription>{b.plan.since ? `Desde ${formatDateTime(b.plan.since)}` : "Plan inicial"}</CardDescription>
+            <CardTitle>{singlePlan ? "Tu comisión" : `Plan ${PLAN_LABELS[b.plan.code]}`}</CardTitle>
+            <CardDescription>
+              {singlePlan
+                ? "Un porcentaje del subtotal de productos de cada pedido completado."
+                : b.plan.since
+                  ? `Desde ${formatDateTime(b.plan.since)}`
+                  : "Plan inicial"}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              <Item label="Comisión base">{formatBps(b.plan.baseRateBps)}</Item>
-              <Item label="Mensualidad">{formatARS(b.plan.monthlyFeeMinor)}</Item>
-              <Item label="Tope por pedido">{formatARS(b.capMinor)}</Item>
-              <Item label="Usuarios">{b.plan.maxUsers}</Item>
+              <Item label="Comisión">{formatBps(b.plan.baseRateBps)}</Item>
+              <Item label="Mensualidad">{b.plan.monthlyFeeMinor ? formatARS(b.plan.monthlyFeeMinor) : "Sin mensualidad"}</Item>
+              <Item label="Tope por pedido">{b.capMinor === null ? "Sin tope" : formatARS(b.capMinor)}</Item>
+              {!singlePlan && <Item label="Usuarios">{b.plan.maxUsers}</Item>}
             </dl>
             <p className="mt-3 text-xs text-muted-foreground">
-              Para cambiar de plan, escribinos. El cambio rige desde ese momento: los pedidos anteriores no cambian.
+              {singlePlan
+                ? "Sin envío ni propina: la comisión se calcula sobre los productos. Si cambian los precios, los pedidos anteriores no cambian."
+                : "Para cambiar de plan, escribinos. El cambio rige desde ese momento: los pedidos anteriores no cambian."}
             </p>
           </CardContent>
         </Card>
@@ -121,7 +131,9 @@ async function Billing({ params }: { params: Props["params"] }) {
         <CardHeader>
           <CardTitle>Simulador</CardTitle>
           <CardDescription>
-            Compará cuánto pagarías en cada plan. Precios de lanzamiento a validar (versión {b.pricing.id}).
+            {singlePlan
+              ? `Calculá cuánto pagás por un pedido y por mes (versión ${b.pricing.id}).`
+              : `Compará cuánto pagarías en cada plan. Precios de lanzamiento a validar (versión ${b.pricing.id}).`}
           </CardDescription>
         </CardHeader>
         <CardContent>

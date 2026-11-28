@@ -1,7 +1,7 @@
 "use client";
 
 import type { PlanCode, PricingVersionDoc } from "@pedilo/api-client";
-import { calculateCommission, formatARS, type MerchantCategory } from "@pedilo/domain";
+import { calculateCommission, formatARS, hasSinglePlan, type MerchantCategory } from "@pedilo/domain";
 import { formatBps, parsePesosToMinor, PLAN_LABELS } from "@pedilo/web-utils";
 import { useState } from "react";
 
@@ -29,6 +29,10 @@ export function CommissionSimulator({
   const basis = parsePesosToMinor(raw);
   const monthly = Number.parseInt(ordersPerMonth, 10);
   const valid = basis !== undefined && Number.isSafeInteger(basis) && basis >= 0;
+  // Comisión plana (ADR 0033): una sola fila, sin comparar planes.
+  const single = hasSinglePlan(pricing);
+  const plans = single ? [currentPlan] : PLANS;
+  const cap = pricing.capsByCategory[category];
 
   return (
     <div className="grid gap-4">
@@ -53,23 +57,25 @@ export function CommissionSimulator({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-muted-foreground">
-                <th className="py-2 pr-3 font-medium">Plan</th>
-                <th className="py-2 pr-3 font-medium">Tasa base</th>
+                {!single && <th className="py-2 pr-3 font-medium">Plan</th>}
+                <th className="py-2 pr-3 font-medium">{single ? "Comisión" : "Tasa base"}</th>
                 <th className="py-2 pr-3 text-right font-medium">Comisión del pedido</th>
                 <th className="py-2 pr-3 text-right font-medium">Mensualidad</th>
                 <th className="py-2 text-right font-medium">Costo por mes estimado</th>
               </tr>
             </thead>
             <tbody>
-              {PLANS.map((plan) => {
+              {plans.map((plan) => {
                 const terms = pricing.plans[plan];
                 const r = calculateCommission({ basisMinor: basis, baseRateBps: terms.baseRateBps, category, pricing });
                 const perMonth = Number.isFinite(monthly) && monthly >= 0 ? r.commissionMinor * monthly + terms.monthlyFeeMinor : null;
                 return (
-                  <tr key={plan} className={cn("border-b last:border-0", plan === currentPlan && "bg-muted/60")}>
-                    <td className="py-2 pr-3 font-medium">
-                      {PLAN_LABELS[plan]} {plan === currentPlan && <span className="text-xs text-muted-foreground">(tu plan)</span>}
-                    </td>
+                  <tr key={plan} className={cn("border-b last:border-0", !single && plan === currentPlan && "bg-muted/60")}>
+                    {!single && (
+                      <td className="py-2 pr-3 font-medium">
+                        {PLAN_LABELS[plan]} {plan === currentPlan && <span className="text-xs text-muted-foreground">(tu plan)</span>}
+                      </td>
+                    )}
                     <td className="py-2 pr-3">{formatBps(terms.baseRateBps)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {formatARS(r.commissionMinor)}
@@ -83,8 +89,9 @@ export function CommissionSimulator({
             </tbody>
           </table>
           <p className="mt-2 text-xs text-muted-foreground">
-            Tramos: el porcentaje baja sobre el excedente, nunca sobre todo el pedido. Tope por pedido de tu rubro:{" "}
-            {formatARS(pricing.capsByCategory[category])}. No incluye el costo del procesador de pagos.
+            {pricing.brackets.length > 1 && "Tramos: el porcentaje baja sobre el excedente, nunca sobre todo el pedido. "}
+            {cap === null ? "Sin tope por pedido. " : `Tope por pedido de tu rubro: ${formatARS(cap)}. `}
+            No incluye el costo del procesador de pagos.
           </p>
         </div>
       )}

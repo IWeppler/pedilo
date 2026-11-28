@@ -11,11 +11,12 @@ import {
  *
  * - Cada tramo aplica un porcentaje de la tasa base del plan SOLO sobre el excedente
  *   dentro de ese tramo (nunca retroactivo al pedido completo).
- * - Luego se aplica el tope del rubro: commission = min(por_tramos, tope).
+ * - Luego se aplica el tope del rubro, si la versión tiene: commission = min(por_tramos, tope).
  * - Se redondea UNA sola vez al final, half-up al centavo.
  *
- * Todos los valores son parámetros versionados (`PricingVersion`). Los de
- * `LAUNCH_PRICING_HYPOTHESIS` son la hipótesis comercial v0.4, no precios aprobados.
+ * Todos los valores son parámetros versionados (`PricingVersion`). `LAUNCH_PRICING_HYPOTHESIS` es
+ * la hipótesis comercial v0.4 (tramos, topes y planes pagos); `FLAT_PRICING` es la vigente desde
+ * 2026-11-28: 3% del subtotal, sin mensualidad y sin tope.
  */
 
 export const MerchantCategory = {
@@ -51,7 +52,8 @@ export interface PlanTerms {
 export interface PricingVersion {
   readonly id: string;
   readonly brackets: readonly CommissionBracket[];
-  readonly capsByCategory: { readonly [C in MerchantCategory]: MinorUnits };
+  /** Tope de comisión por pedido según el rubro. `null` = sin tope. */
+  readonly capsByCategory: { readonly [C in MerchantCategory]: MinorUnits | null };
   readonly plans: { readonly [P in PlanCode]: PlanTerms };
 }
 
@@ -76,6 +78,23 @@ export const LAUNCH_PRICING_HYPOTHESIS: PricingVersion = {
   },
 };
 
+/** Términos únicos de la versión plana: los tres planes quedan iguales. */
+const FLAT_TERMS: PlanTerms = { monthlyFeeMinor: 0, baseRateBps: 300, maxBranches: 1, maxUsers: 1 };
+
+/** 3% del subtotal, sin mensualidad y sin tope (decisión del 2026-11-28). La siembra la migración 0029. */
+export const FLAT_PRICING: PricingVersion = {
+  id: "v1-3pct",
+  brackets: [{ upToMinor: null, rateFactorBps: 10_000 }],
+  capsByCategory: { GASTRONOMY: null, KIOSK: null, SUPERMARKET: null, ELECTRONICS: null, ENTREPRENEUR: null },
+  plans: { EMPRENDEDOR: FLAT_TERMS, NEGOCIO: FLAT_TERMS, PRO: FLAT_TERMS },
+};
+
+/** ¿Todos los planes cobran lo mismo? Entonces el plan no se muestra ni se compara. */
+export function hasSinglePlan(pricing: Pick<PricingVersion, "plans">): boolean {
+  const [first, ...rest] = Object.values(pricing.plans);
+  return rest.every((p) => p.baseRateBps === first!.baseRateBps && p.monthlyFeeMinor === first!.monthlyFeeMinor);
+}
+
 export interface CommissionInput {
   /**
    * Base comisionable en centavos: subtotal de productos después de descuentos financiados
@@ -99,7 +118,8 @@ export interface CommissionResult {
   readonly commissionMinor: MinorUnits;
   /** Comisión por tramos antes de aplicar el tope. */
   readonly uncappedMinor: MinorUnits;
-  readonly capMinor: MinorUnits;
+  /** `null` = la versión no tiene tope para el rubro. */
+  readonly capMinor: MinorUnits | null;
   readonly capApplied: boolean;
   readonly brackets: readonly CommissionBracketDetail[];
 }
@@ -137,11 +157,11 @@ export function calculateCommission(input: CommissionInput): CommissionResult {
 
   const uncappedMinor = Number(divideRoundHalfUp(numerator, BPS_SQUARED));
   const capMinor = pricing.capsByCategory[category];
-  const capApplied = uncappedMinor > capMinor;
+  const capApplied = capMinor !== null && uncappedMinor > capMinor;
 
   return {
     pricingVersionId: pricing.id,
-    commissionMinor: capApplied ? capMinor : uncappedMinor,
+    commissionMinor: capApplied ? capMinor! : uncappedMinor,
     uncappedMinor,
     capMinor,
     capApplied,
