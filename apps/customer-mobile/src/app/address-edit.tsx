@@ -53,7 +53,8 @@ function AddressEditor({
   const [address, setAddress] = useState<AddressValue>({
     line: initialLine,
     notes: existing?.notes ?? "",
-    pin: existing?.location ? { ...existing.location, forLine: initialLine } : gps ? { ...gps, forLine: initialLine.trim() } : null,
+    // El punto del GPS no se guarda solo: el mapa se abre para que el cliente lo confirme.
+    pin: existing?.location ? { ...existing.location, forLine: initialLine } : null,
   });
   const [error, setError] = useState<string | null>(null);
   const close = () => (router.canGoBack() ? router.back() : router.replace("/address"));
@@ -96,8 +97,20 @@ function AddressEditor({
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <AddressFields
+            value={address}
+            onChange={setAddress}
+            cityName={city?.name}
+            fallback={gps}
+            suggestedPin={existing ? null : gps}
+            inputBackground={t.surface}
+          />
+          {gps && !existing && address.line.trim() === initialLine.trim() && initialLine && (
+            <Text style={{ color: t.muted }}>Sugerimos la calle según tu ubicación. Revisala y corregí el número si hace falta.</Text>
+          )}
+
           <View style={{ gap: space.sm }}>
-            <Text style={{ color: t.muted, fontSize: 13, fontWeight: "600" }}>¿Qué dirección es?</Text>
+            <Text style={{ color: t.muted, fontSize: 13, fontWeight: "600" }}>¿Cómo la llamamos?</Text>
             <View style={styles.chips}>
               {LABELS.filter((l) => l === "OTHER" || !taken.has(l)).map((l) => (
                 <Chip key={l} label={ADDRESS_LABELS[l]} selected={label === l} onPress={() => setLabel(l)} />
@@ -119,14 +132,6 @@ function AddressEditor({
             </View>
           )}
 
-          <AddressFields value={address} onChange={setAddress} cityName={city?.name} fallback={gps} inputBackground={t.surface} />
-          {gps && !existing && address.line.trim() === initialLine.trim() && initialLine && (
-            <Text style={{ color: t.muted }}>Sugerimos la calle según tu ubicación. Revisala y corregí el número si hace falta.</Text>
-          )}
-
-          {error && <Text style={{ color: t.danger, fontWeight: "600" }}>{error}</Text>}
-
-          <Button label={busy ? "Guardando…" : "Guardar dirección"} onPress={save} disabled={address.line.trim().length < 3 || busy} />
           {existing && (
             <Pressable
               accessibilityRole="button"
@@ -139,6 +144,12 @@ function AddressEditor({
             </Pressable>
           )}
         </ScrollView>
+
+        {/* Pie fijo: el botón se ve aunque el teclado esté abierto. */}
+        <View style={[styles.footer, { borderColor: t.border }]}>
+          {error && <Text style={{ color: t.danger, fontWeight: "600" }}>{error}</Text>}
+          <Button label={busy ? "Guardando…" : "Guardar dirección"} onPress={save} disabled={address.line.trim().length < 3 || busy} />
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -153,4 +164,5 @@ const styles = StyleSheet.create({
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
   input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
   delete: { alignSelf: "center", paddingVertical: space.sm },
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, gap: space.sm },
 });

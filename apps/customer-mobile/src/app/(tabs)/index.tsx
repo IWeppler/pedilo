@@ -2,9 +2,10 @@ import type { CityMerchant } from "@pedilo/api-client";
 import { addressTitle, formatARSWhole, isOrderFinal } from "@pedilo/domain";
 import { Redirect, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
-import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { BottomSheet } from "@/components/bottom-sheet";
 import { categoryIcon, foodTypeEmoji, Icon, type IconName, rubroEmoji } from "@/components/icon";
 import { Photo } from "@/components/photo";
 import { Text, TextInput } from "@/components/text";
@@ -599,38 +600,34 @@ function OptionSheet({
 }) {
   const t = useTheme();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cerrar" />
-      <SafeAreaView edges={["bottom"]} style={[styles.sheet, { backgroundColor: t.background }]}>
-        <View style={[styles.grabber, { backgroundColor: t.border }]} />
-        <Text style={[styles.sheetTitle, { color: t.text }]} accessibilityRole="header">
-          {title}
-        </Text>
-        {options.map((o) => {
-          const isSelected = o.id === selected;
-          return (
-            <Pressable
-              key={o.id ?? "all"}
-              accessibilityRole="radio"
-              accessibilityState={{ checked: isSelected }}
-              onPress={() => {
-                onSelect(o.id);
-                onClose();
-              }}
-              style={({ pressed }) => [styles.option, { opacity: pressed ? 0.6 : 1 }]}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.optionLabel, { color: t.text, fontWeight: isSelected ? "700" : "500" }]}>{o.label}</Text>
-                {o.hint && <Text style={[styles.meta, { color: t.muted }]}>{o.hint}</Text>}
-              </View>
-              <View style={[styles.radio, { borderColor: isSelected ? t.primary : t.border }]}>
-                {isSelected && <View style={[styles.radioDot, { backgroundColor: t.primary }]} />}
-              </View>
-            </Pressable>
-          );
-        })}
-      </SafeAreaView>
-    </Modal>
+    <BottomSheet visible={visible} onClose={onClose}>
+      <Text style={[styles.sheetTitle, { color: t.text }]} accessibilityRole="header">
+        {title}
+      </Text>
+      {options.map((o) => {
+        const isSelected = o.id === selected;
+        return (
+          <Pressable
+            key={o.id ?? "all"}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: isSelected }}
+            onPress={() => {
+              onSelect(o.id);
+              onClose();
+            }}
+            style={({ pressed }) => [styles.option, { opacity: pressed ? 0.6 : 1 }]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.optionLabel, { color: t.text, fontWeight: isSelected ? "700" : "500" }]}>{o.label}</Text>
+              {o.hint && <Text style={[styles.meta, { color: t.muted }]}>{o.hint}</Text>}
+            </View>
+            <View style={[styles.radio, { borderColor: isSelected ? t.primary : t.border }]}>
+              {isSelected && <View style={[styles.radioDot, { backgroundColor: t.primary }]} />}
+            </View>
+          </Pressable>
+        );
+      })}
+    </BottomSheet>
   );
 }
 
@@ -815,9 +812,6 @@ const styles = StyleSheet.create({
   infoText: { fontSize: 13 },
   empty: { alignItems: "center", gap: space.md, paddingVertical: space.xl * 2 },
 
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)" },
-  sheet: { borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, paddingHorizontal: space.lg, paddingBottom: space.lg },
-  grabber: { alignSelf: "center", width: 40, height: 4, borderRadius: radius.pill, marginTop: space.sm, marginBottom: space.md },
   sheetTitle: { fontFamily: font.display, fontSize: 20, fontWeight: "700", marginBottom: space.sm },
   option: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
   optionLabel: { fontSize: 16 },

@@ -6,6 +6,7 @@ import MapView, { PROVIDER_GOOGLE } from "react-native-maps";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Icon } from "@/components/icon";
+import { MapPin } from "@/components/map-pin";
 import { Text } from "@/components/text";
 import { Button } from "@/components/ui";
 import { font, radius, space, useTheme } from "@/lib/theme";
@@ -23,6 +24,8 @@ export interface LocationPickerProps {
   fallback: LatLng | null;
   onConfirm: (point: LatLng) => void;
   onClose: () => void;
+  /** Texto bajo el título; si no, se pide mover el mapa hasta la puerta. */
+  hint?: string;
 }
 
 /**
@@ -32,7 +35,7 @@ export interface LocationPickerProps {
  * Arranca en el punto ya marcado, si no en la dirección escrita (geocodificada en el teléfono),
  * si no en la ubicación actual y si no en la sucursal.
  */
-export function LocationPicker({ visible, addressQuery, initial, fallback, onConfirm, onClose }: LocationPickerProps) {
+export function LocationPicker({ visible, addressQuery, initial, fallback, onConfirm, onClose, hint }: LocationPickerProps) {
   const t = useTheme();
   const map = useRef<MapView>(null);
   const [start, setStart] = useState<LatLng | null>(null);
@@ -94,15 +97,7 @@ export function LocationPicker({ visible, addressQuery, initial, fallback, onCon
         )}
 
         {/* Pin fijo: la punta marca el centro del mapa. */}
-        {start && (
-          <View pointerEvents="none" style={styles.pinWrap}>
-            <View style={[styles.pinHead, { backgroundColor: t.primary }]}>
-              <Icon name="home" size={20} color={t.primaryText} />
-            </View>
-            <View style={[styles.pinTip, { borderTopColor: t.primary }]} />
-            <View style={styles.pinShadow} />
-          </View>
-        )}
+        {start && <MapPin />}
 
         <SafeAreaView edges={["top"]} style={styles.top} pointerEvents="box-none">
           <Pressable
@@ -128,7 +123,7 @@ export function LocationPicker({ visible, addressQuery, initial, fallback, onCon
         <SafeAreaView edges={["bottom"]} style={[styles.sheet, { backgroundColor: t.background }]}>
           <Text style={[styles.title, { color: t.text }]}>¿Dónde te lo dejamos?</Text>
           <Text style={{ color: t.muted }}>
-            Mové el mapa hasta que el pin quede en tu puerta{addressQuery.trim() ? ` (${addressQuery.split(",")[0]!.trim()})` : ""}.
+            {hint ?? `Mové el mapa hasta que el pin quede en tu puerta${addressQuery.trim() ? ` (${addressQuery.split(",")[0]!.trim()})` : ""}.`}
           </Text>
           {notice && <Text style={{ color: t.danger, fontWeight: "600" }}>{notice}</Text>}
           <Button label="Confirmar ubicación" disabled={!center} onPress={() => center && onConfirm(center)} />
@@ -168,20 +163,8 @@ async function ensurePermission(ask: boolean): Promise<boolean> {
   return (await Location.requestForegroundPermissionsAsync()).granted;
 }
 
-const PIN_HEAD = 40;
 const styles = StyleSheet.create({
   loading: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center", gap: space.sm },
-  pinWrap: {
-    position: "absolute",
-    left: "50%",
-    top: "50%",
-    alignItems: "center",
-    // La punta del pin (no su centro) cae sobre el centro del mapa.
-    transform: [{ translateX: -PIN_HEAD / 2 }, { translateY: -(PIN_HEAD + 10) }],
-  },
-  pinHead: { width: PIN_HEAD, height: PIN_HEAD, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 3, borderColor: "#ffffff" },
-  pinTip: { width: 0, height: 0, borderLeftWidth: 7, borderRightWidth: 7, borderTopWidth: 10, borderLeftColor: "transparent", borderRightColor: "transparent", marginTop: -2 },
-  pinShadow: { width: 10, height: 4, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.25)", marginTop: 1 },
   top: { position: "absolute", top: 0, left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", padding: space.lg },
   round: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", elevation: 3, shadowColor: "#000", shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   sheet: { position: "absolute", left: 0, right: 0, bottom: 0, padding: space.lg, gap: space.sm, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, elevation: 8, shadowColor: "#000", shadowOpacity: 0.12, shadowRadius: 12 },

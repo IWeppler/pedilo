@@ -96,21 +96,31 @@ function Routes() {
         </Stack.Protected>
         <Stack.Protected guard={registered}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="city" options={{ presentation: "modal" }} />
+          <Stack.Screen name="city" options={MODAL} />
           <Stack.Screen name="merchant/[slug]" />
-          <Stack.Screen name="product/[slug]/[productId]" options={{ presentation: "modal" }} />
+          <Stack.Screen name="product/[slug]/[productId]" options={MODAL} />
           <Stack.Screen name="cart" />
           <Stack.Screen name="order/[id]" />
-          <Stack.Screen name="account" options={{ presentation: "modal" }} />
+          <Stack.Screen name="account" options={MODAL} />
           <Stack.Screen name="notifications" />
-          <Stack.Screen name="address" options={{ presentation: "modal" }} />
-          <Stack.Screen name="address-edit" options={{ presentation: "modal" }} />
+          <Stack.Screen name="address" options={MODAL} />
+          <Stack.Screen name="address-edit" options={MODAL} />
         </Stack.Protected>
         <Stack.Screen name="auth/callback" />
       </Stack>
     </>
   );
 }
+
+/**
+ * Pantallas que suben desde abajo (ficha, ciudad, cuenta, direcciones). En iOS, la hoja nativa.
+ * En Android se fija «slide_from_bottom»: la animación por defecto del sistema suma un fondo
+ * oscuro que se ve deslizarse con la pantalla.
+ */
+const MODAL = {
+  presentation: "modal",
+  animation: Platform.OS === "android" ? "slide_from_bottom" : "default",
+} as const;
 
 export default function RootLayout() {
   const [queryClient] = useState(
