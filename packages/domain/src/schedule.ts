@@ -237,3 +237,35 @@ export function validateClosure(c: ClosurePeriod, todayKey: string): ClosureErro
   if (days > MAX_CLOSURE_DAYS) return ClosureError.TOO_LONG;
   return null;
 }
+
+/** Próxima apertura en hora local: «en cuántos días» (0 = hoy), qué día y a qué hora. */
+export interface NextOpening {
+  inDays: number;
+  weekday: number;
+  time: string;
+}
+
+/**
+ * Cuándo vuelve a abrir, para mostrar «Abre 20:00» en un comercio cerrado (ADR 0029). Mira los
+ * próximos `maxDays` días, saltea los cierres excepcionales y devuelve la hora local (sin pasar a
+ * UTC: el cliente arma «hoy», «mañana» o el día). `null` si no abre en ese plazo.
+ */
+export function nextOpening(
+  ranges: readonly OpeningRange[],
+  closures: readonly ClosurePeriod[],
+  timeZone: string,
+  date: Date,
+  maxDays = 7,
+): NextOpening | null {
+  const { weekday, minute } = localWeekdayMinute(date, timeZone);
+  for (let d = 0; d <= maxDays; d++) {
+    const day = (weekday + d) % 7;
+    if (closureOn(closures, localDateKey(new Date(date.getTime() + d * 86_400_000), timeZone))) continue;
+    const opens = ranges
+      .filter((r) => r.weekday === day && (d > 0 || r.opensAt > minute))
+      .map((r) => r.opensAt)
+      .sort((a, b) => a - b);
+    if (opens.length > 0) return { inDays: d, weekday: day, time: formatTime(opens[0]!) };
+  }
+  return null;
+}

@@ -11,9 +11,9 @@ export const MERCHANT_STATUS_LABELS: Record<MerchantStatus, string> = {
 };
 
 export const ONBOARDING_ISSUE_LABELS: Record<OnboardingProblem["issue"], string> = {
-  NO_ACTIVE_BRANCH: "Cargá al menos una sucursal activa.",
-  BRANCH_WITHOUT_HOURS: "Falta cargar el horario de la sucursal.",
-  BRANCH_WITHOUT_FULFILLMENT: "La sucursal tiene que aceptar retiro en el local o tener envío con al menos una zona.",
+  NO_ACTIVE_BRANCH: "Cargá la dirección del local y activá la recepción de pedidos.",
+  BRANCH_WITHOUT_HOURS: "Falta cargar el horario de atención.",
+  BRANCH_WITHOUT_FULFILLMENT: "Tenés que aceptar retiro en el local o hacer envíos con al menos una zona.",
 };
 
 const WEEKDAY_LABELS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"] as const;

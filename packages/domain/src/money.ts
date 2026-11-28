@@ -58,3 +58,16 @@ export function formatARS(minor: MinorUnits): string {
   const cents = (abs % 100).toString().padStart(2, "0");
   return `${sign}$ ${intPart},${cents}`;
 }
+
+/**
+ * Pesos enteros, sin centavos, p. ej. 348000 → "$ 3.480" (app del cliente). Redondea half-up
+ * (SPEC §6.2): 150050 → "$ 1.501". Solo para mostrar; los cálculos siguen en centavos.
+ */
+export function formatARSWhole(minor: MinorUnits): string {
+  assertMinorUnits(minor);
+  const sign = minor < 0 ? "-" : "";
+  const pesos = Math.floor((Math.abs(minor) + 50) / 100)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${sign}$ ${pesos}`;
+}

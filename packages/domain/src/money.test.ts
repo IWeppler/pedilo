@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { divideRoundHalfUp, formatARS, pesos } from "./money";
+import { divideRoundHalfUp, formatARS, formatARSWhole, pesos } from "./money";
 
 describe("money", () => {
   it("pesos → centavos", () => {
@@ -20,5 +20,16 @@ describe("money", () => {
     expect(formatARS(5)).toBe("$ 0,05");
     expect(formatARS(123_456_789)).toBe("$ 1.234.567,89");
     expect(formatARS(-150)).toBe("-$ 1,50");
+  });
+});
+
+describe("formatARSWhole", () => {
+  it("pesos enteros con separador de miles, redondeando half-up", () => {
+    expect(formatARSWhole(348_000)).toBe("$ 3.480");
+    expect(formatARSWhole(150_049)).toBe("$ 1.500");
+    expect(formatARSWhole(150_050)).toBe("$ 1.501");
+    expect(formatARSWhole(0)).toBe("$ 0");
+    expect(formatARSWhole(123_456_700)).toBe("$ 1.234.567");
+    expect(formatARSWhole(-150_000)).toBe("-$ 1.500");
   });
 });

@@ -11,3 +11,5 @@ export * from "./cuit";
 export * from "./menu";
 export * from "./settlements";
 export * from "./geo";
+export * from "./promotions";
+export * from "./ratings";
