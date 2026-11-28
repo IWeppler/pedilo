@@ -1,6 +1,6 @@
 import {
   CLAIM_REASON_LABELS,
-  formatARS,
+  formatARSWhole,
   CLAIM_RESOLUTION_LABELS,
   CLAIM_WINDOW_HOURS,
   type ClaimReason,
@@ -384,7 +384,7 @@ export async function proposeResolution(
       row,
       "CUSTOMER",
       "Respuesta a tu reclamo",
-      `El comercio te propone: ${CLAIM_RESOLUTION_LABELS[input.type].toLowerCase()}${amount ? ` de ${formatARS(amount)}` : ""}. Entrá para aceptar o no.`,
+      `El comercio te propone: ${CLAIM_RESOLUTION_LABELS[input.type].toLowerCase()}${amount ? ` de ${formatARSWhole(amount)}` : ""}. Entrá para aceptar o no.`,
     );
     await recordAudit(tx, actor, { action: "claim.propose", entityType: "claim", entityId: row.id, after: { type: input.type, amount, note } });
   });

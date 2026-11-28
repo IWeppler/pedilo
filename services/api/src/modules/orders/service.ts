@@ -26,7 +26,7 @@ import { and, asc, count, desc, eq, gte, inArray, isNull, lte, max, notInArray, 
 
 import type { Db, DbOrTx, Tx } from "../../db/client";
 import type { OrderLimits } from "../../config";
-import { badRequest, conflict, isUniqueViolation, notFound, tooManyRequests } from "../../lib/errors";
+import { AppError, badRequest, conflict, isUniqueViolation, notFound, tooManyRequests } from "../../lib/errors";
 import { getProductsForOrder } from "../menu/service";
 import { enqueueOrderPlaced, saveCustomerPushToken } from "../notifications/service";
 import { type Actor, recordAudit } from "../audit/service";
@@ -48,6 +48,7 @@ import {
   getTransferDetails,
   type PublicBranchDto,
 } from "../merchants/service";
+import { redeemPromotion, resolveOrderPromotion, reverseOrderPromotion } from "../promotions/service";
 import {
   type OrderActorType,
   orderEvents,
@@ -95,6 +96,10 @@ export interface OrderDto {
     options: Array<{ groupName: string; name: string; quantity: number; priceDeltaMinor: number }>;
   }>;
   subtotalMinor: number;
+  /** Descuento de una promo del comercio (ADR 0030). */
+  discountMinor: number;
+  /** Promo aplicada: título, «20% off» y el código si fue un cupón. */
+  promotion: { title: string; label: string; code: string | null } | null;
   deliveryFeeMinor: number;
   totalMinor: number;
   events: Array<{ fromStatus: OrderStatus | null; toStatus: OrderStatus; actorType: OrderActorType; reason: string | null; createdAt: string }>;
@@ -164,6 +169,8 @@ function toOrderDto(
           .map((op) => ({ groupName: op.groupName, name: op.name, quantity: op.quantity, priceDeltaMinor: op.priceDeltaMinor })),
       })),
     subtotalMinor: o.subtotalMinor,
+    discountMinor: o.discountMinor,
+    promotion: o.promotionLabel ? { title: o.promotionTitle ?? o.promotionLabel, label: o.promotionLabel, code: o.couponCode } : null,
     deliveryFeeMinor: o.deliveryFeeMinor,
     totalMinor: o.totalMinor,
     events: events
@@ -277,6 +284,8 @@ export interface CreateOrderInput {
     | undefined;
   customer: { name: string; phone: string };
   notes?: string | null | undefined;
+  /** Cupón del comercio (ADR 0030). Sin cupón, se aplica sola la mejor oferta vigente. */
+  couponCode?: string | null | undefined;
   /** Efectivo por defecto. */
   paymentMethod?: "CASH" | "TRANSFER" | "MERCADO_PAGO" | undefined;
   /** Inicio de la franja (ISO). Sin esto, lo antes posible. */
@@ -315,7 +324,7 @@ export async function createOrder(
     limits?: Pick<OrderLimits, "maxActivePerPhone" | "maxDailyPerPhone">;
   },
 ): Promise<CreateOrderResult> {
-  const existing = await findByIdempotencyKey(db, idempotencyKey);
+  const existing = await findByIdempotencyKey(db, idempotencyKey, opts.customerUserId ?? null);
   if (existing) return { order: existing, trackingToken: trackingToken(opts.secret, existing.id), replayed: true };
 
   const merchant = await findApprovedMerchantBySlug(db, input.merchantSlug, opts.now ?? new Date());
@@ -372,39 +381,7 @@ export async function createOrder(
     }
   }
 
-  // Precios y validación de cada ítem con las reglas de dominio.
-  const products = await getProductsForOrder(db, merchant.id, input.items.map((i) => i.productId));
-  const lines = input.items.map((item, index) => {
-    const product = products.get(item.productId);
-    if (!product) {
-      throw conflict("Un producto ya no está disponible", { reason: "PRODUCT_UNAVAILABLE", itemIndex: index });
-    }
-    const result = priceSelection(product as PricedProduct, { variantId: item.variantId, modifiers: item.modifiers });
-    if (!result.ok) {
-      throw conflict(`«${product.name}»: la selección no es válida`, {
-        reason: "ITEM_INVALID",
-        itemIndex: index,
-        errors: result.errors,
-      });
-    }
-    const variant = product.variants.find((v) => v.id === result.variantId);
-    const options = item.modifiers.map((pick) => {
-      const group = product.modifierGroups.find((g) => g.modifiers.some((m) => m.id === pick.modifierId))!;
-      const modifier = group.modifiers.find((m) => m.id === pick.modifierId)!;
-      return { modifierId: modifier.id, groupName: group.name, name: modifier.name, quantity: pick.quantity, priceDeltaMinor: modifier.priceDeltaMinor };
-    });
-    return {
-      productId: product.id,
-      productName: product.name,
-      variantId: variant?.id ?? null,
-      variantName: variant?.name ?? null,
-      unitPriceMinor: result.unitPriceMinor,
-      quantity: item.quantity,
-      totalMinor: result.unitPriceMinor * item.quantity,
-      notes: item.notes?.trim() || null,
-      options,
-    };
-  });
+  const lines = await priceLines(db, merchant.id, input.items);
 
   const subtotalMinor = lines.reduce((sum, l) => sum + l.totalMinor, 0);
   const deliveryFeeMinor = zone?.feeMinor ?? 0;
@@ -416,8 +393,20 @@ export async function createOrder(
     });
   }
 
-  // Comisión con el plan y el pricing de este momento: queda congelada en el pedido.
-  const commission = await quoteOrderCommission(db, merchant, subtotalMinor, now);
+  // Promo del comercio (ADR 0030): la mejor oferta o el cupón. Un cupón inválido corta acá.
+  const { applied: promo } = await resolveOrderPromotion(db, {
+    merchantId: merchant.id,
+    customerUserId: opts.customerUserId ?? null,
+    lines: lines.map((l) => ({ productId: l.productId, totalMinor: l.totalMinor })),
+    couponCode: input.couponCode,
+    now,
+  });
+  const discountMinor = promo?.discountMinor ?? 0;
+  const totalMinor = subtotalMinor - discountMinor + deliveryFeeMinor;
+
+  // Comisión con el plan y el pricing de este momento: queda congelada en el pedido. La paga el
+  // comercio sobre lo que cobra: subtotal menos su descuento (SPEC §6.2, base comisionable).
+  const commission = await quoteOrderCommission(db, merchant, subtotalMinor - discountMinor, now);
 
   try {
     const orderId = await db.transaction(async (tx) => {
@@ -468,14 +457,21 @@ export async function createOrder(
           deliveryLng: zone ? (input.deliveryAddress?.location?.lng ?? null) : null,
           notes: input.notes?.trim() || null,
           subtotalMinor,
+          discountMinor,
+          promotionId: promo?.promotionId ?? null,
+          promotionLabel: promo?.label ?? null,
+          promotionTitle: promo?.title ?? null,
+          couponCode: promo?.code ?? null,
           deliveryFeeMinor,
-          totalMinor: subtotalMinor + deliveryFeeMinor,
+          totalMinor,
           idempotencyKey,
           // Con tarjeta el plazo para aceptar corre desde que se aprueba el pago.
           acceptDeadlineAt: digital ? null : acceptDeadline(now, opts.acceptTimeoutMs ?? DEFAULT_ACCEPT_TIMEOUT_MS, scheduledFor),
         })
         .returning({ id: orders.id, code: orders.code });
       const id = row!.id;
+      // Uso de la promo: cupo atómico, en la misma transacción (si se agotó, no se crea el pedido).
+      if (promo) await redeemPromotion(tx, promo, id, opts.customerUserId ?? null);
 
       for (const [i, line] of lines.entries()) {
         const { options, ...rest } = line;
@@ -497,7 +493,7 @@ export async function createOrder(
         merchantId: merchant.id,
         customerName: input.customer.name,
         fulfillmentType: input.fulfillmentType,
-        totalMinor: subtotalMinor + deliveryFeeMinor,
+        totalMinor,
         scheduledFor,
         timezone: branch.timezone,
       });
@@ -507,11 +503,104 @@ export async function createOrder(
   } catch (err) {
     // Dos requests simultáneos con la misma clave: gana uno y el otro devuelve ese pedido.
     if (isUniqueViolation(err)) {
-      const winner = await findByIdempotencyKey(db, idempotencyKey);
+      const winner = await findByIdempotencyKey(db, idempotencyKey, opts.customerUserId ?? null);
       if (winner) return { order: winner, trackingToken: trackingToken(opts.secret, winner.id), replayed: true };
     }
     throw err;
   }
+}
+
+/**
+ * Precio y validación de cada ítem con las reglas de dominio (lo comparten el pedido y la
+ * cotización del checkout).
+ */
+async function priceLines(db: DbOrTx, merchantId: string, items: CreateOrderInput["items"]) {
+  const products = await getProductsForOrder(db, merchantId, items.map((i) => i.productId));
+  return items.map((item, index) => {
+    const product = products.get(item.productId);
+    if (!product) {
+      throw conflict("Un producto ya no está disponible", { reason: "PRODUCT_UNAVAILABLE", itemIndex: index });
+    }
+    const result = priceSelection(product as PricedProduct, { variantId: item.variantId, modifiers: item.modifiers });
+    if (!result.ok) {
+      throw conflict(`«${product.name}»: la selección no es válida`, {
+        reason: "ITEM_INVALID",
+        itemIndex: index,
+        errors: result.errors,
+      });
+    }
+    const variant = product.variants.find((v) => v.id === result.variantId);
+    const options = item.modifiers.map((pick) => {
+      const group = product.modifierGroups.find((g) => g.modifiers.some((m) => m.id === pick.modifierId))!;
+      const modifier = group.modifiers.find((m) => m.id === pick.modifierId)!;
+      return { modifierId: modifier.id, groupName: group.name, name: modifier.name, quantity: pick.quantity, priceDeltaMinor: modifier.priceDeltaMinor };
+    });
+    return {
+      productId: product.id,
+      productName: product.name,
+      variantId: variant?.id ?? null,
+      variantName: variant?.name ?? null,
+      unitPriceMinor: result.unitPriceMinor,
+      quantity: item.quantity,
+      totalMinor: result.unitPriceMinor * item.quantity,
+      notes: item.notes?.trim() || null,
+      options,
+    };
+  });
+}
+
+export interface OrderQuote {
+  subtotalMinor: number;
+  discountMinor: number;
+  deliveryFeeMinor: number;
+  totalMinor: number;
+  promotion: { title: string; label: string; code: string | null } | null;
+  /** Ingresó un cupón válido, pero la oferta vigente descuenta más: se aplica la oferta. */
+  couponOutdone: boolean;
+  /** El cupón no se puede usar (inválido, vencido, agotado, ya usado, mínimo…). */
+  couponError: { reason: string; message: string } | null;
+}
+
+/**
+ * Cotización del checkout (ADR 0030): subtotal, descuento, envío y total con las mismas reglas que
+ * el pedido, sin crearlo. Un cupón que no sirve no corta la cotización: vuelve en `couponError`.
+ */
+export async function quoteOrder(db: Db, input: Omit<CreateOrderInput, "customer">, customerUserId: string, now = new Date()): Promise<OrderQuote> {
+  const merchant = await findApprovedMerchantBySlug(db, input.merchantSlug, now);
+  if (!merchant) throw notFound("Comercio");
+  const branch = merchant.branches.find((b) => b.id === input.branchId);
+  if (!branch) throw badRequest("Sucursal inválida", { field: "branchId" });
+  const zone = input.fulfillmentType === FulfillmentType.DELIVERY ? branch.zones.find((z) => z.id === input.deliveryZoneId) : undefined;
+  const lines = await priceLines(db, merchant.id, input.items);
+  const subtotalMinor = lines.reduce((sum, l) => sum + l.totalMinor, 0);
+  const deliveryFeeMinor = zone?.feeMinor ?? 0;
+  const req = {
+    merchantId: merchant.id,
+    customerUserId,
+    lines: lines.map((l) => ({ productId: l.productId, totalMinor: l.totalMinor })),
+    now,
+  };
+  let couponError: OrderQuote["couponError"] = null;
+  let resolved;
+  try {
+    resolved = await resolveOrderPromotion(db, { ...req, couponCode: input.couponCode });
+  } catch (err) {
+    const reason = err instanceof AppError ? (err.details as { reason?: string } | undefined)?.reason : undefined;
+    if (!reason?.startsWith("COUPON_")) throw err;
+    couponError = { reason, message: (err as Error).message };
+    resolved = await resolveOrderPromotion(db, req);
+  }
+  const promo = resolved.applied;
+  const discountMinor = promo?.discountMinor ?? 0;
+  return {
+    subtotalMinor,
+    discountMinor,
+    deliveryFeeMinor,
+    totalMinor: subtotalMinor - discountMinor + deliveryFeeMinor,
+    promotion: promo ? { title: promo.title, label: promo.label, code: promo.code } : null,
+    couponOutdone: resolved.couponOutdone,
+    couponError,
+  };
 }
 
 /** Solo los dígitos: "3491 555-123" y "3491555123" son el mismo teléfono. */
@@ -559,9 +648,16 @@ async function assertPhoneLimits(
   }
 }
 
-async function findByIdempotencyKey(db: DbOrTx, key: string): Promise<OrderDto | null> {
+/**
+ * Reintento con la misma clave: devuelve el pedido ya creado, solo a quien lo creó. Con la clave de
+ * otro cliente no se revela nada (ni el pedido ni su token de seguimiento).
+ */
+async function findByIdempotencyKey(db: DbOrTx, key: string, customerUserId: string | null): Promise<OrderDto | null> {
   const [row] = await db.select().from(orders).where(eq(orders.idempotencyKey, key));
   if (!row) return null;
+  if (row.customerUserId !== customerUserId) {
+    throw conflict("Esa clave de idempotencia ya se usó. Generá una nueva.", { reason: "IDEMPOTENCY_KEY_REUSED" });
+  }
   const [dto] = await loadOrders(db, [row]);
   return dto ?? null;
 }
@@ -656,6 +752,57 @@ export async function getOrderClaimSummary(db: DbOrTx, orderId: string) {
 export async function registerOrderPushToken(db: Db, orderId: string, token: string | undefined, secret: string, expoToken: string) {
   assertTrackingToken(secret, orderId, token);
   await saveCustomerPushToken(db, orderId, expoToken);
+}
+
+export interface CustomerOrderSummary {
+  id: string;
+  code: string;
+  merchantName: string;
+  /** Para abrir su menú desde «Volver a pedir» (ADR 0028). */
+  merchantSlug: string;
+  /** «2× Muzzarella, Coca 1,5 L»: lo que se pidió, para reconocerlo. */
+  itemsSummary: string;
+  status: OrderStatus;
+  totalMinor: number;
+  createdAt: string;
+  /** Para abrir el seguimiento desde cualquier celular con la misma cuenta. */
+  trackingToken: string;
+}
+
+/** Pedidos hechos con la cuenta del cliente (ADR 0026), los más nuevos primero. */
+export async function listCustomerOrders(db: Db, userId: string, secret: string, limit = 50): Promise<CustomerOrderSummary[]> {
+  const rows = await db
+    .select({
+      id: orders.id,
+      code: orders.code,
+      merchantName: orders.merchantName,
+      merchantSlug: orders.merchantSlug,
+      status: orders.status,
+      totalMinor: orders.totalMinor,
+      createdAt: orders.createdAt,
+    })
+    .from(orders)
+    .where(eq(orders.customerUserId, userId))
+    .orderBy(desc(orders.createdAt))
+    .limit(limit);
+  const items = rows.length
+    ? await db
+        .select({ orderId: orderItems.orderId, productName: orderItems.productName, quantity: orderItems.quantity })
+        .from(orderItems)
+        .where(inArray(orderItems.orderId, rows.map((r) => r.id)))
+        .orderBy(asc(orderItems.sortOrder))
+    : [];
+  const summary = (orderId: string) =>
+    items
+      .filter((i) => i.orderId === orderId)
+      .map((i) => (i.quantity > 1 ? `${i.quantity}× ${i.productName}` : i.productName))
+      .join(", ");
+  return rows.map((r) => ({
+    ...r,
+    itemsSummary: summary(r.id),
+    createdAt: r.createdAt.toISOString(),
+    trackingToken: trackingToken(secret, r.id),
+  }));
 }
 
 export async function getOrderForCustomer(db: Db, orderId: string, token: string | undefined, secret: string) {
@@ -811,6 +958,8 @@ async function applyTransition(
   if ((to === OrderStatus.PICKED_UP || to === OrderStatus.DELIVERED) && row.paymentMethod !== PaymentMethod.MERCADO_PAGO) {
     await accrueOrderCommission(tx, updated!);
   }
+  // El pedido no siguió: el uso de la promo vuelve al cupo (ADR 0030).
+  if (RELEASES_SLOT.includes(to) && row.promotionId) await reverseOrderPromotion(tx, row.id);
   if (refundDigital) {
     for (const listener of paidCancelListeners) await listener(tx, { orderId: row.id, reason: actor.reason ?? `Pedido ${to.toLowerCase()}` });
   }
@@ -1151,4 +1300,38 @@ export async function expireOverdueOrders(db: Db, now = new Date(), batchSize = 
     }
     return due.length;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Para calificaciones (ADR 0031)
+// ---------------------------------------------------------------------------
+
+const COMPLETED_STATUSES: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.PICKED_UP];
+
+/** Cuándo se entregó o se retiró cada pedido (null si todavía no). */
+export async function completedAtFor(db: DbOrTx, orderIds: string[]): Promise<Map<string, Date>> {
+  if (orderIds.length === 0) return new Map();
+  const rows = await db
+    .select({ orderId: orderEvents.orderId, at: max(orderEvents.createdAt) })
+    .from(orderEvents)
+    .where(and(inArray(orderEvents.orderId, orderIds), inArray(orderEvents.toStatus, COMPLETED_STATUSES)))
+    .groupBy(orderEvents.orderId);
+  return new Map(rows.filter((r) => r.at).map((r) => [r.orderId, r.at as Date]));
+}
+
+/**
+ * El pedido que el cliente quiere calificar: tiene que ser suyo (si no, 404) y estar entregado o
+ * retirado (409 ORDER_NOT_COMPLETED).
+ */
+export async function getRatableOrder(db: DbOrTx, orderId: string, userId: string) {
+  const [row] = await db
+    .select({ id: orders.id, code: orders.code, merchantId: orders.merchantId, status: orders.status, customerUserId: orders.customerUserId })
+    .from(orders)
+    .where(eq(orders.id, orderId));
+  if (!row || row.customerUserId !== userId) throw notFound("Pedido");
+  const completedAt = (await completedAtFor(db, [orderId])).get(orderId);
+  if (!COMPLETED_STATUSES.includes(row.status) || !completedAt) {
+    throw conflict("Podés calificar cuando el pedido esté entregado o retirado", { reason: "ORDER_NOT_COMPLETED" });
+  }
+  return { orderId: row.id, code: row.code, merchantId: row.merchantId, completedAt };
 }

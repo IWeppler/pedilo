@@ -16,6 +16,8 @@ export interface CategoryDto {
   commissionCategory: MerchantCategory | null;
   sortOrder: number;
   active: boolean;
+  /** Posición como tipo de comida en el inicio de la app; null = no aparece (solo de producto). */
+  featuredOrder: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -28,6 +30,7 @@ export interface CreateCategoryInput {
   commissionCategory?: MerchantCategory | null | undefined;
   sortOrder?: number | undefined;
   active?: boolean | undefined;
+  featuredOrder?: number | null | undefined;
 }
 
 /** `kind` no se puede cambiar: rompería la jerarquía y los rubros asignados. */
@@ -43,6 +46,7 @@ export function toCategoryDto(row: CategoryRow): CategoryDto {
     commissionCategory: row.commissionCategory ?? null,
     sortOrder: row.sortOrder,
     active: row.active,
+    featuredOrder: row.featuredOrder,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -54,7 +58,12 @@ const ordering = [asc(categories.sortOrder), asc(categories.name)];
  * Categorías visibles al público: activas y con todos sus ancestros activos
  * (desactivar un padre oculta a toda su rama).
  */
-export async function listPublicCategories(db: Db, kind?: CategoryKind): Promise<CategoryDto[]> {
+export async function listPublicCategories(db: Db, kind?: CategoryKind, featured?: boolean): Promise<CategoryDto[]> {
+  // Tipos de comida del inicio: en su posición, no en el orden del catálogo.
+  if (featured) {
+    const all = await listPublicCategories(db, kind);
+    return all.filter((c) => c.featuredOrder !== null).sort((a, b) => a.featuredOrder! - b.featuredOrder! || a.name.localeCompare(b.name, "es"));
+  }
   const rows = await db
     .select()
     .from(categories)
@@ -71,13 +80,31 @@ export async function listPublicCategories(db: Db, kind?: CategoryKind): Promise
     }
     return false;
   };
-  return rows.filter(isVisible).map(toCategoryDto);
+  return rows.filter((r) => isVisible(r) && (featured === undefined || r.featuredOrder === null)).map(toCategoryDto);
 }
 
 export async function listAllCategories(db: Db, kind?: CategoryKind): Promise<CategoryDto[]> {
   const filter: SQL | undefined = kind ? eq(categories.kind, kind) : undefined;
   const rows = await db.select().from(categories).where(filter).orderBy(...ordering);
   return rows.map(toCategoryDto);
+}
+
+/**
+ * La categoría y todas las de su rama (p. ej. «Bebidas» incluye «Cervezas» si cuelga de ella), para
+ * filtrar por un tipo de comida sin que el comercio tenga que elegir el padre.
+ */
+export async function categoryBranchIds(db: DbOrTx, id: string): Promise<string[]> {
+  const rows = await db.select({ id: categories.id, parentId: categories.parentId }).from(categories);
+  const children = new Map<string, string[]>();
+  for (const r of rows) if (r.parentId) children.set(r.parentId, [...(children.get(r.parentId) ?? []), r.id]);
+  const out: string[] = [];
+  const queue = rows.some((r) => r.id === id) ? [id] : [];
+  while (queue.length && out.length < 1000) {
+    const next = queue.shift()!;
+    out.push(next);
+    queue.push(...(children.get(next) ?? []));
+  }
+  return out;
 }
 
 export async function getCategory(db: DbOrTx, id: string): Promise<CategoryDto> {
@@ -88,6 +115,7 @@ export async function getCategory(db: DbOrTx, id: string): Promise<CategoryDto> 
 
 export async function createCategory(db: Db, input: CreateCategoryInput, actor: Actor): Promise<CategoryDto> {
   assertCommissionCategoryAllowed(input.kind, input.commissionCategory);
+  assertFeaturedAllowed(input.kind, input.featuredOrder);
   try {
     return await db.transaction(async (tx) => {
       if (input.parentId) await assertValidParent(tx, input.kind, input.parentId, null);
@@ -102,6 +130,7 @@ export async function createCategory(db: Db, input: CreateCategoryInput, actor: 
           commissionCategory: input.commissionCategory ?? null,
           ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
           ...(input.active !== undefined && { active: input.active }),
+          ...(input.featuredOrder !== undefined && { featuredOrder: input.featuredOrder }),
         })
         .returning();
       if (!row) throw new Error("insert sin resultado");
@@ -136,6 +165,7 @@ export async function updateCategory(
         assertCommissionCategoryAllowed(current.kind, input.commissionCategory);
       }
       if (input.parentId) await assertValidParent(tx, current.kind, input.parentId, id);
+      assertFeaturedAllowed(current.kind, input.featuredOrder);
 
       const [row] = await tx
         .update(categories)
@@ -146,6 +176,7 @@ export async function updateCategory(
           ...(input.commissionCategory !== undefined && { commissionCategory: input.commissionCategory }),
           ...(input.sortOrder !== undefined && { sortOrder: input.sortOrder }),
           ...(input.active !== undefined && { active: input.active }),
+          ...(input.featuredOrder !== undefined && { featuredOrder: input.featuredOrder }),
         })
         .where(eq(categories.id, id))
         .returning();
@@ -170,6 +201,12 @@ export async function updateCategory(
 function assertCommissionCategoryAllowed(kind: CategoryKind, value: MerchantCategory | null | undefined) {
   if (value && kind !== CategoryKind.MERCHANT) {
     throw badRequest("Solo los rubros (kind MERCHANT) tienen categoría de comisión");
+  }
+}
+
+function assertFeaturedAllowed(kind: CategoryKind, featuredOrder: number | null | undefined) {
+  if (featuredOrder !== undefined && featuredOrder !== null && kind !== CategoryKind.PRODUCT) {
+    throw badRequest("Solo las categorías de producto se muestran como tipo de comida en la app");
   }
 }
 

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { check, doublePrecision, pgTable, text, uuid } from "drizzle-orm/pg-core";
 
 import { timestamps } from "../../lib/timestamps";
 
@@ -31,3 +31,29 @@ export const users = pgTable(
 );
 
 export type UserRow = typeof users.$inferSelect;
+
+/**
+ * Perfil del cliente con cuenta (ingreso con Google o Apple, ADR 0026). Pedir como invitado sigue
+ * funcionando (ADR 0007): el perfil solo guarda cómo se llama y cómo contactarlo.
+ */
+export const customerProfiles = pgTable("customer_profiles", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  phone: text("phone").notNull(),
+  /** Dirección de entrega guardada: el checkout la usa sin volver a pedirla (se puede cambiar). */
+  addressLine: text("address_line"),
+  addressNotes: text("address_notes"),
+  /** Punto exacto en el mapa (ADR 0023), si lo marcó. */
+  addressLat: doublePrecision("address_lat"),
+  addressLng: doublePrecision("address_lng"),
+  ...timestamps,
+}, (t) => [
+  check(
+    "customer_profiles_location_check",
+    sql`(${t.addressLat} IS NULL AND ${t.addressLng} IS NULL) OR (${t.addressLat} BETWEEN -90 AND 90 AND ${t.addressLng} BETWEEN -180 AND 180)`,
+  ),
+]);
+
+export type CustomerProfileRow = typeof customerProfiles.$inferSelect;

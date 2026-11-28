@@ -6,7 +6,7 @@ import { loadConfig } from "../config";
 import { MIGRATIONS_FOLDER } from "./paths";
 
 const config = loadConfig();
-const client = postgres(config.databaseUrl, { max: 1 });
+const client = postgres(config.databaseUrl, { max: 1, idle_timeout: 5 });
 
 try {
   await migrate(drizzle(client), { migrationsFolder: MIGRATIONS_FOLDER });

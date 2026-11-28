@@ -9,6 +9,7 @@ import {
   CUSTOMER_TRACKING_STATUSES,
   deliveryStateMachine,
   DeliveryStatus,
+  formatARS,
   type Vehicle,
 } from "@pedilo/domain";
 import { and, asc, desc, eq, gt, inArray, lte, notExists, notInArray, sql } from "drizzle-orm";
@@ -17,6 +18,13 @@ import type { Db, DbOrTx, Tx } from "../../db/client";
 import { badRequest, conflict, forbidden, isUniqueViolation, notFound } from "../../lib/errors";
 import { type Actor, recordAudit } from "../audit/service";
 import { getMerchantAccess, getMerchantNames } from "../merchants/service";
+import { NotificationKind } from "../notifications/schema";
+import {
+  enqueueCourierNotifications,
+  removeCourierPushToken,
+  saveCourierPushToken,
+  skipPendingNotifications,
+} from "../notifications/service";
 import {
   courierLocations,
   courierMerchantEntries,
@@ -87,11 +95,71 @@ async function changeStatus(
   });
   // Terminó (o soltó) su último reparto activo: deja de compartir ubicación (ADR 0022).
   if (row.courierId && !ACTIVE_COURIER_STATUSES.includes(to)) await clearLocationIfIdle(tx, row.courierId);
+  if (row.status === DeliveryStatus.OFFERED && to !== DeliveryStatus.OFFERED) await offerClosed(tx, row.id);
   for (const listener of listeners) {
     await listener(tx, { deliveryId: row.id, orderId: row.orderId, from: row.status, to, reason: actor.reason ?? null });
   }
   return updated;
 }
+
+// ---------------------------------------------------------------------------
+// Avisos de ofertas a los repartidores (ADR 0025)
+// ---------------------------------------------------------------------------
+
+/** Canal de Android de las ofertas: lo crea la app (sonido, importancia máxima). */
+export const OFFER_CHANNEL_ID = "offers";
+const offerTag = (deliveryId: string) => `offer-${deliveryId}`;
+
+/**
+ * Quién puede tomar la oferta, con el mismo criterio que la bandeja (`listOffers`): aprobados y
+ * disponibles de la ciudad, que cobran al menos su mínimo y que no la rechazaron.
+ */
+async function eligibleCourierIds(tx: DbOrTx, d: DeliveryRow): Promise<string[]> {
+  const rows = await tx
+    .select({ id: courierProfiles.id })
+    .from(courierProfiles)
+    .where(
+      and(
+        eq(courierProfiles.cityId, d.cityId),
+        eq(courierProfiles.status, CourierStatus.APPROVED),
+        eq(courierProfiles.available, true),
+        lte(courierProfiles.minFeeMinor, d.courierFeeMinor + d.tipMinor),
+        notExists(
+          tx
+            .select({ one: sql`1` })
+            .from(deliveryDeclines)
+            .where(and(eq(deliveryDeclines.deliveryId, d.id), eq(deliveryDeclines.courierId, courierProfiles.id))),
+        ),
+      ),
+    );
+  return rows.map((r) => r.id);
+}
+
+/**
+ * La oferta se publicó (o cambió su pago): avisa a quienes pueden tomarla, aunque tengan la app
+ * cerrada. Sin la dirección exacta, como en la bandeja. Vence con la oferta.
+ */
+async function notifyOffer(tx: Tx, d: DeliveryRow): Promise<void> {
+  await skipPendingNotifications(tx, offerTag(d.id), "La oferta cambió");
+  const cash = d.cashToCollectMinor > 0 ? ` · Cobrás ${formatARS(d.cashToCollectMinor)} en efectivo` : "";
+  await enqueueCourierNotifications(tx, {
+    kind: NotificationKind.DELIVERY_OFFERED,
+    merchantId: d.merchantId,
+    orderId: d.orderId,
+    courierIds: await eligibleCourierIds(tx, d),
+    payload: {
+      title: `Envío por ${formatARS(d.courierFeeMinor + d.tipMinor)}`,
+      body: `Retirás en ${d.pickupName} · Llevás a ${d.dropoffArea}${cash}`,
+      url: "/",
+      tag: offerTag(d.id),
+      channelId: OFFER_CHANNEL_ID,
+      ...(d.offerExpiresAt && { expiresAt: d.offerExpiresAt.toISOString() }),
+    },
+  });
+}
+
+/** La oferta dejó de estar abierta: los avisos que no salieron todavía ya no se mandan. */
+const offerClosed = (tx: DbOrTx, deliveryId: string) => skipPendingNotifications(tx, offerTag(deliveryId), "La oferta ya no está abierta");
 
 // ---------------------------------------------------------------------------
 // DTOs
@@ -314,13 +382,14 @@ export async function requestDelivery(
     actorType: "MERCHANT",
     actorUserId: offer.actorUserId,
   });
-  await changeStatus(
+  const offered = await changeStatus(
     tx,
     row,
     DeliveryStatus.OFFERED,
     { type: "MERCHANT", userId: offer.actorUserId },
     { offerExpiresAt: new Date(now.getTime() + offer.offerMinutes * 60_000) },
   );
+  await notifyOffer(tx, offered);
   return row.id;
 }
 
@@ -395,16 +464,19 @@ export async function reofferDelivery(
     const row = await loadMerchantDelivery(tx, merchantId, deliveryId);
     const set = { courierFeeMinor: offer.feeMinor, offerExpiresAt: new Date(now.getTime() + offer.offerMinutes * 60_000), courierId: null };
     // Ya publicada: solo se actualiza la tarifa y el plazo.
+    let offered: DeliveryRow;
     if (row.status === DeliveryStatus.OFFERED) {
-      await tx
+      [offered] = (await tx
         .update(deliveries)
         .set({ ...set, version: row.version + 1 })
-        .where(eq(deliveries.id, row.id));
+        .where(eq(deliveries.id, row.id))
+        .returning()) as [DeliveryRow];
     } else {
-      await changeStatus(tx, row, DeliveryStatus.OFFERED, { type: "MERCHANT", userId }, set);
+      offered = await changeStatus(tx, row, DeliveryStatus.OFFERED, { type: "MERCHANT", userId }, set);
     }
-    // Con la tarifa nueva, quien la había rechazado la vuelve a ver.
+    // Con la tarifa nueva, quien la había rechazado la vuelve a ver (y le llega el aviso).
     await tx.delete(deliveryDeclines).where(eq(deliveryDeclines.deliveryId, row.id));
+    await notifyOffer(tx, offered);
   });
   return deliveryDto(db, deliveryId, true, true);
 }
@@ -501,6 +573,18 @@ export async function updateMyCourier(
   return toCourierDto(row!);
 }
 
+/** Registra el celular del repartidor para recibir ofertas con la app cerrada (ADR 0025). Idempotente. */
+export async function registerCourierPushToken(db: Db, userId: string, expoToken: string): Promise<void> {
+  const courier = await myCourier(db, userId);
+  await saveCourierPushToken(db, courier.id, expoToken);
+}
+
+/** Al cerrar sesión, el celular deja de recibir avisos. */
+export async function unregisterCourierPushToken(db: Db, userId: string, expoToken: string): Promise<void> {
+  const courier = await myCourier(db, userId);
+  await removeCourierPushToken(db, courier.id, expoToken);
+}
+
 /**
  * Ofertas abiertas para el repartidor: su ciudad, que no vencieron, que pagan al menos su mínimo
  * y que no rechazó. Hora del servidor: el reloj del teléfono no cuenta (SPEC §9.3).
@@ -573,6 +657,7 @@ export async function acceptOffer(db: Db, userId: string, deliveryId: string, no
       actorUserId: userId,
       courierId: courier.id,
     });
+    await offerClosed(tx, deliveryId);
     for (const listener of listeners) {
       await listener(tx, { deliveryId, orderId: won.orderId, from: DeliveryStatus.OFFERED, to: DeliveryStatus.ASSIGNED, reason: null });
     }

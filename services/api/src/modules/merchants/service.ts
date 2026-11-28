@@ -3,6 +3,8 @@ import {
   closureOn,
   isOpenAtInstant,
   localDateKey,
+  type NextOpening,
+  nextOpening,
   validateClosure,
   formatTime,
   merchantStateMachine,
@@ -46,6 +48,8 @@ import {
 export interface MerchantDto {
   id: string;
   displayName: string;
+  /** Minutos que tarda en preparar un pedido típico (ADR 0029); null = sin cargar. */
+  prepMinutes: number | null;
   legalName: string;
   taxId: string;
   slug: string;
@@ -146,6 +150,7 @@ export function toMerchantDto(row: MerchantRow): MerchantDto {
   return {
     id: row.id,
     displayName: row.displayName,
+    prepMinutes: row.prepMinutes,
     legalName: row.legalName,
     taxId: row.taxId,
     slug: row.slug,
@@ -229,10 +234,10 @@ export interface RegisterMerchantInput {
   contactEmail?: string | null | undefined;
 }
 
-export type UpdateMerchantInput = Partial<RegisterMerchantInput>;
+export type UpdateMerchantInput = Partial<RegisterMerchantInput> & { prepMinutes?: number | null | undefined };
 
 /** Campos que se pueden cambiar con el comercio ya aprobado; el resto requiere nueva revisión. */
-const BASIC_PROFILE_FIELDS = ["displayName", "contactPhone", "contactEmail"] as const;
+const BASIC_PROFILE_FIELDS = ["displayName", "contactPhone", "contactEmail", "prepMinutes"] as const;
 
 export interface BranchInput {
   name: string;
@@ -478,6 +483,7 @@ export async function updateMerchantProfile(
         ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
         ...(input.contactPhone !== undefined && { contactPhone: input.contactPhone }),
         ...(input.contactEmail !== undefined && { contactEmail: input.contactEmail }),
+        ...(input.prepMinutes !== undefined && { prepMinutes: input.prepMinutes }),
       })
       .where(eq(merchants.id, merchantId))
       .returning();
@@ -988,6 +994,8 @@ export interface PublicMerchantDto {
   payment: { cash: boolean; transfer: boolean; card: boolean };
   logoUrl: string | null;
   coverUrl: string | null;
+  /** Minutos de preparación de un pedido típico; null = sin cargar (ADR 0029). */
+  prepMinutes: number | null;
   branches: PublicBranchDto[];
 }
 
@@ -998,6 +1006,11 @@ function branchOpenAt(b: BranchDto, now: Date): boolean {
     closesAt: parseTime(h.closesAt) ?? 0,
   }));
   return isOpenAtInstant(ranges, b.closures, b.timezone, now);
+}
+
+function branchNextOpening(b: BranchDto, now: Date): NextOpening | null {
+  const ranges = b.hours.map((h) => ({ weekday: h.weekday, opensAt: parseTime(h.opensAt) ?? 0, closesAt: parseTime(h.closesAt) ?? 0 }));
+  return nextOpening(ranges, b.closures, b.timezone, now);
 }
 
 function closedToday(b: BranchDto, now: Date): { reason: string; endsOn: string } | null {
@@ -1051,6 +1064,7 @@ export async function findApprovedMerchantBySlug(
     payment: { cash: row.acceptsCash, transfer: row.acceptsTransfer, card: row.acceptsMercadoPago },
     logoUrl: mediaUrl(row.logoPath),
     coverUrl: mediaUrl(row.coverPath),
+    prepMinutes: row.prepMinutes,
     branches: detail.branches.filter((b) => b.active).map((b) => toPublicBranch(b, now)),
   };
 }
@@ -1069,7 +1083,18 @@ export interface CityMerchantDto {
   minDeliveryFeeMinor: number | null;
   logoUrl: string | null;
   coverUrl: string | null;
+  /** Minutos de preparación de un pedido típico; null = sin cargar (ADR 0029). */
+  prepMinutes: number | null;
+  /** Cerrado ahora: cuándo vuelve a abrir (hora local), si abre en la próxima semana. */
+  opensNext: NextOpening | null;
+  /** Acepta pedidos programados (alguna sucursal en la ciudad): con eso, «Programá». */
+  schedulingEnabled: boolean;
+  /** Aprobado hace poco (`NEW_MERCHANT_DAYS`): «Nuevo en Pedilo». */
+  isNew: boolean;
 }
+
+/** Cuántos días se muestra «Nuevo en Pedilo» desde que se aprueba el comercio. */
+export const NEW_MERCHANT_DAYS = 30;
 
 /**
  * Comercios aprobados con al menos una sucursal activa en la ciudad. Abiertos primero,
@@ -1078,11 +1103,12 @@ export interface CityMerchantDto {
 export async function listApprovedMerchantsInCity(
   db: Db,
   citySlug: string,
-  opts: { categoryId?: string | undefined; now?: Date } = {},
+  opts: { categoryId?: string | undefined; merchantIds?: string[] | undefined; now?: Date } = {},
 ): Promise<CityMerchantDto[] | null> {
   const city = await findActiveCityBySlug(db, citySlug);
   if (!city) return null;
   const now = opts.now ?? new Date();
+  if (opts.merchantIds && opts.merchantIds.length === 0) return [];
 
   const rows = await db
     .selectDistinct({ merchant: merchants })
@@ -1092,6 +1118,7 @@ export async function listApprovedMerchantsInCity(
       and(
         eq(merchants.status, MerchantStatus.APPROVED),
         opts.categoryId ? eq(merchants.categoryId, opts.categoryId) : undefined,
+        opts.merchantIds ? inArray(merchants.id, opts.merchantIds) : undefined,
       ),
     );
 
@@ -1100,17 +1127,31 @@ export async function listApprovedMerchantsInCity(
     const detail = await loadDetail(db, merchant);
     const here = detail.branches.filter((b) => b.active && b.cityId === city.id).map((b) => toPublicBranch(b, now));
     const fees = here.filter((b) => b.acceptsDelivery).flatMap((b) => b.zones.map((z) => z.feeMinor));
+    const openNow = here.some((b) => b.openNow);
+    // La apertura más próxima entre sus sucursales de la ciudad.
+    const opensNext = openNow
+      ? null
+      : (detail.branches
+          .filter((b) => b.active && b.cityId === city.id)
+          .map((b) => branchNextOpening(b, now))
+          .filter((o): o is NextOpening => o !== null)
+          .sort((a, b) => a.inDays - b.inDays || a.time.localeCompare(b.time))[0] ?? null);
+    const approvedAt = merchant.reviewedAt ?? merchant.createdAt;
     result.push({
       id: merchant.id,
       slug: merchant.slug,
       displayName: merchant.displayName,
       categoryId: merchant.categoryId,
-      openNow: here.some((b) => b.openNow),
+      openNow,
       acceptsPickup: here.some((b) => b.acceptsPickup),
       acceptsDelivery: fees.length > 0,
       minDeliveryFeeMinor: fees.length ? Math.min(...fees) : null,
       logoUrl: mediaUrl(merchant.logoPath),
       coverUrl: mediaUrl(merchant.coverPath),
+      prepMinutes: merchant.prepMinutes,
+      opensNext,
+      schedulingEnabled: here.some((b) => b.scheduling.enabled),
+      isNew: now.getTime() - approvedAt.getTime() < NEW_MERCHANT_DAYS * 86_400_000,
     });
   }
   return result.sort((a, b) => Number(b.openNow) - Number(a.openNow) || a.displayName.localeCompare(b.displayName, "es"));

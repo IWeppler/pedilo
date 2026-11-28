@@ -1,11 +1,14 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { courierLocations, deliveryEvents } from "../src/db/schema";
+import { courierLocations, courierPushTokens, deliveryEvents, notificationOutbox } from "../src/db/schema";
 import { expireOffers, purgeStaleCourierLocations } from "../src/modules/deliveries/service";
+import { type ExpoPushSender, processOutbox } from "../src/modules/notifications/service";
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let admin: string;
 let owner: string;
 let c1: string; // repartidores aprobados y disponibles
@@ -30,13 +33,13 @@ let seq = 0;
 const DROPOFF = "Belgrano 456";
 const placeOrder = async (fulfillment: "DELIVERY" | "PICKUP" = "DELIVERY") => {
   const res = await req("POST", "/v1/public/orders", {
+    token: buyer,
     headers: { "idempotency-key": `delivery-${++seq}-${Date.now()}` },
     payload: {
       merchantSlug: "pizzeria-centro",
       branchId,
       fulfillmentType: fulfillment,
       ...(fulfillment === "DELIVERY" && { deliveryZoneId: zoneId, deliveryAddress: { line: DROPOFF, notes: "Timbre B" } }),
-      customer: { name: "Ana", phone: `3491 700-${String(seq).padStart(3, "0")}` },
       items: [{ productId, modifiers: [], quantity: 2 }],
     },
   });
@@ -97,6 +100,7 @@ const registerCourier = (token: string, over: Body = {}) =>
 
 beforeAll(async () => {
   ctx = await createTestContext();
+  buyer = await ctx.customerToken();
   admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   [c1, c2, pending] = await Promise.all([ctx.tokenFor(), ctx.tokenFor(), ctx.tokenFor()]).then((u) => u.map((x) => x.token));
@@ -319,6 +323,7 @@ describe("vencimiento, cancelaciones y reasignación", () => {
 describe("PIN de entrega (ADR 0016)", () => {
   it("lo ven el cliente y el comercio, nunca el repartidor; sin el PIN correcto no se entrega", async () => {
     const placed = await req("POST", "/v1/public/orders", {
+    token: buyer,
       headers: { "idempotency-key": `pin-${Date.now()}` },
       payload: {
         merchantSlug: "pizzeria-centro",
@@ -326,7 +331,6 @@ describe("PIN de entrega (ADR 0016)", () => {
         fulfillmentType: "DELIVERY",
         deliveryZoneId: zoneId,
         deliveryAddress: { line: DROPOFF },
-        customer: { name: "Bea", phone: "3491 999-111" },
         items: [{ productId, modifiers: [], quantity: 1 }],
       },
     });
@@ -457,6 +461,7 @@ describe("seguimiento en vivo (ADR 0022)", () => {
   /** Pedido con envío y su token de seguimiento, ya aceptado por c3. */
   const assignedToC3 = async () => {
     const placed = await req("POST", "/v1/public/orders", {
+    token: buyer,
       headers: { "idempotency-key": `track-${++seq}-${Date.now()}` },
       payload: {
         merchantSlug: "pizzeria-centro",
@@ -464,7 +469,6 @@ describe("seguimiento en vivo (ADR 0022)", () => {
         fulfillmentType: "DELIVERY",
         deliveryZoneId: zoneId,
         deliveryAddress: { line: DROPOFF },
-        customer: { name: "Caro", phone: `3491 800-${String(seq).padStart(3, "0")}` },
         items: [{ productId, modifiers: [], quantity: 1 }],
       },
     });
@@ -546,6 +550,7 @@ describe("seguimiento en vivo (ADR 0022)", () => {
 describe("punto exacto de entrega (ADR 0023)", () => {
   const order = (location: { lat: number; lng: number } | null) =>
     req("POST", "/v1/public/orders", {
+    token: buyer,
       headers: { "idempotency-key": `pin-map-${++seq}-${Date.now()}` },
       payload: {
         merchantSlug: "pizzeria-centro",
@@ -553,7 +558,6 @@ describe("punto exacto de entrega (ADR 0023)", () => {
         fulfillmentType: "DELIVERY",
         deliveryZoneId: zoneId,
         deliveryAddress: { line: DROPOFF, ...(location && { location }) },
-        customer: { name: "Dani", phone: `3491 900-${String(seq).padStart(3, "0")}` },
         items: [{ productId, modifiers: [], quantity: 1 }],
       },
     });
@@ -582,5 +586,109 @@ describe("punto exacto de entrega (ADR 0023)", () => {
     const plain = (await order(null)).json().order;
     expect(plain.delivery.location).toBeNull();
     await req("PATCH", `/v1/merchants/${merchantId}/branches/${branchId}`, { token: owner, payload: { lat: null, lng: null } });
+  });
+});
+
+describe("avisos de ofertas a los repartidores (ADR 0025)", () => {
+  const T1 = "ExponentPushToken[courier-uno]";
+  const T2 = "ExponentPushToken[courier-dos]";
+  let id1: string;
+  let id2: string;
+  let idPending: string;
+  const offerRows = (deliveryId: string) =>
+    ctx.db
+      .select()
+      .from(notificationOutbox)
+      .where(and(eq(notificationOutbox.kind, "DELIVERY_OFFERED"), sql`${notificationOutbox.payload}->>'tag' = ${`offer-${deliveryId}`}`));
+  const sent: string[] = [];
+  const sender: ExpoPushSender = {
+    send: async (token, payload) => {
+      sent.push(`${token}|${payload.title}`);
+      return token === T2 ? { ok: false, gone: true, error: "DeviceNotRegistered" } : { ok: true };
+    },
+  };
+  const drain = (now = new Date()) => processOutbox(ctx.db, null, now, 1000, sender);
+  const pushToken = (token: string, expoToken: string, remove = false) =>
+    req("POST", `/v1/courier/push-token${remove ? "/remove" : ""}`, { token, payload: { expoToken } });
+
+  beforeAll(async () => {
+    const ids = await Promise.all([c1, c2, pending].map(async (t) => (await req("GET", "/v1/courier/me", { token: t })).json().id as string));
+    [id1, id2, idPending] = ids as [string, string, string];
+    // Lo que dejaron los tests anteriores sale antes de registrar celulares.
+    await processOutbox(ctx.db, null, new Date(Date.now() + 3_600_000), 1000, null);
+  });
+
+  it("registrar el celular: valida el token, es idempotente y necesita perfil", async () => {
+    expect((await pushToken(c1, "basura")).statusCode).toBe(400);
+    expect((await pushToken(c1, T1)).statusCode).toBe(204);
+    expect((await pushToken(c1, T1)).statusCode).toBe(204);
+    expect((await pushToken((await ctx.tokenFor()).token, T1)).statusCode).toBe(404);
+    // Otro repartidor entra en el mismo celular: el token pasa a ser suyo, y después vuelve.
+    await pushToken(c2, T1);
+    expect((await ctx.db.select().from(courierPushTokens).where(eq(courierPushTokens.expoToken, T1)))[0]!.courierId).toBe(id2);
+    await pushToken(c1, T1);
+    await pushToken(c2, T2);
+    expect(await ctx.db.select().from(courierPushTokens).where(eq(courierPushTokens.expoToken, T1))).toMatchObject([{ courierId: id1 }]);
+  });
+
+  it("la oferta avisa a quienes pueden tomarla, sin la dirección; vence con la oferta", async () => {
+    const { deliveryId } = await offeredOrder();
+    const rows = await offerRows(deliveryId);
+    const to = rows.map((r) => r.courierId);
+    expect(to).toEqual(expect.arrayContaining([id1, id2]));
+    expect(to).not.toContain(idPending);
+    expect(rows[0]!.payload).toMatchObject({ title: "Envío por $ 1.500,00", url: "/", channelId: "offers", expiresAt: expect.any(String) });
+    expect(rows[0]!.payload.body).toContain("Barrio Norte");
+    expect(JSON.stringify(rows[0]!.payload)).not.toContain(DROPOFF);
+    expect(JSON.stringify(rows[0]!.payload)).not.toContain("Ana");
+
+    // Llega al celular de cada uno; un celular dado de baja se borra.
+    sent.length = 0;
+    await drain();
+    expect(sent).toEqual(expect.arrayContaining([`${T1}|Envío por $ 1.500,00`, `${T2}|Envío por $ 1.500,00`]));
+    const after = await offerRows(deliveryId);
+    expect(after.find((r) => r.courierId === id1)).toMatchObject({ status: "SENT", deliveredCount: 1 });
+    expect(after.find((r) => r.courierId === id2)).toMatchObject({ status: "SKIPPED" });
+    expect(await ctx.db.select().from(courierPushTokens).where(eq(courierPushTokens.expoToken, T2))).toHaveLength(0);
+  });
+
+  it("con mínimo más alto o rechazada no avisa; si el comercio sube el pago, sí", async () => {
+    await req("PATCH", "/v1/courier/me", { token: c2, payload: { minFeeMinor: 200_000 } });
+    const { deliveryId } = await offeredOrder();
+    expect((await offerRows(deliveryId)).map((r) => r.courierId)).not.toContain(id2);
+    await req("POST", `/v1/courier/offers/${deliveryId}/decline`, { token: c1 });
+    await req("POST", `/v1/merchants/${merchantId}/deliveries/${deliveryId}/reoffer`, { token: owner, payload: { feeMinor: 250_000 } });
+    const rows = await offerRows(deliveryId);
+    // El aviso anterior que no salió se descarta; el nuevo va a los dos (c1 la vuelve a ver).
+    expect(rows.filter((r) => r.status === "PENDING").map((r) => r.courierId)).toEqual(expect.arrayContaining([id1, id2]));
+    expect(rows.filter((r) => r.status === "PENDING").every((r) => r.payload.title === "Envío por $ 2.500,00")).toBe(true);
+    expect(rows.some((r) => r.status === "SKIPPED" && r.lastError === "La oferta cambió")).toBe(true);
+    await req("PATCH", "/v1/courier/me", { token: c2, payload: { minFeeMinor: 0 } });
+    await drain();
+  });
+
+  it("tomada o vencida antes de mandarse, no se manda", async () => {
+    const taken = await offeredOrder();
+    expect((await accept(c1, taken.deliveryId)).statusCode).toBe(200);
+    expect((await offerRows(taken.deliveryId)).every((r) => r.status === "SKIPPED" && r.lastError === "La oferta ya no está abierta")).toBe(true);
+
+    const late = await offeredOrder({ offerMinutes: 2 });
+    sent.length = 0;
+    await drain(new Date(Date.now() + 3 * 60_000));
+    expect(sent).toEqual([]);
+    expect((await offerRows(late.deliveryId)).every((r) => r.status === "SKIPPED" && r.lastError === "Venció antes de mandarse")).toBe(true);
+  });
+
+  it("al cerrar sesión el celular deja de recibir avisos", async () => {
+    expect((await pushToken(c1, T1, true)).statusCode).toBe(204);
+    expect((await pushToken(c1, T1, true)).statusCode).toBe(204);
+    const { deliveryId } = await offeredOrder();
+    sent.length = 0;
+    await drain();
+    expect(sent).toEqual([]);
+    expect((await offerRows(deliveryId)).find((r) => r.courierId === id1)).toMatchObject({
+      status: "SKIPPED",
+      lastError: "El repartidor no registró su celular",
+    });
   });
 });

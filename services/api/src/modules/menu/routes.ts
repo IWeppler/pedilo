@@ -6,6 +6,10 @@ import type { Db } from "../../db/client";
 import { errorResponses } from "../../lib/errors";
 import { readUpload, uploadDescription } from "../../lib/uploads";
 import { nameSchema, nonEmptyPatch } from "../../lib/schemas";
+import { publicOfferSchema } from "../promotions/routes";
+import { listPublicOffers } from "../promotions/service";
+import { publicRatingSchema } from "../ratings/routes";
+import { publicRatings } from "../ratings/service";
 import { authOf, requireAuth } from "../identity/auth-plugin";
 import {
   createProduct,
@@ -75,6 +79,7 @@ const publicMenuSchema = z.object({
     payment: z.object({ cash: z.boolean(), transfer: z.boolean(), card: z.boolean().describe("Tarjeta con Mercado Pago") }).describe("Medios de pago que acepta"),
     logoUrl: z.string().nullable(),
     coverUrl: z.string().nullable(),
+    prepMinutes: z.number().int().nullable().describe("Minutos de preparación de un pedido típico (ADR 0029)"),
     branches: z.array(
       z.object({
         id: z.uuid(),
@@ -182,10 +187,20 @@ export const menuRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
         summary: "Comercio aprobado con sus sucursales y su menú (público)",
         description: "404 si el comercio no existe o no está aprobado.",
         params: z.object({ slug: z.string().min(1).max(100) }),
-        response: { 200: publicMenuSchema, 404: errorResponses[404] },
+        response: {
+          200: publicMenuSchema.extend({
+            offers: z.array(publicOfferSchema).describe("Ofertas vigentes (ADR 0030); los cupones no se publican"),
+            rating: publicRatingSchema,
+          }),
+          404: errorResponses[404],
+        },
       },
     },
-    (request) => getPublicMerchantMenu(db, request.params.slug),
+    async (request) => {
+      const menu = await getPublicMerchantMenu(db, request.params.slug);
+      const [offers, ratings] = await Promise.all([listPublicOffers(db, menu.merchant.id), publicRatings(db, [menu.merchant.id])]);
+      return { ...menu, offers, rating: ratings.get(menu.merchant.id) ?? null };
+    },
   );
 
   app.get(

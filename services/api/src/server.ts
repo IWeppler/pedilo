@@ -15,7 +15,7 @@ import { type PaymentsContext, processRefunds } from "./modules/payments/service
 import { createSecretBox } from "./lib/secret-box";
 
 const config = loadConfig();
-const { db, close } = createDb(config.databaseUrl);
+const { db, close } = createDb(config.databaseUrl, config.dbPoolMax);
 const tokenVerifier = await createTokenVerifier(config);
 const mp = config.mercadoPago;
 const paymentsCtx: PaymentsContext | null = mp
@@ -43,14 +43,14 @@ if (config.auth.mode === "local") {
 // Workers dentro del proceso (ADR 0008/0009): el estado vive en la base, así que son durables.
 const pushSender = config.push.vapid ? createWebPushSender(config.push.vapid) : null;
 if (!pushSender) app.log.warn("Web Push sin configurar (VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY): los avisos push se omiten.");
-const customerPushSender = config.expoPush.enabled ? createExpoPushSender({ accessToken: config.expoPush.accessToken }) : null;
+const expoPushSender = config.expoPush.enabled ? createExpoPushSender({ accessToken: config.expoPush.accessToken }) : null;
 const workers = [
   startIntervalWorker({ name: "order-expiry", intervalMs: config.orders.expirySweepMs, log: app.log, run: () => expireOverdueOrders(db) }),
   startIntervalWorker({
     name: "push-outbox",
     intervalMs: config.push.outboxSweepMs,
     log: app.log,
-    run: () => processOutbox(db, pushSender, new Date(), 20, customerPushSender),
+    run: () => processOutbox(db, pushSender, new Date(), 20, expoPushSender),
   }),
   startIntervalWorker({ name: "unpaid-expiry", intervalMs: 60_000, log: app.log, run: () => expireUnpaidOrders(db) }),
   ...(paymentsCtx

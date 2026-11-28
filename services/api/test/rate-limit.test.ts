@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { createTestContext, type TestContext } from "./helpers";
+import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
 
@@ -11,10 +11,13 @@ afterAll(() => ctx.close());
 
 describe("límite por IP al crear pedidos (ADR 0010)", () => {
   it("después del máximo responde 429 RATE_LIMITED con retry-after", async () => {
+    const buyer = await ctx.customerToken();
     const post = () =>
-      ctx.app.inject({ method: "POST", url: "/v1/public/orders", headers: { "idempotency-key": "rate-limit-key-1" }, payload: {} });
+      ctx.app.inject({ method: "POST", url: "/v1/public/orders", headers: { ...bearer(buyer), "idempotency-key": "rate-limit-key-1" }, payload: {} });
 
-    // Los requests cuentan aunque sean inválidos (el límite corre antes de validar).
+    // Sin sesión se rechaza antes (401) y no gasta el cupo.
+    expect((await ctx.app.inject({ method: "POST", url: "/v1/public/orders", headers: { "idempotency-key": "x" }, payload: {} })).statusCode).toBe(401);
+    // Con sesión, los requests cuentan aunque sean inválidos (el límite corre antes de validar).
     for (let i = 0; i < 3; i++) expect((await post()).statusCode).toBe(400);
 
     const blocked = await post();

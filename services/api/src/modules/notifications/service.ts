@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { Db, DbOrTx } from "../../db/client";
 import { getMerchantAccess } from "../merchants/service";
 import {
+  courierPushTokens,
   customerPushTokens,
   NotificationAudience,
   NotificationKind,
@@ -30,8 +31,8 @@ export interface PushSender {
   send(subscription: Pick<PushSubscriptionRow, "endpoint" | "p256dh" | "auth">, payload: PushPayload): Promise<PushResult>;
 }
 
-/** Push a los celulares del cliente (Expo Push, ADR 0020). */
-export interface CustomerPushSender {
+/** Push a los celulares del cliente y de los repartidores (Expo Push, ADR 0020/0025). */
+export interface ExpoPushSender {
   send(expoToken: string, payload: PushPayload): Promise<PushResult>;
 }
 
@@ -116,6 +117,51 @@ export async function enqueueNotification(
   await tx.insert(notificationOutbox).values(n);
 }
 
+/**
+ * Oferta de reparto → aviso a cada repartidor que puede tomarla (ADR 0025). Quién puede tomarla lo
+ * decide `deliveries`; acá solo se encola, una fila por repartidor, en la transacción de la oferta.
+ */
+export async function enqueueCourierNotifications(
+  tx: DbOrTx,
+  n: { kind: NotificationKind; merchantId: string; orderId: string | null; courierIds: string[]; payload: PushPayload },
+): Promise<void> {
+  if (n.courierIds.length === 0) return;
+  await tx.insert(notificationOutbox).values(
+    n.courierIds.map((courierId) => ({
+      kind: n.kind,
+      audience: NotificationAudience.COURIER,
+      merchantId: n.merchantId,
+      orderId: n.orderId,
+      courierId,
+      payload: n.payload,
+    })),
+  );
+}
+
+/**
+ * Descarta los avisos todavía sin mandar con este tag (p. ej. la oferta ya la tomó alguien o
+ * venció): un reintento tardío no tiene que despertar a nadie por algo que ya no está.
+ */
+export async function skipPendingNotifications(tx: DbOrTx, tag: string, reason: string): Promise<void> {
+  await tx
+    .update(notificationOutbox)
+    .set({ status: OutboxStatus.SKIPPED, lastError: reason })
+    .where(and(eq(notificationOutbox.status, OutboxStatus.PENDING), sql`${notificationOutbox.payload}->>'tag' = ${tag}`));
+}
+
+/** El repartidor registra su celular (Expo Push). Si el token era de otro repartidor, pasa a ser suyo. */
+export async function saveCourierPushToken(db: DbOrTx, courierId: string, expoToken: string): Promise<void> {
+  await db
+    .insert(courierPushTokens)
+    .values({ courierId, expoToken })
+    .onConflictDoUpdate({ target: courierPushTokens.expoToken, set: { courierId } });
+}
+
+/** Al cerrar sesión: este celular deja de recibir avisos del repartidor. */
+export async function removeCourierPushToken(db: DbOrTx, courierId: string, expoToken: string): Promise<void> {
+  await db.delete(courierPushTokens).where(and(eq(courierPushTokens.courierId, courierId), eq(courierPushTokens.expoToken, expoToken)));
+}
+
 /** El cliente registra su celular para recibir avisos de un pedido (Expo Push). Idempotente. */
 export async function saveCustomerPushToken(db: DbOrTx, orderId: string, expoToken: string): Promise<void> {
   await db.insert(customerPushTokens).values({ orderId, expoToken }).onConflictDoNothing();
@@ -151,7 +197,7 @@ export async function processOutbox(
   sender: PushSender | null,
   now = new Date(),
   batchSize = 20,
-  customerSender: CustomerPushSender | null = null,
+  expoSender: ExpoPushSender | null = null,
 ): Promise<number> {
   const claimed: NotificationOutboxRow[] = await db.transaction(async (tx) => {
     const rows = await tx
@@ -172,26 +218,38 @@ export async function processOutbox(
 
   for (const row of claimed) {
     const attempts = row.attempts + 1;
-    const customer = row.audience === NotificationAudience.CUSTOMER;
-    if (customer ? !customerSender : !sender) {
-      await finish(db, row.id, { status: OutboxStatus.SKIPPED, lastError: customer ? "Expo Push no configurado" : "Web Push no configurado (VAPID)" });
+    const audience = row.audience;
+    const viaExpo = audience !== NotificationAudience.MERCHANT;
+    if (row.payload.expiresAt && new Date(row.payload.expiresAt) <= now) {
+      await finish(db, row.id, { status: OutboxStatus.SKIPPED, lastError: "Venció antes de mandarse" });
+      continue;
+    }
+    if (viaExpo ? !expoSender : !sender) {
+      await finish(db, row.id, { status: OutboxStatus.SKIPPED, lastError: viaExpo ? "Expo Push no configurado" : "Web Push no configurado (VAPID)" });
       continue;
     }
 
-    // Destinos: navegadores del comercio o celulares del cliente que sigue el pedido.
-    const targets: Array<{ id: string; send: () => Promise<PushResult> }> = customer
-      ? (await db.select().from(customerPushTokens).where(eq(customerPushTokens.orderId, row.orderId!))).map((t) => ({
-          id: t.id,
-          send: () => customerSender!.send(t.expoToken, row.payload),
-        }))
-      : (await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.merchantId, row.merchantId))).map((s) => ({
-          id: s.id,
-          send: () => sender!.send(s, row.payload),
-        }));
+    // Destinos: navegadores del comercio, o celulares del cliente que sigue el pedido o del repartidor.
+    const expoTargets = (tokens: Array<{ id: string; expoToken: string }>) =>
+      tokens.map((t) => ({ id: t.id, send: () => expoSender!.send(t.expoToken, row.payload) }));
+    const targets: Array<{ id: string; send: () => Promise<PushResult> }> =
+      audience === NotificationAudience.CUSTOMER
+        ? expoTargets(await db.select().from(customerPushTokens).where(eq(customerPushTokens.orderId, row.orderId!)))
+        : audience === NotificationAudience.COURIER
+          ? expoTargets(await db.select().from(courierPushTokens).where(eq(courierPushTokens.courierId, row.courierId!)))
+          : (await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.merchantId, row.merchantId))).map((s) => ({
+              id: s.id,
+              send: () => sender!.send(s, row.payload),
+            }));
     if (targets.length === 0) {
       await finish(db, row.id, {
         status: OutboxStatus.SKIPPED,
-        lastError: customer ? "El cliente no registró su celular" : "El comercio no tiene dispositivos registrados",
+        lastError:
+          audience === NotificationAudience.CUSTOMER
+            ? "El cliente no registró su celular"
+            : audience === NotificationAudience.COURIER
+              ? "El repartidor no registró su celular"
+              : "El comercio no tiene dispositivos registrados",
       });
       continue;
     }
@@ -203,12 +261,17 @@ export async function processOutbox(
       const result = await target.send();
       if (result.ok) {
         delivered++;
-        if (!customer) await db.update(pushSubscriptions).set({ lastSuccessAt: now }).where(eq(pushSubscriptions.id, target.id));
+        if (audience === NotificationAudience.MERCHANT) {
+          await db.update(pushSubscriptions).set({ lastSuccessAt: now }).where(eq(pushSubscriptions.id, target.id));
+        } else if (audience === NotificationAudience.COURIER) {
+          await db.update(courierPushTokens).set({ lastSuccessAt: now }).where(eq(courierPushTokens.id, target.id));
+        }
       } else if (result.gone) gone.push(target.id);
       else errors.push(result.error);
     }
     if (gone.length) {
-      if (customer) await db.delete(customerPushTokens).where(inArray(customerPushTokens.id, gone));
+      if (audience === NotificationAudience.CUSTOMER) await db.delete(customerPushTokens).where(inArray(customerPushTokens.id, gone));
+      else if (audience === NotificationAudience.COURIER) await db.delete(courierPushTokens).where(inArray(courierPushTokens.id, gone));
       else await db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, gone));
     }
 

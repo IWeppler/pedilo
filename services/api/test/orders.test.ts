@@ -13,6 +13,8 @@ import {
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let admin: string;
 let owner: string;
 let stranger: string;
@@ -44,13 +46,17 @@ let keySeq = 0;
 const newKey = () => `test-key-${++keySeq}-${Date.now()}`;
 
 const placeOrder = (body: Body, key = newKey()) =>
-  req("POST", "/v1/public/orders", { payload: body, headers: { "idempotency-key": key } });
+  req("POST", "/v1/public/orders", {
+    token: buyer, payload: body, headers: { "idempotency-key": key } });
+
+/** Lo que recibe `createOrder` (el servicio): la ruta le suma nombre y teléfono del perfil. */
+const serviceInput = (over: Body = {}) =>
+  ({ ...pickupBody(over), customer: { name: "Ana Gómez", phone: "3491 555-123" } }) as unknown as Parameters<typeof createOrder>[1];
 
 const pickupBody = (over: Body = {}): Body => ({
   merchantSlug: "pizzeria-don-pepe",
   branchId,
   fulfillmentType: "PICKUP",
-  customer: { name: "Ana Gómez", phone: "3491 555-123" },
   items: [
     {
       productId: pizza.id,
@@ -71,6 +77,7 @@ const ALL_DAY = Array.from({ length: 7 }, (_, weekday) => ({ weekday, opensAt: "
 
 beforeAll(async () => {
   ctx = await createTestContext();
+  buyer = await ctx.customerToken({ displayName: "Ana Gómez" });
   admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   stranger = (await ctx.tokenFor()).token;
@@ -139,7 +146,6 @@ describe("crear pedido (invitado)", () => {
       paymentStatus: "PENDING",
       merchant: { name: "Pizzería Don Pepe" },
       branch: { name: "Centro", address: "San Martín 123" },
-      customer: { name: "Ana Gómez" },
       delivery: null,
       // (9.000 + 500 + 1.600) × 2 + 3.500 = 25.700
       subtotalMinor: 2570000,
@@ -171,7 +177,8 @@ describe("crear pedido (invitado)", () => {
   });
 
   it("sin Idempotency-Key → 400", async () => {
-    const res = await req("POST", "/v1/public/orders", { payload: pickupBody() });
+    const res = await req("POST", "/v1/public/orders", {
+    token: buyer, payload: pickupBody() });
     expect(res.statusCode).toBe(400);
   });
 
@@ -218,7 +225,7 @@ describe("crear pedido (invitado)", () => {
     try {
       // Martes 2026-12-01 10:00 en Argentina (13:00 UTC): la sucursal abre solo los lunes.
       await expect(
-        createOrder(ctx.db, pickupBody() as never, newKey(), { secret: "x".repeat(16), now: new Date("2026-12-01T13:00:00Z") }),
+        createOrder(ctx.db, serviceInput(), newKey(), { secret: "x".repeat(16), now: new Date("2026-12-01T13:00:00Z") }),
       ).rejects.toMatchObject({ statusCode: 409, details: { reason: "BRANCH_CLOSED" } });
     } finally {
       await req("PUT", `/v1/merchants/${merchantId}/branches/${branchId}/hours`, { token: owner, payload: { ranges: ALL_DAY } });
@@ -403,7 +410,7 @@ describe("avisos al comercio y vencimiento", () => {
 
   it("respeta un plazo configurado al crear", async () => {
     const now = new Date();
-    const { order } = await createOrder(ctx.db, pickupBody() as unknown as Parameters<typeof createOrder>[1], newKey(), {
+    const { order } = await createOrder(ctx.db, serviceInput(), newKey(), {
       secret: "test-order-token-secret",
       acceptTimeoutMs: 5 * 60 * 1000,
       now,
@@ -562,7 +569,7 @@ describe("límites anti-abuso por teléfono (ADR 0010)", () => {
 
 describe("pedidos programados (ADR 0011)", () => {
   const secret = "test-order-token-secret";
-  const input = (over: Body = {}) => ({ ...pickupBody(), ...over }) as unknown as Parameters<typeof createOrder>[1];
+  const input = (over: Body = {}) => serviceInput(over);
   // Lunes 2026-11-30 10:00 en Argentina (13:00 UTC). La sucursal abre solo los lunes 12:00–14:00.
   const now = new Date("2026-11-30T13:00:00Z");
   const noon = "2026-11-30T15:00:00.000Z"; // 12:00 local
@@ -648,7 +655,7 @@ describe("pedidos programados (ADR 0011)", () => {
 describe("pago por transferencia y confirmación de cobro (ADR 0011)", () => {
   const settings = `/v1/merchants/${"__ID__"}/payment-settings`;
   const url = () => settings.replace("__ID__", merchantId);
-  const order = (over: Body = {}) => placeOrder(pickupBody({ customer: { name: "Pago", phone: "3491 800-000" }, ...over }));
+  const order = (over: Body = {}) => placeOrder(pickupBody(over));
   const confirm = (orderId: string, token = owner) =>
     req("POST", `/v1/merchants/${merchantId}/orders/${orderId}/payment/confirm`, { token });
 

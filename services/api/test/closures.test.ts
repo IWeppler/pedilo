@@ -4,6 +4,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let owner: string;
 let stranger: string;
 let merchantId: string;
@@ -25,6 +27,7 @@ const publicBranch = async () => (await req("GET", "/v1/public/merchants/cafe-fe
 
 beforeAll(async () => {
   ctx = await createTestContext();
+  buyer = await ctx.customerToken();
   const admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   stranger = (await ctx.tokenFor()).token;
@@ -70,8 +73,9 @@ describe("cierres excepcionales (ADR 0018)", () => {
     const b = await publicBranch();
     expect(b).toMatchObject({ openNow: false, closedToday: { reason: "Feriado", endsOn: day(0) } });
     const order = await req("POST", "/v1/public/orders", {
+    token: buyer,
       headers: { "idempotency-key": `closure-${Date.now()}` },
-      payload: { merchantSlug: "cafe-feriado", branchId, fulfillmentType: "PICKUP", customer: { name: "Ana", phone: "3491 555-111" }, items: [{ productId, modifiers: [], quantity: 1 }] },
+      payload: { merchantSlug: "cafe-feriado", branchId, fulfillmentType: "PICKUP", items: [{ productId, modifiers: [], quantity: 1 }] },
     });
     expect(order.json().error.details.reason).toBe("BRANCH_CLOSED");
   });

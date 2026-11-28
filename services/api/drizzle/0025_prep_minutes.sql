@@ -1,0 +1,2 @@
+ALTER TABLE "merchants" ADD COLUMN "prep_minutes" integer;--> statement-breakpoint
+ALTER TABLE "merchants" ADD CONSTRAINT "merchants_prep_minutes_check" CHECK ("merchants"."prep_minutes" IS NULL OR "merchants"."prep_minutes" BETWEEN 5 AND 120);

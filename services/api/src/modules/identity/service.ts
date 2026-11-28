@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 
 import type { DbOrTx } from "../../db/client";
-import { PlatformRole, type UserRow, users, UserStatus } from "./schema";
+import { customerProfiles, type CustomerProfileRow, PlatformRole, type UserRow, users, UserStatus } from "./schema";
 import type { VerifiedIdentity } from "./token-verifier";
 
 export interface AuthContext {
@@ -70,3 +70,67 @@ function toAuthContext(row: UserRow): AuthContext {
 }
 
 export const isAdmin = (auth: AuthContext | null) => auth?.platformRole === PlatformRole.ADMIN;
+
+// ---------------------------------------------------------------------------
+// Perfil del cliente (ADR 0026)
+// ---------------------------------------------------------------------------
+
+export interface CustomerAddress {
+  line: string;
+  notes: string | null;
+  location: { lat: number; lng: number } | null;
+}
+
+export interface CustomerProfileDto {
+  displayName: string;
+  phone: string;
+  email: string | null;
+  /** Dirección de entrega guardada (null = todavía no cargó ninguna). */
+  address: CustomerAddress | null;
+}
+
+const toProfileDto = (row: CustomerProfileRow, email: string | null): CustomerProfileDto => ({
+  displayName: row.displayName,
+  phone: row.phone,
+  email,
+  address: row.addressLine
+    ? {
+        line: row.addressLine,
+        notes: row.addressNotes,
+        location: row.addressLat !== null && row.addressLng !== null ? { lat: row.addressLat, lng: row.addressLng } : null,
+      }
+    : null,
+});
+
+/** `null` = entró pero todavía no completó el registro. */
+export async function getCustomerProfile(db: DbOrTx, auth: AuthContext): Promise<CustomerProfileDto | null> {
+  const [row] = await db.select().from(customerProfiles).where(eq(customerProfiles.userId, auth.userId));
+  return row ? toProfileDto(row, auth.email) : null;
+}
+
+/**
+ * Registro y edición: crea el perfil o lo actualiza. `address` ausente deja la guardada como está;
+ * `null` la borra.
+ */
+export async function saveCustomerProfile(
+  db: DbOrTx,
+  auth: AuthContext,
+  input: { displayName: string; phone: string; address?: { line: string; notes?: string | null | undefined; location?: { lat: number; lng: number } | null | undefined } | null | undefined },
+): Promise<CustomerProfileDto> {
+  const address =
+    input.address === undefined
+      ? {}
+      : {
+          addressLine: input.address?.line ?? null,
+          addressNotes: input.address?.notes || null,
+          addressLat: input.address?.location?.lat ?? null,
+          addressLng: input.address?.location?.lng ?? null,
+        };
+  const values = { displayName: input.displayName, phone: input.phone, ...address };
+  const [row] = await db
+    .insert(customerProfiles)
+    .values({ userId: auth.userId, ...values })
+    .onConflictDoUpdate({ target: customerProfiles.userId, set: values })
+    .returning();
+  return toProfileDto(row!, auth.email);
+}

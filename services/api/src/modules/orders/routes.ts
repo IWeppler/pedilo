@@ -1,11 +1,13 @@
-import { OrderStatus } from "@pedilo/domain";
+import { canRateUntil, OrderStatus } from "@pedilo/domain";
 import type { FastifyPluginAsyncZod } from "fastify-type-provider-zod";
 import { z } from "zod";
 
 import type { OrderLimits } from "../../config";
 import type { Db } from "../../db/client";
-import { badRequest, errorResponses } from "../../lib/errors";
+import { AppError, badRequest, ErrorCode, errorResponses } from "../../lib/errors";
+import { ratingsForOrders } from "../ratings/service";
 import { authOf, requireAuth } from "../identity/auth-plugin";
+import { getCustomerProfile } from "../identity/service";
 import {
   acknowledgeMerchantOrders,
   cancelOrderByCustomer,
@@ -14,6 +16,9 @@ import {
   getMerchantOrdersPulse,
   getOrderForCustomer,
   listBranchSlots,
+  completedAtFor,
+  listCustomerOrders,
+  quoteOrder,
   registerOrderPushToken,
   listMerchantOrders,
   requestOrderDelivery,
@@ -59,8 +64,12 @@ const orderSchema = z.object({
     }),
   ),
   subtotalMinor: z.number().int(),
+  discountMinor: z.number().int().describe("Descuento de una promo del comercio (ADR 0030)"),
+  promotion: z
+    .object({ title: z.string(), label: z.string().describe("«20% off»"), code: z.string().nullable().describe("Código del cupón, si fue uno") })
+    .nullable(),
   deliveryFeeMinor: z.number().int(),
-  totalMinor: z.number().int(),
+  totalMinor: z.number().int().describe("subtotal − descuento + envío"),
   events: z.array(
     z.object({
       fromStatus: statusSchema.nullable(),
@@ -157,12 +166,6 @@ const customerOrderSchema = orderSchema.extend({
 /** Saca la comisión de lo que se le devuelve al cliente. */
 const forCustomer = <T extends { commission: unknown }>({ commission: _commission, ...order }: T) => order;
 
-const phoneSchema = z
-  .string()
-  .trim()
-  .regex(/^[0-9+()\s-]{8,24}$/, "Teléfono inválido")
-  .refine((v) => v.replace(/\D/g, "").length >= 8, "Teléfono inválido");
-
 const createOrderBody = z.object({
   merchantSlug: z.string().min(1).max(100),
   branchId: z.uuid(),
@@ -178,8 +181,14 @@ const createOrderBody = z.object({
         .describe("Punto exacto marcado en el mapa (opcional, ADR 0023). 400 si queda a más de 30 km de la sucursal"),
     })
     .optional(),
-  customer: z.object({ name: z.string().trim().min(2).max(80), phone: phoneSchema }),
   notes: z.string().trim().max(500).nullable().optional(),
+  couponCode: z
+    .string()
+    .trim()
+    .max(20)
+    .nullable()
+    .optional()
+    .describe("Cupón del comercio. Sin cupón se aplica sola la mejor oferta vigente (ADR 0030). 409 con reason COUPON_* si no sirve"),
   paymentMethod: z
     .enum(["CASH", "TRANSFER", "MERCADO_PAGO"])
     .optional()
@@ -224,29 +233,41 @@ export const orderRoutes: FastifyPluginAsyncZod<{
   const createLimit = limits?.perIpPer10Min ? { max: limits.perIpPer10Min, timeWindow: "10 minutes" } : false;
   const trackLimit = limits ? { max: 120, timeWindow: "1 minute" } : false;
 
-  // --- Cliente (invitado, ADR 0007) ---
+  // --- Cliente (con cuenta registrada, ADR 0026; el seguimiento sigue con token, ADR 0007) ---
 
   app.post(
     "/public/orders",
     {
       config: { rateLimit: createLimit },
+      onRequest: requireAuth,
       schema: {
         tags: ["orders"],
-        summary: "Crear un pedido (invitado, efectivo o transferencia, inmediato o programado)",
+        summary: "Crear un pedido (cliente registrado; efectivo, transferencia o tarjeta; inmediato o programado)",
         description:
+          "Requiere sesión y perfil completo: 401 sin sesión, 403 PROFILE_REQUIRED sin nombre y teléfono (ADR 0026). " +
+          "El nombre y el teléfono del pedido son los del perfil. " +
+          "Reusar la Idempotency-Key de otro cliente: 409 IDEMPOTENCY_KEY_REUSED. " +
           "La API recalcula precios, disponibilidad, horario, zona y mínimo. Errores de negocio: 409 con `details.reason` " +
           "(BRANCH_CLOSED, PRODUCT_UNAVAILABLE, ITEM_INVALID, MIN_ORDER_NOT_MET, PICKUP_NOT_AVAILABLE, DELIVERY_NOT_AVAILABLE, " +
           "PAYMENT_METHOD_NOT_AVAILABLE, SCHEDULING_DISABLED, SLOT_UNAVAILABLE, SLOT_FULL). " +
           "Anti-abuso: 429 RATE_LIMITED con `details.reason` IP_RATE_LIMIT, TOO_MANY_ACTIVE_ORDERS o DAILY_LIMIT (ADR 0010).",
+        security,
         headers: idempotencyHeaders,
         body: createOrderBody,
         response: { 201: z.object({ order: orderSchema, trackingToken: z.string(), replayed: z.boolean() }), ...errorResponses },
       },
     },
     async (request, reply) => {
-      const result = await createOrder(db, request.body, request.headers["idempotency-key"], {
+      const auth = authOf(request);
+      // Nombre y teléfono salen de la cuenta, no del request: no se pueden inventar por pedido.
+      const profile = await getCustomerProfile(db, auth);
+      if (!profile) {
+        throw new AppError(403, ErrorCode.FORBIDDEN, "Completá tu nombre y teléfono para hacer pedidos", { reason: "PROFILE_REQUIRED" });
+      }
+      const input = { ...request.body, customer: { name: profile.displayName, phone: profile.phone } };
+      const result = await createOrder(db, input, request.headers["idempotency-key"], {
         secret: orderTokenSecret,
-        customerUserId: request.auth?.userId ?? null,
+        customerUserId: auth.userId,
         ...(acceptTimeoutMs !== undefined && { acceptTimeoutMs }),
         ...(limits && { limits }),
       });
@@ -291,6 +312,78 @@ export const orderRoutes: FastifyPluginAsyncZod<{
     },
     async (request) =>
       forCustomer(await getOrderForCustomer(db, request.params.orderId, request.headers["x-order-token"], orderTokenSecret)),
+  );
+
+  app.post(
+    "/public/orders/quote",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["orders"],
+        summary: "Cotizar el pedido: subtotal, descuento de la promo, envío y total",
+        description:
+          "Mismas reglas que al pedir, sin crear nada (ADR 0030). Un cupón que no sirve vuelve en `couponError` con su `reason`; " +
+          "si la oferta vigente descuenta más que el cupón, `couponOutdone`.",
+        security,
+        body: createOrderBody,
+        response: {
+          200: z.object({
+            subtotalMinor: z.number().int(),
+            discountMinor: z.number().int(),
+            deliveryFeeMinor: z.number().int(),
+            totalMinor: z.number().int(),
+            promotion: z.object({ title: z.string(), label: z.string(), code: z.string().nullable() }).nullable(),
+            couponOutdone: z.boolean(),
+            couponError: z.object({ reason: z.string(), message: z.string() }).nullable(),
+          }),
+          ...errorResponses,
+        },
+      },
+    },
+    (request) => quoteOrder(db, request.body, authOf(request).userId),
+  );
+
+  app.get(
+    "/customer/orders",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["customers"],
+        summary: "Mis pedidos (hechos con mi cuenta)",
+        description: "Los últimos 50, con el token de seguimiento para abrirlos desde cualquier celular (ADR 0026).",
+        security: [{ bearerAuth: [] }],
+        response: {
+          200: z.array(
+            z.object({
+              id: z.uuid(),
+              code: z.string(),
+              merchantName: z.string(),
+              merchantSlug: z.string(),
+              itemsSummary: z.string().describe("«2× Muzzarella, Coca 1,5 L»"),
+              rating: z.number().int().nullable().describe("Estrellas que le diste al comercio (ADR 0031)"),
+              ratableUntil: z.string().nullable().describe("Hasta cuándo podés calificarlo; null si ya lo calificaste o no se puede"),
+              status: statusSchema,
+              totalMinor: z.number().int(),
+              createdAt: z.string(),
+              trackingToken: z.string(),
+            }),
+          ),
+          ...errorResponses,
+        },
+      },
+    },
+    async (request) => {
+      const list = await listCustomerOrders(db, authOf(request).userId, orderTokenSecret);
+      const ids = list.map((o) => o.id);
+      const [completed, ratings] = await Promise.all([completedAtFor(db, ids), ratingsForOrders(db, ids)]);
+      const now = new Date();
+      return list.map((o) => {
+        const done = completed.get(o.id);
+        const until = done ? canRateUntil(done) : null;
+        const rating = ratings.get(o.id) ?? null;
+        return { ...o, rating, ratableUntil: rating === null && until && until > now ? until.toISOString() : null };
+      });
+    },
   );
 
   app.post(

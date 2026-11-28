@@ -9,10 +9,12 @@ import { eq } from "drizzle-orm";
 
 import { customerPushTokens, notificationOutbox } from "../src/db/schema";
 import { escalateOverdueClaims, openClaim } from "../src/modules/claims/service";
-import { type CustomerPushSender, processOutbox } from "../src/modules/notifications/service";
+import { type ExpoPushSender, processOutbox } from "../src/modules/notifications/service";
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let dir: string;
 let admin: string;
 let owner: string;
@@ -35,12 +37,12 @@ let seq = 0;
 /** Pedido de retiro de $10.000 ya retirado (completo). Devuelve id y token del cliente. */
 async function completedOrder(complete = true) {
   const res = await req("POST", "/v1/public/orders", {
+    token: buyer,
     headers: { "idempotency-key": `claim-${++seq}-${Date.now()}` },
     payload: {
       merchantSlug: "almacen-reclamos",
       branchId,
       fulfillmentType: "PICKUP",
-      customer: { name: "Ana", phone: `3491 800-${String(seq).padStart(3, "0")}` },
       items: [{ productId, modifiers: [], quantity: 1 }],
     },
   });
@@ -66,6 +68,7 @@ const merchantPost = (claimId: string, action: string, payload: Body, token = ow
 beforeAll(async () => {
   dir = await mkdtemp(join(tmpdir(), "pedilo-claims-"));
   ctx = await createTestContext({ media: { driver: "local", dir } });
+  buyer = await ctx.customerToken();
   admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   stranger = (await ctx.tokenFor()).token;
@@ -244,7 +247,7 @@ describe("avisos de reclamos (ADR 0020)", () => {
 
     // El worker manda el aviso del cliente a su celular; un token dado de baja se borra.
     const sent: string[] = [];
-    const sender: CustomerPushSender = {
+    const sender: ExpoPushSender = {
       send: async (t, payload) => {
         sent.push(`${t}|${payload.title}`);
         return { ok: false, gone: true, error: "DeviceNotRegistered" };

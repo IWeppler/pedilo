@@ -49,6 +49,11 @@ export const merchants = pgTable(
     /** Logo y portada (rutas en el almacenamiento, ADR 0017). */
     logoPath: text("logo_path"),
     coverPath: text("cover_path"),
+    /**
+     * Cuánto tarda en preparar un pedido típico, en minutos (lo carga el comercio). La app muestra
+     * el tiempo estimado con esto (ADR 0029). Más adelante se puede calcular con el historial.
+     */
+    prepMinutes: integer("prep_minutes"),
     status: text("status").$type<MerchantStatus>().notNull().default("DRAFT"),
     /** Motivo del último rechazo o de la suspensión (lo ve el comercio). */
     rejectionReason: text("rejection_reason"),
@@ -65,6 +70,7 @@ export const merchants = pgTable(
       sql`${t.status} IN ('DRAFT', 'PENDING_REVIEW', 'APPROVED', 'REJECTED', 'SUSPENDED')`,
     ),
     check("merchants_tax_id_check", sql`${t.taxId} ~ '^[0-9]{11}$'`),
+    check("merchants_prep_minutes_check", sql`${t.prepMinutes} IS NULL OR ${t.prepMinutes} BETWEEN 5 AND 120`),
     check("merchants_payment_method_check", sql`${t.acceptsCash} OR ${t.acceptsTransfer}`),
     check(
       "merchants_transfer_details_check",

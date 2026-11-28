@@ -39,7 +39,11 @@ export const authPlugin = fp<AuthPluginOptions>(
       try {
         identity = await tokenVerifier.verify(match[1]);
       } catch (err) {
-        if (err instanceof InvalidTokenError) throw unauthorized("Token inválido o vencido");
+        if (err instanceof InvalidTokenError) {
+          // El motivo (firma, emisor, audiencia, vencido) sirve para diagnosticar; el token nunca se registra.
+          request.log.warn({ reason: err.message }, "token rechazado");
+          throw unauthorized("Token inválido o vencido");
+        }
         throw err;
       }
 

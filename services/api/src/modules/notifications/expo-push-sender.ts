@@ -1,13 +1,17 @@
-import type { CustomerPushSender } from "./service";
+import type { ExpoPushSender } from "./service";
 
 /**
  * Envío por el servicio de push de Expo (ADR 0020): no necesita credenciales para empezar
  * (`EXPO_ACCESS_TOKEN` es opcional, para proteger el envío). Para que llegue a Android, la app
  * tiene que ser un build propio con FCM configurado en EAS; Expo Go no recibe push desde el SDK 53.
  */
-export function createExpoPushSender(opts: { accessToken?: string | undefined } = {}): CustomerPushSender {
+export function createExpoPushSender(opts: { accessToken?: string | undefined } = {}): ExpoPushSender {
   return {
     async send(expoToken, payload) {
+      // Un aviso con vencimiento (una oferta) no tiene que llegar tarde: el servicio lo descarta.
+      const ttl = payload.expiresAt
+        ? Math.max(1, Math.floor((new Date(payload.expiresAt).getTime() - Date.now()) / 1000))
+        : 60 * 60;
       try {
         const res = await fetch("https://exp.host/--/api/v2/push/send", {
           method: "POST",
@@ -23,7 +27,8 @@ export function createExpoPushSender(opts: { accessToken?: string | undefined } 
             data: { url: payload.url, tag: payload.tag },
             sound: "default",
             priority: "high",
-            ttl: 60 * 60,
+            ttl,
+            ...(payload.channelId && { channelId: payload.channelId }),
           }),
           signal: AbortSignal.timeout(10_000),
         });

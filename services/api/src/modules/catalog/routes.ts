@@ -21,11 +21,23 @@ const categorySchema = z.object({
   commissionCategory: commissionCategorySchema.nullable(),
   sortOrder: z.number().int(),
   active: z.boolean(),
+  featuredOrder: z
+    .number()
+    .int()
+    .nullable()
+    .describe("Posición como tipo de comida en el inicio de la app; null = no aparece (solo categorías de producto)"),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 const listQuery = z.object({ kind: kindSchema.optional() });
+const publicListQuery = listQuery.extend({
+  featured: z
+    .enum(["true", "false"])
+    .transform((v) => v === "true")
+    .optional()
+    .describe("true: solo los tipos de comida del inicio de la app, en su posición; false: los que no aparecen ahí"),
+});
 
 const createCategoryBody = z.object({
   kind: kindSchema,
@@ -38,6 +50,14 @@ const createCategoryBody = z.object({
     .describe("Solo para rubros (MERCHANT): define el tope de comisión (SPEC §6.2)"),
   sortOrder: z.number().int().min(0).max(10_000).optional(),
   active: z.boolean().optional(),
+  featuredOrder: z
+    .number()
+    .int()
+    .min(0)
+    .max(1000)
+    .nullable()
+    .optional()
+    .describe("Solo categorías de producto: posición como tipo de comida en el inicio de la app; null = no aparece"),
 });
 
 const updateCategoryBody = nonEmptyPatch(createCategoryBody.omit({ kind: true }).partial());
@@ -50,11 +70,11 @@ export const catalogRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db
         tags: ["catalog"],
         summary: "Categorías visibles (activas y con ancestros activos)",
         description: "Lista plana ordenada; el árbol se arma con `parentId`.",
-        querystring: listQuery,
+        querystring: publicListQuery,
         response: { 200: z.array(categorySchema) },
       },
     },
-    (request) => listPublicCategories(db, request.query.kind),
+    (request) => listPublicCategories(db, request.query.kind, request.query.featured),
   );
 
   app.get(

@@ -134,6 +134,69 @@
       "when": 1795779149718,
       "tag": "0018_dropoff_location",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795799939541,
+      "tag": "0019_courier_locations_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795802451478,
+      "tag": "0020_media_bucket",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1795818149121,
+      "tag": "0021_courier_push",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795819325249,
+      "tag": "0022_customer_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795822253579,
+      "tag": "0023_customer_address",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795828025323,
+      "tag": "0024_food_types",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795833453236,
+      "tag": "0025_prep_minutes",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795834673459,
+      "tag": "0026_promotions",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795835799961,
+      "tag": "0027_ratings",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,11 @@
 import { fromPriceMinor, MerchantStatus, validateMenuProduct } from "@pedilo/domain";
-import { and, asc, eq, inArray, notInArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, notInArray } from "drizzle-orm";
 
 import type { Db, DbOrTx, Tx } from "../../db/client";
 import { AppError, badRequest, conflict, ErrorCode, notFound } from "../../lib/errors";
 import { media, mediaPath, mediaUrl, processImage } from "../../lib/media";
 import { type Actor, recordAudit } from "../audit/service";
-import { getCategory } from "../catalog/service";
+import { categoryBranchIds, getCategory } from "../catalog/service";
 import { findApprovedMerchantBySlug, getMerchantAccess, type PublicMerchantDto } from "../merchants/service";
 import {
   type MenuSectionRow,
@@ -620,4 +620,127 @@ export async function setProductAvailability(
     });
     return loadProduct(tx, merchantId, productId);
   });
+}
+
+/**
+ * Comercios que venden algo de esa categoría de producto (o de su rama): productos activos y no
+ * pausados. Lo usa el filtro por tipo de comida del inicio de la app (ADR 0027).
+ */
+export async function merchantIdsSellingCategory(db: DbOrTx, categoryId: string): Promise<string[]> {
+  const branch = await categoryBranchIds(db, categoryId);
+  if (branch.length === 0) return [];
+  const rows = await db
+    .selectDistinct({ merchantId: products.merchantId })
+    .from(products)
+    .where(and(inArray(products.categoryId, branch), eq(products.active, true), eq(products.available, true)));
+  return rows.map((r) => r.merchantId);
+}
+
+// ---------------------------------------------------------------------------
+// Inicio de la app: platos y nivel de precio (ADR 0028)
+// ---------------------------------------------------------------------------
+
+export interface CityDishDto {
+  productId: string;
+  name: string;
+  imageUrl: string;
+  fromPriceMinor: number;
+  merchant: { slug: string; name: string; openNow: boolean };
+}
+
+/** Precio de lista de cada producto: el suyo, o el de su variante disponible más barata. */
+async function listPrices(db: DbOrTx, rows: Array<{ id: string; priceMinor: number }>): Promise<Map<string, number>> {
+  if (rows.length === 0) return new Map();
+  const vs = await db
+    .select({ productId: productVariants.productId, name: productVariants.name, priceMinor: productVariants.priceMinor, available: productVariants.available })
+    .from(productVariants)
+    .where(inArray(productVariants.productId, rows.map((r) => r.id)));
+  return new Map(
+    rows.map((r) => [r.id, fromPriceMinor({ priceMinor: r.priceMinor, variants: vs.filter((v) => v.productId === r.id) })]),
+  );
+}
+
+/**
+ * «Platos para probar»: productos con foto, activos y no pausados, de los comercios dados (los de la
+ * ciudad). Abiertos primero y repartidos entre comercios, para que uno con muchas fotos no tape al resto.
+ */
+export async function listCityDishes(
+  db: DbOrTx,
+  cityMerchants: Array<{ id: string; slug: string; displayName: string; openNow: boolean }>,
+  limit = 12,
+): Promise<CityDishDto[]> {
+  if (cityMerchants.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(products)
+    .where(
+      and(
+        inArray(products.merchantId, cityMerchants.map((m) => m.id)),
+        eq(products.active, true),
+        eq(products.available, true),
+        isNotNull(products.imagePath),
+      ),
+    )
+    .orderBy(asc(products.sortOrder), asc(products.name));
+  const prices = await listPrices(db, rows);
+
+  const byMerchant = new Map<string, ProductRow[]>();
+  for (const r of rows) byMerchant.set(r.merchantId, [...(byMerchant.get(r.merchantId) ?? []), r]);
+  const ordered = [...cityMerchants].sort((a, b) => Number(b.openNow) - Number(a.openNow));
+
+  // Una vuelta por comercio por ronda: el primero de cada uno, después el segundo…
+  const out: CityDishDto[] = [];
+  for (let round = 0; out.length < limit; round++) {
+    let added = false;
+    for (const m of ordered) {
+      const p = byMerchant.get(m.id)?.[round];
+      if (!p || out.length >= limit) continue;
+      added = true;
+      out.push({
+        productId: p.id,
+        name: p.name,
+        imageUrl: mediaUrl(p.imagePath)!,
+        fromPriceMinor: prices.get(p.id) ?? p.priceMinor,
+        merchant: { slug: m.slug, name: m.displayName, openNow: m.openNow },
+      });
+    }
+    if (!added) break;
+  }
+  return out;
+}
+
+/**
+ * Nivel de precio de cada comercio (1 = $, 2 = $$, 3 = $$$) según la mediana de sus precios de
+ * lista. Umbrales en pesos, a revisar con la inflación: hasta $8.000, hasta $15.000, más.
+ */
+export const PRICE_LEVEL_LIMITS_MINOR = [800_000, 1_500_000] as const;
+
+export async function merchantPriceLevels(db: DbOrTx, merchantIds: string[]): Promise<Map<string, 1 | 2 | 3>> {
+  if (merchantIds.length === 0) return new Map();
+  const rows = await db
+    .select({ id: products.id, merchantId: products.merchantId, priceMinor: products.priceMinor })
+    .from(products)
+    .where(and(inArray(products.merchantId, merchantIds), eq(products.active, true)));
+  const prices = await listPrices(db, rows);
+  const levels = new Map<string, 1 | 2 | 3>();
+  for (const id of merchantIds) {
+    const list = rows
+      .filter((r) => r.merchantId === id)
+      .map((r) => prices.get(r.id) ?? r.priceMinor)
+      .sort((a, b) => a - b);
+    if (list.length === 0) continue;
+    const median = list[Math.floor((list.length - 1) / 2)]!;
+    levels.set(id, median <= PRICE_LEVEL_LIMITS_MINOR[0] ? 1 : median <= PRICE_LEVEL_LIMITS_MINOR[1] ? 2 : 3);
+  }
+  return levels;
+}
+
+/** Cuáles de estos productos son del comercio (para validar promociones de otros módulos). */
+export async function productIdsOfMerchant(db: DbOrTx, merchantId: string, ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows = await db
+    .select({ id: products.id })
+    .from(products)
+    .where(and(eq(products.merchantId, merchantId), inArray(products.id, ids)));
+  return new Set(rows.map((r) => r.id));
 }

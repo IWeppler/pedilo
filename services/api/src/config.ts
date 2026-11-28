@@ -7,6 +7,8 @@ const envSchema = z
     PORT: z.coerce.number().int().positive().default(4000),
     LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
     DATABASE_URL: z.string().min(1, "DATABASE_URL es obligatoria"),
+    /** Conexiones abiertas por proceso. Bajo en Supabase para no agotar el pooler («max clients reached»). */
+    DB_POOL_MAX: z.coerce.number().int().min(1).max(50).default(5),
     SUPABASE_URL: z.url().optional(),
     DEV_KEYS_DIR: z.string().default(".dev-keys"),
     /** Firma de los tokens de seguimiento de pedidos (ADR 0007). Obligatorio en producción. */
@@ -103,6 +105,7 @@ export interface Config {
   port: number;
   logLevel: string;
   databaseUrl: string;
+  dbPoolMax: number;
   auth: { mode: "supabase"; supabaseUrl: string } | { mode: "local"; devKeysDir: string };
   corsOrigins: string[];
   orderTokenSecret: string;
@@ -148,6 +151,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     port: env.PORT,
     logLevel: env.LOG_LEVEL,
     databaseUrl: env.DATABASE_URL,
+    dbPoolMax: env.DB_POOL_MAX,
     auth: env.SUPABASE_URL
       ? { mode: "supabase", supabaseUrl: env.SUPABASE_URL.replace(/\/+$/, "") }
       : { mode: "local", devKeysDir: env.DEV_KEYS_DIR },

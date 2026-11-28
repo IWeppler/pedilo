@@ -22,7 +22,9 @@ import {
   listMyDeliveries,
   listOffers,
   registerCourier,
+  registerCourierPushToken,
   reofferDelivery,
+  unregisterCourierPushToken,
   reviewCourier,
   updateCourierLocation,
   updateMyCourier,
@@ -175,6 +177,46 @@ export const deliveryRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
       },
     },
     (request) => updateMyCourier(db, authOf(request).userId, request.body),
+  );
+
+  const expoTokenBody = z.object({ expoToken: z.string().regex(/^Expo(nent)?PushToken\[[^\]]+\]$/, "Token de Expo inválido") });
+
+  app.post(
+    "/courier/push-token",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["couriers"],
+        summary: "Registrar el celular para recibir ofertas con la app cerrada",
+        description: "Token de Expo Push (ExponentPushToken[...]). Idempotente; si el celular era de otro repartidor, pasa a ser mío (ADR 0025).",
+        security,
+        body: expoTokenBody,
+        response: { 204: z.null(), ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      await registerCourierPushToken(db, authOf(request).userId, request.body.expoToken);
+      return reply.code(204).send(null);
+    },
+  );
+
+  app.post(
+    "/courier/push-token/remove",
+    {
+      onRequest: requireAuth,
+      schema: {
+        tags: ["couriers"],
+        summary: "Dejar de recibir avisos en este celular",
+        description: "Al cerrar sesión. Idempotente.",
+        security,
+        body: expoTokenBody,
+        response: { 204: z.null(), ...errorResponses },
+      },
+    },
+    async (request, reply) => {
+      await unregisterCourierPushToken(db, authOf(request).userId, request.body.expoToken);
+      return reply.code(204).send(null);
+    },
   );
 
   app.get(

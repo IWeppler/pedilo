@@ -50,6 +50,14 @@ export const orders = pgTable(
 
     subtotalMinor: integer("subtotal_minor").notNull(),
     deliveryFeeMinor: integer("delivery_fee_minor").notNull(),
+    /** Descuento de una promo del comercio (ADR 0030); 0 sin promo. */
+    discountMinor: integer("discount_minor").notNull().default(0),
+    /** Promo aplicada (dato: la promo es de otro módulo) y su texto al momento de pedir. */
+    promotionId: uuid("promotion_id"),
+    promotionLabel: text("promotion_label"),
+    promotionTitle: text("promotion_title"),
+    /** Código del cupón, si se usó uno. */
+    couponCode: text("coupon_code"),
     totalMinor: integer("total_minor").notNull(),
 
     idempotencyKey: text("idempotency_key").notNull(),
@@ -86,6 +94,8 @@ export const orders = pgTable(
     uniqueIndex("orders_idempotency_key_unique").on(t.idempotencyKey),
     index("orders_merchant_status_idx").on(t.merchantId, t.status, t.createdAt),
     index("orders_branch_idx").on(t.branchId, t.createdAt),
+    // «Mis pedidos» del cliente con cuenta (ADR 0026).
+    index("orders_customer_user_idx").on(t.customerUserId, t.createdAt).where(sql`${t.customerUserId} IS NOT NULL`),
     // Barrido de vencimientos: solo pedidos esperando confirmación.
     index("orders_accept_deadline_idx").on(t.acceptDeadlineAt).where(sql`${t.status} = 'PLACED'`),
     // Cupos por franja de los pedidos programados.
@@ -103,7 +113,7 @@ export const orders = pgTable(
     ),
     check(
       "orders_amounts_check",
-      sql`${t.subtotalMinor} >= 0 AND ${t.deliveryFeeMinor} >= 0 AND ${t.totalMinor} = ${t.subtotalMinor} + ${t.deliveryFeeMinor}`,
+      sql`${t.subtotalMinor} >= 0 AND ${t.deliveryFeeMinor} >= 0 AND ${t.discountMinor} BETWEEN 0 AND ${t.subtotalMinor} AND ${t.totalMinor} = ${t.subtotalMinor} - ${t.discountMinor} + ${t.deliveryFeeMinor}`,
     ),
   ],
 );

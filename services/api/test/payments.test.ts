@@ -62,6 +62,8 @@ const box = createSecretBox(randomBytes(32).toString("base64"));
 const paymentsCtx: PaymentsContext = { gateway: fake.gateway, box, publicKey: "public-key-de-prueba", notificationUrl: null };
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let admin: string;
 let owner: string;
 let merchantId: string;
@@ -80,13 +82,13 @@ const req = (method: "GET" | "POST" | "PUT" | "DELETE", url: string, opts: { tok
 let seq = 0;
 const cardOrder = (paymentMethod = "MERCADO_PAGO") =>
   req("POST", "/v1/public/orders", {
+    token: buyer,
     headers: { "idempotency-key": `pay-${++seq}-${Date.now()}` },
     payload: {
       merchantSlug: "kiosco-tarjeta",
       branchId,
       fulfillmentType: "PICKUP",
       paymentMethod,
-      customer: { name: "Ana", phone: `3491 700-${String(seq).padStart(3, "0")}` },
       items: [{ productId, modifiers: [], quantity: 1 }],
     },
   });
@@ -113,6 +115,7 @@ async function connect(code = "ok") {
 
 beforeAll(async () => {
   ctx = await createTestContext({}, { payments: { ctx: paymentsCtx, webhookSecret: HOOK_KEY, panelUrl: "http://panel.test" } });
+  buyer = await ctx.customerToken();
   admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   const cityId = (await req("POST", "/v1/admin/cities", { token: admin, payload: { name: "Tostado", province: "Santa Fe" } })).json().id;

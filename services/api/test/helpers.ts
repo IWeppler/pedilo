@@ -20,6 +20,8 @@ export interface TestContext {
   tokenFor(opts?: { email?: string; userId?: string }): Promise<{ token: string; userId: string }>;
   /** Token de un usuario con rol ADMIN ya persistido. */
   adminToken(): Promise<string>;
+  /** Token de un cliente registrado (con perfil): el único que puede hacer pedidos (ADR 0026). */
+  customerToken(profile?: { displayName?: string; phone?: string }): Promise<string>;
   close(): Promise<void>;
 }
 
@@ -60,6 +62,14 @@ export async function createTestContext(
     async adminToken() {
       const { token, userId } = await tokenFor();
       await db.insert(schema.users).values({ id: userId, platformRole: "ADMIN" });
+      return token;
+    },
+    async customerToken(profile = {}) {
+      const { token, userId } = await tokenFor();
+      await db.insert(schema.users).values({ id: userId });
+      await db
+        .insert(schema.customerProfiles)
+        .values({ userId, displayName: profile.displayName ?? "Ana", phone: profile.phone ?? "3491 555-123" });
       return token;
     },
     async close() {

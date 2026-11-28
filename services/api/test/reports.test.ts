@@ -3,6 +3,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let admin: string;
 let owner: string;
 let stranger: string;
@@ -23,12 +25,12 @@ let keySeq = 0;
 /** Pedido de `quantity` pizzas de $9.000 (retiro, efectivo). */
 const order = async (quantity: number) => {
   const res = await req("POST", "/v1/public/orders", {
+    token: buyer,
     headers: { "idempotency-key": `reports-${++keySeq}-${Date.now()}` },
     payload: {
       merchantSlug: "la-esquina-reportes",
       branchId,
       fulfillmentType: "PICKUP",
-      customer: { name: "Cliente", phone: `3491 700-${String(keySeq).padStart(3, "0")}` },
       items: [{ productId: pizzaId, modifiers: [], quantity }],
     },
   });
@@ -47,6 +49,7 @@ const earnings = (days = 7, token = owner) => req("GET", `/v1/merchants/${mercha
 
 beforeAll(async () => {
   ctx = await createTestContext();
+  buyer = await ctx.customerToken();
   admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   stranger = (await ctx.tokenFor()).token;

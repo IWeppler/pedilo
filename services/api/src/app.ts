@@ -36,6 +36,8 @@ import { menuRoutes } from "./modules/menu/routes";
 import { merchantRoutes } from "./modules/merchants/routes";
 import { notificationRoutes } from "./modules/notifications/routes";
 import { orderRoutes } from "./modules/orders/routes";
+import { promotionRoutes } from "./modules/promotions/routes";
+import { ratingRoutes } from "./modules/ratings/routes";
 import { reportRoutes } from "./modules/reports/routes";
 import { DEFAULT_SETTLEMENT_CONFIG } from "./modules/billing/settlements";
 import { applyRefundToClaim } from "./modules/claims/service";
@@ -155,7 +157,7 @@ export async function buildApp({ config, db, tokenVerifier, payments = null }: A
       .send(bytes);
   });
 
-  await app.register(identityRoutes, { prefix: "/v1" });
+  await app.register(identityRoutes, { prefix: "/v1", db });
   await app.register(geographyRoutes, { prefix: "/v1", db });
   await app.register(catalogRoutes, { prefix: "/v1", db });
   await app.register(merchantRoutes, { prefix: "/v1", db });
@@ -171,6 +173,8 @@ export async function buildApp({ config, db, tokenVerifier, payments = null }: A
     acceptTimeoutMs: config.orders?.acceptTimeoutMs,
     limits: config.limits,
   });
+  await app.register(promotionRoutes, { prefix: "/v1", db });
+  await app.register(ratingRoutes, { prefix: "/v1", db });
   await app.register(claimRoutes, { prefix: "/v1", db, orderTokenSecret: config.orderTokenSecret });
   await app.register(reportRoutes, { prefix: "/v1", db, timeZone: (config.settlement ?? DEFAULT_SETTLEMENT_CONFIG).timeZone });
   await app.register(notificationRoutes, { prefix: "/v1", db, vapidPublicKey: config.push?.vapid?.publicKey ?? null });

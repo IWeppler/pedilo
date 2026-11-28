@@ -7,6 +7,8 @@ import { closeSettlementWeek, listSettlementsForAdmin } from "../src/modules/bil
 import { bearer, createTestContext, type TestContext } from "./helpers";
 
 let ctx: TestContext;
+/** Cliente registrado: solo así se puede pedir (ADR 0026). */
+let buyer: string;
 let admin: string;
 let owner: string;
 let stranger: string;
@@ -27,12 +29,12 @@ let keySeq = 0;
 /** Pedido de `quantity` pizzas de $9.000 (retiro, efectivo). */
 const order = (quantity: number) =>
   req("POST", "/v1/public/orders", {
+    token: buyer,
     headers: { "idempotency-key": `billing-${++keySeq}-${Date.now()}` },
     payload: {
       merchantSlug: "la-esquina",
       branchId,
       fulfillmentType: "PICKUP",
-      customer: { name: "Cliente", phone: `3491 600-${String(keySeq).padStart(3, "0")}` },
       items: [{ productId: pizzaId, modifiers: [], quantity }],
     },
   });
@@ -48,6 +50,7 @@ const billing = () => req("GET", `/v1/merchants/${merchantId}/billing`, { token:
 
 beforeAll(async () => {
   ctx = await createTestContext();
+  buyer = await ctx.customerToken();
   admin = await ctx.adminToken();
   owner = (await ctx.tokenFor()).token;
   stranger = (await ctx.tokenFor()).token;

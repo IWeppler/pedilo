@@ -38,6 +38,11 @@ export const categories = pgTable(
     commissionCategory: text("commission_category").$type<MerchantCategory>(),
     sortOrder: integer("sort_order").notNull().default(0),
     active: boolean("active").notNull().default(true),
+    /**
+     * Solo categorías de producto: posición como «tipo de comida» en el inicio de la app del cliente
+     * (Hamburguesas, Pizzas…), para filtrar comercios por lo que venden. Null = no aparece (ADR 0027).
+     */
+    featuredOrder: integer("featured_order"),
     ...timestamps,
   },
   (t) => [
@@ -49,6 +54,7 @@ export const categories = pgTable(
       sql`${t.commissionCategory} IS NULL OR (${t.kind} = 'MERCHANT' AND ${t.commissionCategory} IN ('GASTRONOMY', 'KIOSK', 'SUPERMARKET', 'ELECTRONICS', 'ENTREPRENEUR'))`,
     ),
     check("categories_not_own_parent", sql`${t.parentId} IS NULL OR ${t.parentId} <> ${t.id}`),
+    check("categories_featured_check", sql`${t.featuredOrder} IS NULL OR (${t.kind} = 'PRODUCT' AND ${t.featuredOrder} >= 0)`),
   ],
 );
 

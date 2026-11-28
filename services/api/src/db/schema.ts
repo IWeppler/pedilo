@@ -14,3 +14,5 @@ export * from "../modules/billing/schema";
 export * from "../modules/deliveries/schema";
 export * from "../modules/claims/schema";
 export * from "../modules/payments/schema";
+export * from "../modules/promotions/schema";
+export * from "../modules/ratings/schema";

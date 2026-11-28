@@ -3,6 +3,7 @@ import { check, index, jsonb, pgTable, smallint, text, timestamp, uniqueIndex, u
 
 import { timestamps } from "../../lib/timestamps";
 // Solo para FKs (excepción documentada en ARCHITECTURE §4).
+import { courierProfiles } from "../deliveries/schema";
 import { merchants } from "../merchants/schema";
 import { orders } from "../orders/schema";
 
@@ -34,11 +35,16 @@ export const NotificationKind = {
   /** Reclamos (ADR 0020): nuevo reclamo para el comercio; novedades para comercio o cliente. */
   CLAIM_OPENED: "CLAIM_OPENED",
   CLAIM_UPDATE: "CLAIM_UPDATE",
+  /** Oferta de reparto nueva (o con mejor pago) para un repartidor. */
+  DELIVERY_OFFERED: "DELIVERY_OFFERED",
 } as const;
 export type NotificationKind = (typeof NotificationKind)[keyof typeof NotificationKind];
 
-/** A quién va el aviso: navegadores del comercio (Web Push) o celulares del cliente del pedido (Expo Push). */
-export const NotificationAudience = { MERCHANT: "MERCHANT", CUSTOMER: "CUSTOMER" } as const;
+/**
+ * A quién va el aviso: navegadores del comercio (Web Push), celulares del cliente del pedido o
+ * celulares de un repartidor (Expo Push).
+ */
+export const NotificationAudience = { MERCHANT: "MERCHANT", CUSTOMER: "CUSTOMER", COURIER: "COURIER" } as const;
 export type NotificationAudience = (typeof NotificationAudience)[keyof typeof NotificationAudience];
 
 export const OutboxStatus = { PENDING: "PENDING", SENT: "SENT", FAILED: "FAILED", SKIPPED: "SKIPPED" } as const;
@@ -58,6 +64,8 @@ export const notificationOutbox = pgTable(
       .notNull()
       .references(() => merchants.id, { onDelete: "cascade" }),
     orderId: uuid("order_id"),
+    /** Repartidor destinatario (audience = COURIER): una fila por repartidor. */
+    courierId: uuid("courier_id").references(() => courierProfiles.id, { onDelete: "cascade" }),
     /** Título, texto, url y tag de la notificación. */
     payload: jsonb("payload").$type<PushPayload>().notNull(),
     status: text("status").$type<OutboxStatus>().notNull().default("PENDING"),
@@ -73,6 +81,7 @@ export const notificationOutbox = pgTable(
     index("notification_outbox_pending_idx").on(t.nextAttemptAt).where(sql`${t.status} = 'PENDING'`),
     check("notification_outbox_status_check", sql`${t.status} IN ('PENDING', 'SENT', 'FAILED', 'SKIPPED')`),
     check("notification_outbox_audience_check", sql`${t.audience} <> 'CUSTOMER' OR ${t.orderId} IS NOT NULL`),
+    check("notification_outbox_courier_check", sql`${t.audience} <> 'COURIER' OR ${t.courierId} IS NOT NULL`),
   ],
 );
 
@@ -93,6 +102,24 @@ export const customerPushTokens = pgTable(
   (t) => [uniqueIndex("customer_push_tokens_unique").on(t.orderId, t.expoToken)],
 );
 
+/**
+ * Celulares de los repartidores (Expo Push): reciben las ofertas con la app cerrada. Un token es
+ * de un solo repartidor: si otro inicia sesión en ese celular, pasa a ser suyo.
+ */
+export const courierPushTokens = pgTable(
+  "courier_push_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    courierId: uuid("courier_id")
+      .notNull()
+      .references(() => courierProfiles.id, { onDelete: "cascade" }),
+    expoToken: text("expo_token").notNull(),
+    lastSuccessAt: timestamp("last_success_at", { withTimezone: true }),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("courier_push_tokens_token_unique").on(t.expoToken), index("courier_push_tokens_courier_idx").on(t.courierId)],
+);
+
 export interface PushPayload {
   title: string;
   body: string;
@@ -100,8 +127,13 @@ export interface PushPayload {
   url: string;
   /** Notificaciones con el mismo tag se reemplazan (evita duplicados con el aviso de la página). */
   tag: string;
+  /** Canal de Android (Expo Push). Las ofertas van por uno propio, con sonido e importancia máxima. */
+  channelId?: string;
+  /** Pasada esta hora el aviso ya no sirve (p. ej. la oferta venció): no se manda. */
+  expiresAt?: string;
 }
 
 export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type CourierPushTokenRow = typeof courierPushTokens.$inferSelect;
 export type CustomerPushTokenRow = typeof customerPushTokens.$inferSelect;
 export type NotificationOutboxRow = typeof notificationOutbox.$inferSelect;

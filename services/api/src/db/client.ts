@@ -13,8 +13,13 @@ export type Tx = PgTransaction<PgQueryResultHKT, Schema, ExtractTablesWithRelati
 /** Cualquier cosa sobre la que se pueden ejecutar queries: la base o una transacción abierta. */
 export type DbOrTx = Db | Tx;
 
-export function createDb(databaseUrl: string) {
-  const client = postgres(databaseUrl, { max: 10 });
+/**
+ * El pooler de Supabase en modo sesión tiene un cupo chico (15 clientes en total para todo el
+ * proyecto): cada proceso usa pocas conexiones y suelta las que quedan sin uso. Si no, la API local,
+ * la de Fly y un migrador juntos agotan el cupo (`EMAXCONNSESSION`).
+ */
+export function createDb(databaseUrl: string, poolMax = 5) {
+  const client = postgres(databaseUrl, { max: poolMax, idle_timeout: 20, max_lifetime: 60 * 30 });
   const db: Db = drizzle(client, { schema });
   return { db, close: () => client.end({ timeout: 5 }) };
 }

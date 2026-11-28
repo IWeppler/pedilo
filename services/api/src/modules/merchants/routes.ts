@@ -7,6 +7,11 @@ import { errorResponses, notFound } from "../../lib/errors";
 import { readUpload, uploadDescription } from "../../lib/uploads";
 import { idParamsSchema, nameSchema, nonEmptyPatch } from "../../lib/schemas";
 import { authOf, requireAdmin, requireAuth } from "../identity/auth-plugin";
+import { listCityDishes, merchantIdsSellingCategory, merchantPriceLevels } from "../menu/service";
+import { publicOfferSchema } from "../promotions/routes";
+import { headlineOffers } from "../promotions/service";
+import { publicRatingSchema } from "../ratings/routes";
+import { publicRatings } from "../ratings/service";
 import {
   approveMerchant,
   createBranch,
@@ -48,6 +53,7 @@ const merchantSchema = z.object({
   contactEmail: z.string().nullable(),
   logoUrl: z.string().nullable().describe("Relativa a la API (`/media/...`) en modo local"),
   coverUrl: z.string().nullable(),
+  prepMinutes: z.number().int().nullable().describe("Minutos que tarda en preparar un pedido típico (ADR 0029)"),
   payment: z.object({
     acceptsCash: z.boolean(),
     acceptsTransfer: z.boolean(),
@@ -140,7 +146,18 @@ const registerBody = z.object({
   contactEmail: z.email().nullable().optional(),
 });
 
-const updateMerchantBody = nonEmptyPatch(registerBody.partial());
+const updateMerchantBody = nonEmptyPatch(
+  registerBody.partial().extend({
+    prepMinutes: z
+      .number()
+      .int()
+      .min(5)
+      .max(120)
+      .nullable()
+      .optional()
+      .describe("Minutos que tarda en preparar un pedido típico; se puede cambiar con el comercio aprobado (ADR 0029)"),
+  }),
+);
 
 const branchBody = z.object({
   name: nameSchema,
@@ -473,7 +490,13 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
         summary: "Comercios aprobados con sucursal activa en la ciudad (abiertos primero)",
         description: "404 si la ciudad no existe o está inactiva.",
         params: z.object({ citySlug: z.string().min(1).max(100) }),
-        querystring: z.object({ categoryId: z.uuid().optional().describe("Filtrar por rubro") }),
+        querystring: z.object({
+          categoryId: z.uuid().optional().describe("Filtrar por rubro"),
+          productCategoryId: z
+            .uuid()
+            .optional()
+            .describe("Filtrar por tipo de comida: comercios con productos de esa categoría o de su rama (ADR 0027)"),
+        }),
         response: {
           200: z.array(
             z.object({
@@ -487,6 +510,23 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
               minDeliveryFeeMinor: z.number().int().nullable(),
               logoUrl: z.string().nullable(),
               coverUrl: z.string().nullable(),
+              prepMinutes: z.number().int().nullable().describe("Minutos de preparación; null = sin cargar"),
+              opensNext: z
+                .object({
+                  inDays: z.number().int().describe("0 = hoy, 1 = mañana…"),
+                  weekday: z.number().int().describe("0 = domingo … 6 = sábado"),
+                  time: z.string().describe("Hora local HH:MM"),
+                })
+                .nullable()
+                .describe("Cerrado ahora: cuándo vuelve a abrir (próximos 7 días); null si está abierto o no abre"),
+              schedulingEnabled: z.boolean().describe("Acepta pedidos programados"),
+              isNew: z.boolean().describe("Aprobado en los últimos 30 días: «Nuevo en Pedilo»"),
+              offer: publicOfferSchema.nullable().describe("Su oferta vigente más llamativa (ADR 0030); null si no tiene"),
+              rating: publicRatingSchema,
+              priceLevel: z
+                .union([z.literal(1), z.literal(2), z.literal(3)])
+                .nullable()
+                .describe("1 = $, 2 = $$, 3 = $$$ según la mediana de sus precios; null sin productos (ADR 0028)"),
             }),
           ),
           404: errorResponses[404],
@@ -494,11 +534,81 @@ export const merchantRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { d
       },
     },
     async (request) => {
+      const merchantIds = request.query.productCategoryId
+        ? await merchantIdsSellingCategory(db, request.query.productCategoryId)
+        : undefined;
       const list = await listApprovedMerchantsInCity(db, request.params.citySlug, {
         categoryId: request.query.categoryId,
+        merchantIds,
       });
       if (!list) throw notFound("Ciudad");
-      return list;
+      const ids = list.map((m) => m.id);
+      const [levels, offers, ratings] = await Promise.all([merchantPriceLevels(db, ids), headlineOffers(db, ids), publicRatings(db, ids)]);
+      return list.map((m) => ({ ...m, priceLevel: levels.get(m.id) ?? null, offer: offers.get(m.id) ?? null, rating: ratings.get(m.id) ?? null }));
+    },
+  );
+
+  app.get(
+    "/public/cities/:citySlug/offers",
+    {
+      schema: {
+        tags: ["merchants"],
+        summary: "Ofertas vigentes de los comercios de la ciudad (banner del inicio)",
+        description: "Una por comercio (la más llamativa), abiertos primero (ADR 0030). Los cupones no se publican. 404 si la ciudad no existe.",
+        params: z.object({ citySlug: z.string().min(1).max(100) }),
+        response: {
+          200: z.array(
+            z.object({
+              merchant: z.object({ slug: z.string(), name: z.string(), openNow: z.boolean(), logoUrl: z.string().nullable(), coverUrl: z.string().nullable() }),
+              offer: publicOfferSchema,
+            }),
+          ),
+          404: errorResponses[404],
+        },
+      },
+    },
+    async (request) => {
+      const merchants = await listApprovedMerchantsInCity(db, request.params.citySlug);
+      if (!merchants) throw notFound("Ciudad");
+      const offers = await headlineOffers(db, merchants.map((m) => m.id));
+      return merchants
+        .filter((m) => offers.has(m.id))
+        .sort((a, b) => Number(b.openNow) - Number(a.openNow))
+        .map((m) => ({
+          merchant: { slug: m.slug, name: m.displayName, openNow: m.openNow, logoUrl: m.logoUrl, coverUrl: m.coverUrl },
+          offer: offers.get(m.id)!,
+        }));
+    },
+  );
+
+  app.get(
+    "/public/cities/:citySlug/dishes",
+    {
+      schema: {
+        tags: ["merchants"],
+        summary: "Platos para probar: productos con foto de los comercios de la ciudad",
+        description:
+          "Activos y no pausados, de comercios aprobados con sucursal en la ciudad. Abiertos primero y repartidos entre comercios (ADR 0028). 404 si la ciudad no existe.",
+        params: z.object({ citySlug: z.string().min(1).max(100) }),
+        querystring: z.object({ limit: z.coerce.number().int().min(1).max(30).default(12) }),
+        response: {
+          200: z.array(
+            z.object({
+              productId: z.uuid(),
+              name: z.string(),
+              imageUrl: z.string(),
+              fromPriceMinor: z.number().int().describe("Precio de lista (con variantes, la más barata)"),
+              merchant: z.object({ slug: z.string(), name: z.string(), openNow: z.boolean() }),
+            }),
+          ),
+          404: errorResponses[404],
+        },
+      },
+    },
+    async (request) => {
+      const merchants = await listApprovedMerchantsInCity(db, request.params.citySlug);
+      if (!merchants) throw notFound("Ciudad");
+      return listCityDishes(db, merchants, request.query.limit);
     },
   );
 
