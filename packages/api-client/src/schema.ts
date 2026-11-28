@@ -132,15 +132,24 @@ export interface paths {
                             phone: string;
                             /** @description El de la cuenta (Google, Apple o email) */
                             email: string | null;
-                            /** @description Dirección de entrega guardada */
-                            address: {
+                            /** @description Direcciones guardadas (ADR 0034): Casa, Trabajo y otras, hasta 5 */
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /**
+                                 * @description Casa, Trabajo u Otra
+                                 * @enum {string}
+                                 */
+                                label: "HOME" | "WORK" | "OTHER";
+                                /** @description Nombre de una «Otra»; null en Casa y Trabajo */
+                                name: string | null;
                                 line: string;
                                 notes: string | null;
                                 location: {
                                     lat: number;
                                     lng: number;
                                 } | null;
-                            } | null;
+                            }[];
                         };
                     };
                 };
@@ -249,16 +258,6 @@ export interface paths {
                     "application/json": {
                         displayName: string;
                         phone: string;
-                        /** @description Sin este campo, la dirección guardada no cambia; null la borra */
-                        address?: {
-                            line: string;
-                            notes?: string | null;
-                            /** @description Punto exacto en el mapa (ADR 0023) */
-                            location?: {
-                                lat: number;
-                                lng: number;
-                            } | null;
-                        } | null;
                     };
                 };
             };
@@ -274,15 +273,24 @@ export interface paths {
                             phone: string;
                             /** @description El de la cuenta (Google, Apple o email) */
                             email: string | null;
-                            /** @description Dirección de entrega guardada */
-                            address: {
+                            /** @description Direcciones guardadas (ADR 0034): Casa, Trabajo y otras, hasta 5 */
+                            addresses: {
+                                /** Format: uuid */
+                                id: string;
+                                /**
+                                 * @description Casa, Trabajo u Otra
+                                 * @enum {string}
+                                 */
+                                label: "HOME" | "WORK" | "OTHER";
+                                /** @description Nombre de una «Otra»; null en Casa y Trabajo */
+                                name: string | null;
                                 line: string;
                                 notes: string | null;
                                 location: {
                                     lat: number;
                                     lng: number;
                                 } | null;
-                            } | null;
+                            }[];
                         };
                     };
                 };
@@ -380,6 +388,446 @@ export interface paths {
         };
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customer/me/addresses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Guardar una dirección
+         * @description Hasta 5. 409 PROFILE_REQUIRED (sin registro), ADDRESS_LIMIT o ADDRESS_LABEL_TAKEN (ya hay Casa o Trabajo).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Casa, Trabajo u Otra
+                         * @enum {string}
+                         */
+                        label: "HOME" | "WORK" | "OTHER";
+                        /** @description Solo para una «Otra», p. ej. «Casa de mamá» */
+                        name?: string | null;
+                        line: string;
+                        notes?: string | null;
+                        /** @description Punto exacto en el mapa (ADR 0023) */
+                        location?: {
+                            lat: number;
+                            lng: number;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /**
+                             * @description Casa, Trabajo u Otra
+                             * @enum {string}
+                             */
+                            label: "HOME" | "WORK" | "OTHER";
+                            /** @description Nombre de una «Otra»; null en Casa y Trabajo */
+                            name: string | null;
+                            line: string;
+                            notes: string | null;
+                            location: {
+                                lat: number;
+                                lng: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/customer/me/addresses/{addressId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Editar una dirección
+         * @description Los pedidos hechos no cambian: guardan su copia. 409 ADDRESS_LABEL_TAKEN.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    addressId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /**
+                         * @description Casa, Trabajo u Otra
+                         * @enum {string}
+                         */
+                        label: "HOME" | "WORK" | "OTHER";
+                        /** @description Solo para una «Otra», p. ej. «Casa de mamá» */
+                        name?: string | null;
+                        line: string;
+                        notes?: string | null;
+                        /** @description Punto exacto en el mapa (ADR 0023) */
+                        location?: {
+                            lat: number;
+                            lng: number;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /**
+                             * @description Casa, Trabajo u Otra
+                             * @enum {string}
+                             */
+                            label: "HOME" | "WORK" | "OTHER";
+                            /** @description Nombre de una «Otra»; null en Casa y Trabajo */
+                            name: string | null;
+                            line: string;
+                            notes: string | null;
+                            location: {
+                                lat: number;
+                                lng: number;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Borrar una dirección */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    addressId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+                /** @description Error con forma estable (ADR 0005) */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                message: string;
+                                details?: unknown;
+                            };
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -11739,12 +12187,13 @@ export interface paths {
                                 /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                 rateFactorBps: number;
                             }[];
+                            /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                             capsByCategory: {
-                                GASTRONOMY: number;
-                                KIOSK: number;
-                                SUPERMARKET: number;
-                                ELECTRONICS: number;
-                                ENTREPRENEUR: number;
+                                GASTRONOMY: number | null;
+                                KIOSK: number | null;
+                                SUPERMARKET: number | null;
+                                ELECTRONICS: number | null;
+                                ENTREPRENEUR: number | null;
                             };
                             plans: {
                                 EMPRENDEDOR: {
@@ -11920,7 +12369,8 @@ export interface paths {
                             category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
                             /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
                             categoryDefaulted: boolean;
-                            capMinor: number;
+                            /** @description Tope por pedido del rubro; null = sin tope */
+                            capMinor: number | null;
                             pricing: {
                                 /** @description Identificador inmutable, p. ej. v0.5 */
                                 id: string;
@@ -11930,12 +12380,13 @@ export interface paths {
                                     /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                     rateFactorBps: number;
                                 }[];
+                                /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                                 capsByCategory: {
-                                    GASTRONOMY: number;
-                                    KIOSK: number;
-                                    SUPERMARKET: number;
-                                    ELECTRONICS: number;
-                                    ENTREPRENEUR: number;
+                                    GASTRONOMY: number | null;
+                                    KIOSK: number | null;
+                                    SUPERMARKET: number | null;
+                                    ELECTRONICS: number | null;
+                                    ENTREPRENEUR: number | null;
                                 };
                                 plans: {
                                     EMPRENDEDOR: {
@@ -12143,12 +12594,13 @@ export interface paths {
                                 /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                 rateFactorBps: number;
                             }[];
+                            /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                             capsByCategory: {
-                                GASTRONOMY: number;
-                                KIOSK: number;
-                                SUPERMARKET: number;
-                                ELECTRONICS: number;
-                                ENTREPRENEUR: number;
+                                GASTRONOMY: number | null;
+                                KIOSK: number | null;
+                                SUPERMARKET: number | null;
+                                ELECTRONICS: number | null;
+                                ENTREPRENEUR: number | null;
                             };
                             plans: {
                                 EMPRENDEDOR: {
@@ -12297,12 +12749,13 @@ export interface paths {
                             /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                             rateFactorBps: number;
                         }[];
+                        /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                         capsByCategory: {
-                            GASTRONOMY: number;
-                            KIOSK: number;
-                            SUPERMARKET: number;
-                            ELECTRONICS: number;
-                            ENTREPRENEUR: number;
+                            GASTRONOMY: number | null;
+                            KIOSK: number | null;
+                            SUPERMARKET: number | null;
+                            ELECTRONICS: number | null;
+                            ENTREPRENEUR: number | null;
                         };
                         plans: {
                             EMPRENDEDOR: {
@@ -12352,12 +12805,13 @@ export interface paths {
                                 /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                 rateFactorBps: number;
                             }[];
+                            /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                             capsByCategory: {
-                                GASTRONOMY: number;
-                                KIOSK: number;
-                                SUPERMARKET: number;
-                                ELECTRONICS: number;
-                                ENTREPRENEUR: number;
+                                GASTRONOMY: number | null;
+                                KIOSK: number | null;
+                                SUPERMARKET: number | null;
+                                ELECTRONICS: number | null;
+                                ENTREPRENEUR: number | null;
                             };
                             plans: {
                                 EMPRENDEDOR: {
@@ -12531,7 +12985,8 @@ export interface paths {
                             category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
                             /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
                             categoryDefaulted: boolean;
-                            capMinor: number;
+                            /** @description Tope por pedido del rubro; null = sin tope */
+                            capMinor: number | null;
                             pricing: {
                                 /** @description Identificador inmutable, p. ej. v0.5 */
                                 id: string;
@@ -12541,12 +12996,13 @@ export interface paths {
                                     /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                     rateFactorBps: number;
                                 }[];
+                                /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                                 capsByCategory: {
-                                    GASTRONOMY: number;
-                                    KIOSK: number;
-                                    SUPERMARKET: number;
-                                    ELECTRONICS: number;
-                                    ENTREPRENEUR: number;
+                                    GASTRONOMY: number | null;
+                                    KIOSK: number | null;
+                                    SUPERMARKET: number | null;
+                                    ELECTRONICS: number | null;
+                                    ENTREPRENEUR: number | null;
                                 };
                                 plans: {
                                     EMPRENDEDOR: {
@@ -12776,7 +13232,8 @@ export interface paths {
                             category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
                             /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
                             categoryDefaulted: boolean;
-                            capMinor: number;
+                            /** @description Tope por pedido del rubro; null = sin tope */
+                            capMinor: number | null;
                             pricing: {
                                 /** @description Identificador inmutable, p. ej. v0.5 */
                                 id: string;
@@ -12786,12 +13243,13 @@ export interface paths {
                                     /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                     rateFactorBps: number;
                                 }[];
+                                /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                                 capsByCategory: {
-                                    GASTRONOMY: number;
-                                    KIOSK: number;
-                                    SUPERMARKET: number;
-                                    ELECTRONICS: number;
-                                    ENTREPRENEUR: number;
+                                    GASTRONOMY: number | null;
+                                    KIOSK: number | null;
+                                    SUPERMARKET: number | null;
+                                    ELECTRONICS: number | null;
+                                    ENTREPRENEUR: number | null;
                                 };
                                 plans: {
                                     EMPRENDEDOR: {
@@ -13020,7 +13478,8 @@ export interface paths {
                             category: "GASTRONOMY" | "KIOSK" | "SUPERMARKET" | "ELECTRONICS" | "ENTREPRENEUR";
                             /** @description El rubro no tiene categoría de comisión: se usa la de emprendedores */
                             categoryDefaulted: boolean;
-                            capMinor: number;
+                            /** @description Tope por pedido del rubro; null = sin tope */
+                            capMinor: number | null;
                             pricing: {
                                 /** @description Identificador inmutable, p. ej. v0.5 */
                                 id: string;
@@ -13030,12 +13489,13 @@ export interface paths {
                                     /** @description Porción de la tasa base en este tramo (10000 = 100%) */
                                     rateFactorBps: number;
                                 }[];
+                                /** @description Tope de comisión por pedido según el rubro; null = sin tope */
                                 capsByCategory: {
-                                    GASTRONOMY: number;
-                                    KIOSK: number;
-                                    SUPERMARKET: number;
-                                    ELECTRONICS: number;
-                                    ENTREPRENEUR: number;
+                                    GASTRONOMY: number | null;
+                                    KIOSK: number | null;
+                                    SUPERMARKET: number | null;
+                                    ELECTRONICS: number | null;
+                                    ENTREPRENEUR: number | null;
                                 };
                                 plans: {
                                     EMPRENDEDOR: {
@@ -14547,7 +15007,8 @@ export interface paths {
                                 basisMinor: number;
                                 plan: string;
                                 pricingVersionId: string;
-                                capMinor: number;
+                                /** @description null = sin tope */
+                                capMinor: number | null;
                                 capApplied: boolean;
                             } | null;
                             /** @description Reparto con repartidor de Pedilo (ADR 0014), si se pidió */
@@ -14853,7 +15314,8 @@ export interface paths {
                                 basisMinor: number;
                                 plan: string;
                                 pricingVersionId: string;
-                                capMinor: number;
+                                /** @description null = sin tope */
+                                capMinor: number | null;
                                 capApplied: boolean;
                             } | null;
                         };
@@ -15087,7 +15549,8 @@ export interface paths {
                                 basisMinor: number;
                                 plan: string;
                                 pricingVersionId: string;
-                                capMinor: number;
+                                /** @description null = sin tope */
+                                capMinor: number | null;
                                 capApplied: boolean;
                             } | null;
                         };
@@ -15332,7 +15795,8 @@ export interface paths {
                                 basisMinor: number;
                                 plan: string;
                                 pricingVersionId: string;
-                                capMinor: number;
+                                /** @description null = sin tope */
+                                capMinor: number | null;
                                 capApplied: boolean;
                             } | null;
                             /** @description Reparto con repartidor de Pedilo (ADR 0014), si se pidió */

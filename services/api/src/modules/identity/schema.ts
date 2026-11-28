@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, doublePrecision, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { check, doublePrecision, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import { timestamps } from "../../lib/timestamps";
 
@@ -42,18 +42,45 @@ export const customerProfiles = pgTable("customer_profiles", {
     .references(() => users.id, { onDelete: "cascade" }),
   displayName: text("display_name").notNull(),
   phone: text("phone").notNull(),
-  /** Dirección de entrega guardada: el checkout la usa sin volver a pedirla (se puede cambiar). */
-  addressLine: text("address_line"),
-  addressNotes: text("address_notes"),
-  /** Punto exacto en el mapa (ADR 0023), si lo marcó. */
-  addressLat: doublePrecision("address_lat"),
-  addressLng: doublePrecision("address_lng"),
   ...timestamps,
-}, (t) => [
-  check(
-    "customer_profiles_location_check",
-    sql`(${t.addressLat} IS NULL AND ${t.addressLng} IS NULL) OR (${t.addressLat} BETWEEN -90 AND 90 AND ${t.addressLng} BETWEEN -180 AND 180)`,
-  ),
-]);
+});
+
+export const AddressLabel = { HOME: "HOME", WORK: "WORK", OTHER: "OTHER" } as const;
+export type AddressLabel = (typeof AddressLabel)[keyof typeof AddressLabel];
+
+/**
+ * Direcciones guardadas del cliente (ADR 0034): Casa, Trabajo y otras, hasta 5. En cada pedido el
+ * cliente elige desde dónde pide; el pedido guarda una copia, así editar una dirección no cambia
+ * pedidos hechos.
+ */
+export const customerAddresses = pgTable(
+  "customer_addresses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => customerProfiles.userId, { onDelete: "cascade" }),
+    label: text("label").$type<AddressLabel>().notNull(),
+    /** Nombre de una «Otra» (p. ej. «Casa de mamá»); en Casa y Trabajo, null. */
+    name: text("name"),
+    line: text("line").notNull(),
+    notes: text("notes"),
+    /** Punto exacto en el mapa (ADR 0023), si lo marcó. */
+    lat: doublePrecision("lat"),
+    lng: doublePrecision("lng"),
+    ...timestamps,
+  },
+  (t) => [
+    index("customer_addresses_user_idx").on(t.userId),
+    // Una sola Casa y un solo Trabajo por cliente.
+    uniqueIndex("customer_addresses_label_unique").on(t.userId, t.label).where(sql`${t.label} IN ('HOME', 'WORK')`),
+    check("customer_addresses_label_check", sql`${t.label} IN ('HOME', 'WORK', 'OTHER')`),
+    check(
+      "customer_addresses_location_check",
+      sql`(${t.lat} IS NULL AND ${t.lng} IS NULL) OR (${t.lat} BETWEEN -90 AND 90 AND ${t.lng} BETWEEN -180 AND 180)`,
+    ),
+  ],
+);
 
 export type CustomerProfileRow = typeof customerProfiles.$inferSelect;
+export type CustomerAddressRow = typeof customerAddresses.$inferSelect;

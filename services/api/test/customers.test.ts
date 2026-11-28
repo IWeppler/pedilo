@@ -9,7 +9,7 @@ let branchId: string;
 let productId: string;
 
 type Body = Record<string, unknown>;
-const req = (method: "GET" | "POST" | "PUT", url: string, opts: { token?: string; payload?: Body; headers?: Record<string, string> } = {}) =>
+const req = (method: "GET" | "POST" | "PUT" | "DELETE", url: string, opts: { token?: string; payload?: Body; headers?: Record<string, string> } = {}) =>
   ctx.app.inject({
     method,
     url,
@@ -146,16 +146,50 @@ describe("cuentas de clientes (ADR 0026)", () => {
     expect(res.json().order.customer).toEqual({ name: "Lucía Paz", phone: "3491 444-555" });
   });
 
-  it("guarda la dirección de entrega; sin el campo no la toca y con null la borra", async () => {
+  it("direcciones (ADR 0034): Casa, Trabajo y otras, hasta 5, solo las propias", async () => {
     const { token } = await ctx.tokenFor();
-    const put = (payload: Body) => req("PUT", "/v1/customer/me", { token, payload });
-    const base = { displayName: "Ana Gómez", phone: "3491 555-111" };
-    expect((await put(base)).json().address).toBeNull();
-    const withAddress = await put({ ...base, address: { line: "Belgrano 456", notes: "Timbre B", location: { lat: -29.24, lng: -61.77 } } });
-    expect(withAddress.json().address).toEqual({ line: "Belgrano 456", notes: "Timbre B", location: { lat: -29.24, lng: -61.77 } });
-    expect((await put({ ...base, phone: "3491 555-222" })).json().address).toMatchObject({ line: "Belgrano 456" });
-    expect((await put({ ...base, address: { line: "Mitre 10" } })).json().address).toEqual({ line: "Mitre 10", notes: null, location: null });
-    expect((await put({ ...base, address: null })).json().address).toBeNull();
-    expect((await put({ ...base, address: { line: "Mitre 10", location: { lat: 200, lng: 0 } } })).statusCode).toBe(400);
+    const add = (payload: Body, t = token) => req("POST", "/v1/customer/me/addresses", { token: t, payload });
+    const me = async () => (await req("GET", "/v1/customer/me", { token })).json();
+
+    // Sin registro no hay direcciones.
+    expect((await add({ label: "HOME", line: "Belgrano 456" })).json().error.details.reason).toBe("PROFILE_REQUIRED");
+    expect((await req("PUT", "/v1/customer/me", { token, payload: { displayName: "Ana Gómez", phone: "3491 555-111" } })).json().addresses).toEqual([]);
+
+    const work = await add({ label: "WORK", line: "San Martín 900", name: "ignorado" });
+    expect(work.statusCode).toBe(201);
+    expect(work.json()).toMatchObject({ label: "WORK", name: null, notes: null, location: null });
+    const home = (await add({ label: "HOME", line: " Belgrano 456 ", notes: "Timbre B", location: { lat: -29.24, lng: -61.77 } })).json();
+    expect(home).toMatchObject({ label: "HOME", line: "Belgrano 456", notes: "Timbre B", location: { lat: -29.24, lng: -61.77 } });
+    expect((await add({ label: "HOME", line: "Otra casa" })).json().error.details.reason).toBe("ADDRESS_LABEL_TAKEN");
+    expect((await add({ label: "OTHER", line: "Mitre 10", location: { lat: 200, lng: 0 } })).statusCode).toBe(400);
+
+    await add({ label: "OTHER", line: "Mitre 10", name: "Casa de mamá" });
+    await add({ label: "OTHER", line: "Rivadavia 20" });
+    await add({ label: "OTHER", line: "Sarmiento 30" });
+    expect((await add({ label: "OTHER", line: "Moreno 40" })).json().error.details.reason).toBe("ADDRESS_LIMIT");
+
+    // Casa primero, después Trabajo y las otras por antigüedad.
+    const list = (await me()).addresses as Array<{ label: string; name: string | null; line: string }>;
+    expect(list.map((a) => [a.label, a.name ?? a.line])).toEqual([
+      ["HOME", "Belgrano 456"],
+      ["WORK", "San Martín 900"],
+      ["OTHER", "Casa de mamá"],
+      ["OTHER", "Rivadavia 20"],
+      ["OTHER", "Sarmiento 30"],
+    ]);
+
+    // Editar: no puede pasar a ser una segunda Casa; sí cambiar sus datos.
+    const edit = (id: string, payload: Body, t = token) => req("PUT", `/v1/customer/me/addresses/${id}`, { token: t, payload });
+    expect((await edit(work.json().id, { label: "HOME", line: "San Martín 900" })).json().error.details.reason).toBe("ADDRESS_LABEL_TAKEN");
+    expect((await edit(home.id, { label: "HOME", line: "Belgrano 458" })).json()).toMatchObject({ line: "Belgrano 458", notes: null, location: null });
+
+    // Las de otro cliente no se ven, no se editan ni se borran.
+    const other = await ctx.customerToken();
+    expect((await edit(home.id, { label: "HOME", line: "X 1" }, other)).statusCode).toBe(404);
+    expect((await req("DELETE", `/v1/customer/me/addresses/${home.id}`, { token: other })).statusCode).toBe(404);
+
+    expect((await req("DELETE", `/v1/customer/me/addresses/${home.id}`, { token })).statusCode).toBe(204);
+    expect((await me()).addresses).toHaveLength(4);
+    expect((await add({ label: "HOME", line: "Nueva casa 1" })).statusCode).toBe(201);
   });
 });

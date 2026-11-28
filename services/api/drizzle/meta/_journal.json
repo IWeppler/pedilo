@@ -197,6 +197,27 @@
       "when": 1795835799961,
       "tag": "0027_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1795868074842,
+      "tag": "0028_email_outbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795871250805,
+      "tag": "0029_flat_commission",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795871813415,
+      "tag": "0030_customer_addresses",
+      "breakpoints": true
     }
   ]
 }

@@ -1,21 +1,21 @@
 import { ApiError, fieldErrors, unwrap } from "@pedilo/api-client";
-import { formatARSWhole } from "@pedilo/domain";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { addressTitle, distanceMeters, FAR_FROM_ADDRESS_METERS, formatARSWhole, type LatLng } from "@pedilo/domain";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text, TextInput } from "@/components/text";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
-import { AddressFields, type AddressValue, validPinOf } from "@/components/address-fields";
 import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
 import { api, useBranchSlots, useCustomerProfile, useMerchantCategories, useMerchantMenu, useOrderQuote } from "@/lib/api";
 import { openCardPayment } from "@/lib/card-payment";
 import { type CartLine, useCart } from "@/lib/cart";
+import { useDeliveryAddress } from "@/lib/addresses";
 import { useAuth } from "@/lib/auth";
-import { useCity } from "@/lib/city";
+import { positionIfAllowed } from "@/lib/current-position";
 import { useMyOrders } from "@/lib/my-orders";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
@@ -46,7 +46,6 @@ export default function CartScreen() {
   const t = useTheme();
   const router = useRouter();
   const { cart, itemCount, subtotalMinor, setQuantity, remove, clear } = useCart();
-  const queryClient = useQueryClient();
   const { save } = useMyOrders();
   const menu = useMerchantMenu(cart?.merchantSlug ?? "");
   const categories = useMerchantCategories();
@@ -54,18 +53,12 @@ export default function CartScreen() {
   const branch = menu.data?.merchant.branches.find((b) => b.id === cart?.branchId);
   const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY" | null>(null);
   const [zoneId, setZoneId] = useState<string | null>(null);
-  // Solo se llega con cuenta y perfil completo (ADR 0026): nombre, teléfono y dirección salen de
-  // ahí. En el pedido no se vuelven a pedir; la dirección se puede cambiar.
+  // Solo se llega con cuenta y perfil completo (ADR 0026): nombre y teléfono salen de ahí. La
+  // dirección es la elegida en «¿Desde dónde pedís?» (ADR 0034) y se cambia desde acá.
   const { status: authStatus } = useAuth();
   const profile = useCustomerProfile(authStatus === "signedIn");
-  const saved = profile.data?.address ?? null;
-  const savedAddress: AddressValue = saved
-    ? { line: saved.line, notes: saved.notes ?? "", pin: saved.location ? { ...saved.location, forLine: saved.line } : null }
-    : { line: "", notes: "", pin: null };
-  const [addressEdit, setAddressEdit] = useState<AddressValue | null>(null);
-  const address = addressEdit ?? savedAddress;
-  const editingAddress = addressEdit !== null || !saved;
-  const { city } = useCity();
+  const { selected: address } = useDeliveryAddress();
+  const farFrom = useFarFromAddress(address?.location ?? null);
   const [notes, setNotes] = useState("");
   const [idempotencyKey] = useState(newIdempotencyKey);
   const [error, setError] = useState<string | null>(null);
@@ -87,7 +80,7 @@ export default function CartScreen() {
   const mode = fulfillment ?? (branch?.acceptsPickup ? "PICKUP" : branch?.acceptsDelivery ? "DELIVERY" : null);
   const zone = branch?.zones.find((z) => z.id === zoneId) ?? branch?.zones[0];
   const deliveryFee = mode === "DELIVERY" ? (zone?.feeMinor ?? 0) : 0;
-  const validPin = validPinOf(address);
+  const validPin = address?.location ?? null;
   const belowMinimum = mode === "DELIVERY" && zone ? subtotalMinor < zone.minOrderMinor : false;
 
   // Cotización (ADR 0030): subtotal, descuento de la promo y total con las reglas de la API.
@@ -123,8 +116,8 @@ export default function CartScreen() {
             ...(mode === "DELIVERY" && {
               deliveryZoneId: zone?.id,
               deliveryAddress: {
-                line: address.line.trim(),
-                notes: address.notes.trim() || null,
+                line: address!.line,
+                notes: address!.notes,
                 location: validPin ? { lat: validPin.lat, lng: validPin.lng } : null,
               },
             }),
@@ -144,19 +137,6 @@ export default function CartScreen() {
       ),
     onSuccess: ({ order, trackingToken }) => {
       save({ id: order.id, token: trackingToken, code: order.code, merchantName: order.merchant.name, createdAt: order.createdAt });
-      // Dirección nueva: queda guardada en la cuenta para el próximo pedido.
-      if (mode === "DELIVERY" && editingAddress && profile.data) {
-        void api
-          .PUT("/v1/customer/me", {
-            body: {
-              displayName: profile.data.displayName,
-              phone: profile.data.phone,
-              address: { line: address.line.trim(), notes: address.notes.trim() || null, location: validPin },
-            },
-          })
-          .then(() => queryClient.invalidateQueries({ queryKey: ["customer", "me"] }))
-          .catch(() => undefined);
-      }
       clear();
       router.replace({ pathname: "/order/[id]", params: { id: order.id } });
       // Con tarjeta el pedido espera el pago: se abre la pantalla de pago enseguida.
@@ -215,7 +195,7 @@ export default function CartScreen() {
   // Con la cotización de la API (promo incluida); mientras llega, la cuenta local sin descuento.
   const discount = quote.data?.discountMinor ?? 0;
   const total = quote.data ? quote.data.totalMinor : subtotalMinor + deliveryFee;
-  const missing = !profile.data || (mode === "DELIVERY" && address.line.trim().length < 3) || !mode;
+  const missing = !profile.data || (mode === "DELIVERY" && !address) || !mode;
   const timingOk = timing === "LATER" ? Boolean(slot) : Boolean(branch?.openNow);
   const canSubmit = !missing && !belowMinimum && timingOk && !submit.isPending;
 
@@ -324,41 +304,42 @@ export default function CartScreen() {
                     </Card>
                   )}
                   {branch.zones.length === 1 && zone?.description && <Text style={[styles.meta, { color: t.muted }]}>{zone.description}</Text>}
-                  {editingAddress ? (
-                    <Card t={t} padded>
-                      <AddressFields
-                        value={address}
-                        onChange={setAddressEdit}
-                        cityName={city?.name}
-                        fallback={branch.lat !== null && branch.lng !== null ? { lat: branch.lat, lng: branch.lng } : null}
-                        inputBackground={t.background}
-                      />
-                      {saved && (
-                        <Pressable accessibilityRole="button" onPress={() => setAddressEdit(null)} hitSlop={6}>
-                          <Text style={[styles.meta, { color: t.muted, textDecorationLine: "underline" }]}>Usar mi dirección guardada</Text>
-                        </Pressable>
-                      )}
-                    </Card>
-                  ) : (
+                  {address ? (
                     <Card t={t} padded>
                       <View style={styles.savedAddress}>
                         <Icon name="location" size={20} color={t.text} />
                         <View style={{ flex: 1 }}>
-                          <Text style={[styles.infoText, { color: t.text, fontWeight: "700" }]}>{address.line}</Text>
+                          <Text style={[styles.infoText, { color: t.text, fontWeight: "700" }]}>
+                            {addressTitle(address)} · {address.line}
+                          </Text>
                           <Text style={[styles.meta, { color: t.muted }]}>
-                            {[address.notes || null, validPin ? "Marcada en el mapa" : null].filter(Boolean).join(" · ") || "Tu dirección guardada"}
+                            {[address.notes, validPin ? "Marcada en el mapa" : null].filter(Boolean).join(" · ") || "Sin indicaciones"}
                           </Text>
                         </View>
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel="Cambiar la dirección"
-                          onPress={() => setAddressEdit(savedAddress)}
+                          accessibilityLabel="Cambiar desde dónde pedís"
+                          onPress={() => router.push("/address")}
                           hitSlop={8}
                         >
                           <Text style={[styles.infoText, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>Cambiar</Text>
                         </Pressable>
                       </View>
+                      {farFrom !== null && (
+                        <Pressable
+                          accessibilityRole="button"
+                          onPress={() => router.push("/address")}
+                          style={[styles.farNotice, { backgroundColor: t.accentSoft }]}
+                        >
+                          <Icon name="warning" size={18} color={t.accent} />
+                          <Text style={[styles.meta, { color: t.text, flex: 1 }]}>
+                            Estás a {formatDistance(farFrom)} de {addressTitle(address).toLowerCase()}. ¿Pedís desde otro lado?
+                          </Text>
+                        </Pressable>
+                      )}
                     </Card>
+                  ) : (
+                    <Button label="Agregar dirección de entrega" variant="outline" onPress={() => router.push("/address")} />
                   )}
                 </>
               )}
@@ -723,8 +704,36 @@ function SummaryRow({ label, value, strong, tone }: { label: string; value: stri
   );
 }
 
+/**
+ * Distancia entre el GPS y la dirección elegida, si supera FAR_FROM_ADDRESS_METERS (ADR 0034). Solo
+ * con el permiso de ubicación ya dado: el checkout nunca lo pide.
+ */
+function useFarFromAddress(target: LatLng | null): number | null {
+  // Se guarda para qué punto se midió: al cambiar de dirección, la medición vieja deja de valer.
+  const [far, setFar] = useState<{ key: string; meters: number } | null>(null);
+  const lat = target?.lat;
+  const lng = target?.lng;
+  const key = `${lat},${lng}`;
+  useEffect(() => {
+    if (lat === undefined || lng === undefined) return;
+    let cancelled = false;
+    void positionIfAllowed().then((here) => {
+      if (cancelled || !here) return;
+      const meters = distanceMeters(here, { lat, lng });
+      setFar(meters > FAR_FROM_ADDRESS_METERS ? { key: `${lat},${lng}`, meters } : null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [lat, lng]);
+  return far && far.key === key && lat !== undefined ? far.meters : null;
+}
+
+const formatDistance = (m: number) => (m < 1000 ? `${Math.round(m / 50) * 50} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`);
+
 const styles = StyleSheet.create({
   savedAddress: { flexDirection: "row", alignItems: "center", gap: space.md },
+  farNotice: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.sm, marginTop: space.md },
   couponRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.sm },
   couponApply: { borderRadius: radius.md, paddingHorizontal: space.lg, height: 46, alignItems: "center", justifyContent: "center" },
   screen: { flex: 1 },

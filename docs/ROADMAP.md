@@ -41,7 +41,7 @@ Falta:
 - ✅ Cierres excepcionales por sucursal: feriados y vacaciones ([ADR 0018](adr/0018-cierres-excepcionales.md)). ✅ Suspender y reactivar comercios desde el admin.
 - Fuera del MVP: invitar operadores al comercio (un solo usuario por comercio en el MVP).
 - ✅ Tipo de producto (categoría global) al cargar cada producto en el panel; tipos de comida en el inicio de la app elegidos por el admin ([ADR 0027](adr/0027-tipos-de-comida.md)).
-- ⬜ **Emails del MVP**: proveedor de envío (Resend/Postmark) como SMTP de Supabase para confirmación y recuperación, y emails propios de la API por outbox (pedido confirmado, rechazado, reclamos). Hoy Supabase usa un SMTP de Gmail.
+- 🟡 **Emails del MVP** ([ADR 0032](adr/0032-emails-al-cliente.md)): emails propios de la API por outbox con Resend (pedido aceptado, rechazado, cancelado por el comercio o vencido, y novedades del reclamo), con reintentos y sin duplicados. Falta: verificar el dominio en Resend, cargar `RESEND_API_KEY` y `EMAIL_FROM` en Fly, y poner Resend como SMTP de Supabase (confirmación y contraseña; hoy sale por Gmail).
 
 ## Fase 2 — Primer pedido real (E3, E4, E5, E7)
 
@@ -94,10 +94,15 @@ Falta:
 2. **Probar la app del cliente en Expo Go** y anotar lo que falle en el celular.
 3. 🟡 **UI de la app del cliente:** rediseño hecho (naranja de marca, íconos `expo-symbols`, pestañas Inicio/Pedidos/Carrito, home con destacados y rubros, menú con portada y pestañas por sección, modal de producto, checkout, seguimiento con línea de tiempo, ciudad por GPS con `expo-location`). Falta: probarlo en Expo Go, tipografía e ícono de la app, fotos reales.
 4. **Fotos:** ADR de storage y subida de imágenes de productos/logos.
-5. 🟡 **Supabase Auth:** login de comercio/admin hecho (falta prueba con email real); pendiente login del cliente con OTP y asociar pedidos al usuario.
+5. 🟡 **Supabase Auth:** login de comercio/admin hecho (falta prueba con email real). Cuenta del cliente hecha ([ADR 0026](adr/0026-cuenta-del-cliente-google-apple.md)); falta activar Google y Apple.
 6. 🟡 **Avisos al comercio:** alarma, notificación, Web Push y vencimientos hechos. Sigue: prueba en campo con comercios reales → G3.
 7. **CI.**
 8. **Prueba real de Mercado Pago** con túnel https → G1.
+
+## Pendientes anotados
+
+- ⏸️ **Dominio propio** (en espera, todavía no se compra). Lo necesitan los emails: verificar en Resend un subdominio de envío (p. ej. `avisos.<dominio>`), cargar `RESEND_API_KEY` y `EMAIL_FROM` en Fly y poner Resend como SMTP de Supabase. También sirve para la API y los paneles (`api.<dominio>`, `comercios.<dominio>`). Hasta entonces, los emails al cliente quedan omitidos (SKIPPED) y Supabase sigue con Gmail.
+- Backlog de producto (planilla «Pedilo — Backlog de épicas y tareas», hoja Decisiones), revisado el 2026-11-28. Se queda lo que hace el código en calificaciones (ADR 0031), login (ADR 0026), repartidores (ADR 0014/0025), liquidación semanal (ADR 0013) y reclamos (ADR 0019). Hay que hacer el **chat por pedido**. La aceptación sigue **manual**, pero el cliente ve «Pedido confirmado» desde que el pedido llega al comercio. **Comisión plana del 3%**, sin mensualidad ni tope ([ADR 0033](adr/0033-comision-plana-3.md)). **Varias direcciones** por cliente: Casa, Trabajo y otras, con «¿Desde dónde pedís?» y aviso por GPS ([ADR 0034](adr/0034-direcciones-del-cliente.md)). Sigue pendiente el **chat por pedido**.
 
 ## Detalles menores anotados
 

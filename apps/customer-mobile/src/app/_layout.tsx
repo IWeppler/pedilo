@@ -12,6 +12,7 @@ import { ErrorState, Loading } from "@/components/ui";
 import { useAccountOrders, useCustomerProfile } from "@/lib/api";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { CartProvider } from "@/lib/cart";
+import { DeliveryAddressProvider } from "@/lib/addresses";
 import { CityProvider } from "@/lib/city";
 import { MyOrdersProvider, useMyOrders } from "@/lib/my-orders";
 import { useTheme } from "@/lib/theme";
@@ -103,6 +104,7 @@ function Routes() {
           <Stack.Screen name="account" options={{ presentation: "modal" }} />
           <Stack.Screen name="notifications" />
           <Stack.Screen name="address" options={{ presentation: "modal" }} />
+          <Stack.Screen name="address-edit" options={{ presentation: "modal" }} />
         </Stack.Protected>
         <Stack.Screen name="auth/callback" />
       </Stack>
@@ -130,7 +132,9 @@ export default function RootLayout() {
       <CityProvider>
         <CartProvider>
           <MyOrdersProvider>
-            <Routes />
+            <DeliveryAddressProvider>
+              <Routes />
+            </DeliveryAddressProvider>
           </MyOrdersProvider>
         </CartProvider>
       </CityProvider>

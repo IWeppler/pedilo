@@ -8,6 +8,7 @@ import type { ColorValue, StyleProp, ViewStyle } from "react-native";
  */
 const ICONS = {
   home: { ios: "house.fill", android: "home" },
+  work: { ios: "briefcase.fill", android: "work" },
   orders: { ios: "list.bullet.rectangle.portrait", android: "receipt_long" },
   cart: { ios: "bag.fill", android: "shopping_bag" },
   search: { ios: "magnifyingglass", android: "search" },

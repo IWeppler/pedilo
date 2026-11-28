@@ -1,3 +1,4 @@
+import { addressTitle } from "@pedilo/domain";
 import { useRouter } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -39,7 +40,12 @@ export default function ProfileScreen() {
 
         <Group>
           <Item icon="person" label="Tus datos" detail={profile ? `${profile.displayName} · ${profile.phone}` : undefined} onPress={() => router.push("/account")} />
-          <Item icon="location" label="Tu dirección" detail={profile?.address?.line ?? "Sin cargar"} onPress={() => router.push("/address")} />
+          <Item
+            icon="location"
+            label="Tus direcciones"
+            detail={profile?.addresses.length ? profile.addresses.map((a) => addressTitle(a)).join(" · ") : "Sin cargar"}
+            onPress={() => router.push("/address")}
+          />
           <Item icon="map" label="Ciudad" detail={city?.name ?? "Sin elegir"} onPress={() => router.push("/city")} />
           <Item icon="bell" label="Avisos" detail="Cómo van tus pedidos" onPress={() => router.push("/notifications")} last />
         </Group>

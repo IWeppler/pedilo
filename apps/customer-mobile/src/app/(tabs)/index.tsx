@@ -1,5 +1,5 @@
 import type { CityMerchant } from "@pedilo/api-client";
-import { formatARSWhole, isOrderFinal } from "@pedilo/domain";
+import { addressTitle, formatARSWhole, isOrderFinal } from "@pedilo/domain";
 import { Redirect, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from "react-native";
@@ -9,7 +9,8 @@ import { categoryIcon, foodTypeEmoji, Icon, type IconName, rubroEmoji } from "@/
 import { Photo } from "@/components/photo";
 import { Text, TextInput } from "@/components/text";
 import { Button, ErrorState, Loading } from "@/components/ui";
-import { useAccountOrders, useCityDishes, useCityMerchants, useCityOffers, useCustomerProfile, useFoodTypes, useMerchantCategories } from "@/lib/api";
+import { useAccountOrders, useCityDishes, useCityMerchants, useCityOffers, useFoodTypes, useMerchantCategories } from "@/lib/api";
+import { useDeliveryAddress } from "@/lib/addresses";
 import { useCity } from "@/lib/city";
 import { closedLabel, etaLabel, etaSortKey } from "@/lib/merchant-labels";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
@@ -72,7 +73,7 @@ export default function HomeScreen() {
   const dishes = useCityDishes(city?.slug ?? null);
   const offers = useCityOffers(city?.slug ?? null);
   const accountOrders = useAccountOrders(true);
-  const address = useCustomerProfile(true).data?.address ?? null;
+  const { selected: address } = useDeliveryAddress();
 
   const categoryById = useMemo(() => new Map((categories.data ?? []).map((c) => [c.id, c])), [categories.data]);
   const activeOrders = (accountOrders.data ?? []).filter((o) => !isOrderFinal(o.status)).length;
@@ -163,13 +164,13 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={address ? `Entregar en ${address.line}, ${city.name}. Cambiar` : `Ciudad: ${city.name}. Cambiar`}
+            accessibilityLabel={address ? `Pedís desde ${addressTitle(address)}: ${address.line}. Cambiar` : `Ciudad: ${city.name}. Elegí desde dónde pedís`}
             onPress={() => router.push("/address")}
             hitSlop={8}
             style={styles.where}
           >
             <Text style={[styles.whereText, { color: t.text }]} numberOfLines={1}>
-              {address?.line ?? city.name}
+              {address ? `${addressTitle(address)} · ${address.line}` : city.name}
             </Text>
             <Icon name="chevronDown" size={18} color={t.text} />
           </Pressable>

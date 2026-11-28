@@ -35,6 +35,9 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0029](0029-tiempo-estimado-apertura-y-nuevos.md) | Tiempo estimado, próxima apertura y comercios nuevos | Aceptada |
 | [0030](0030-promociones-del-comercio.md) | Promociones del comercio: ofertas y cupones | Aceptada |
 | [0031](0031-calificaciones-de-comercios.md) | Calificaciones de comercios | Aceptada |
+| [0032](0032-emails-al-cliente.md) | Emails al cliente con Resend | Aceptada |
+| [0033](0033-comision-plana-3.md) | Comisión plana del 3% | Aceptada |
+| [0034](0034-direcciones-del-cliente.md) | Varias direcciones del cliente y «¿Desde dónde pedís?» | Aceptada |
 
 Pendientes (SPEC §17): realtime (SSE).
 

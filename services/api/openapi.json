@@ -183,63 +183,83 @@
                         "null"
                       ]
                     },
-                    "address": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "line": {
-                              "type": "string"
-                            },
-                            "notes": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "location": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "lat": {
-                                      "type": "number"
-                                    },
-                                    "lng": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "lat",
-                                    "lng"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
+                    "addresses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                           },
-                          "required": [
-                            "line",
-                            "notes",
-                            "location"
-                          ],
-                          "additionalProperties": false
+                          "label": {
+                            "type": "string",
+                            "enum": [
+                              "HOME",
+                              "WORK",
+                              "OTHER"
+                            ],
+                            "description": "Casa, Trabajo u Otra"
+                          },
+                          "name": {
+                            "description": "Nombre de una «Otra»; null en Casa y Trabajo",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "line": {
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lng": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lng"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
                         },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Dirección de entrega guardada"
+                        "required": [
+                          "id",
+                          "label",
+                          "name",
+                          "line",
+                          "notes",
+                          "location"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Direcciones guardadas (ADR 0034): Casa, Trabajo y otras, hasta 5"
                     }
                   },
                   "required": [
                     "displayName",
                     "phone",
                     "email",
-                    "address"
+                    "addresses"
                   ],
                   "additionalProperties": false
                 }
@@ -472,65 +492,6 @@
                   "phone": {
                     "type": "string",
                     "pattern": "^[0-9+()\\s-]{8,24}$"
-                  },
-                  "address": {
-                    "description": "Sin este campo, la dirección guardada no cambia; null la borra",
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "line": {
-                            "type": "string",
-                            "minLength": 3,
-                            "maxLength": 160
-                          },
-                          "notes": {
-                            "anyOf": [
-                              {
-                                "type": "string",
-                                "maxLength": 200
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          },
-                          "location": {
-                            "description": "Punto exacto en el mapa (ADR 0023)",
-                            "anyOf": [
-                              {
-                                "type": "object",
-                                "properties": {
-                                  "lat": {
-                                    "type": "number",
-                                    "minimum": -90,
-                                    "maximum": 90
-                                  },
-                                  "lng": {
-                                    "type": "number",
-                                    "minimum": -180,
-                                    "maximum": 180
-                                  }
-                                },
-                                "required": [
-                                  "lat",
-                                  "lng"
-                                ]
-                              },
-                              {
-                                "type": "null"
-                              }
-                            ]
-                          }
-                        },
-                        "required": [
-                          "line"
-                        ]
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
                   }
                 },
                 "required": [
@@ -567,68 +528,1080 @@
                         "null"
                       ]
                     },
-                    "address": {
-                      "anyOf": [
-                        {
-                          "type": "object",
-                          "properties": {
-                            "line": {
-                              "type": "string"
-                            },
-                            "notes": {
-                              "type": [
-                                "string",
-                                "null"
-                              ]
-                            },
-                            "location": {
-                              "anyOf": [
-                                {
-                                  "type": "object",
-                                  "properties": {
-                                    "lat": {
-                                      "type": "number"
-                                    },
-                                    "lng": {
-                                      "type": "number"
-                                    }
-                                  },
-                                  "required": [
-                                    "lat",
-                                    "lng"
-                                  ],
-                                  "additionalProperties": false
-                                },
-                                {
-                                  "type": "null"
-                                }
-                              ]
-                            }
+                    "addresses": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                           },
-                          "required": [
-                            "line",
-                            "notes",
-                            "location"
-                          ],
-                          "additionalProperties": false
+                          "label": {
+                            "type": "string",
+                            "enum": [
+                              "HOME",
+                              "WORK",
+                              "OTHER"
+                            ],
+                            "description": "Casa, Trabajo u Otra"
+                          },
+                          "name": {
+                            "description": "Nombre de una «Otra»; null en Casa y Trabajo",
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "line": {
+                            "type": "string"
+                          },
+                          "notes": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "location": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "lat": {
+                                    "type": "number"
+                                  },
+                                  "lng": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "lat",
+                                  "lng"
+                                ],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
                         },
-                        {
-                          "type": "null"
-                        }
-                      ],
-                      "description": "Dirección de entrega guardada"
+                        "required": [
+                          "id",
+                          "label",
+                          "name",
+                          "line",
+                          "notes",
+                          "location"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Direcciones guardadas (ADR 0034): Casa, Trabajo y otras, hasta 5"
                     }
                   },
                   "required": [
                     "displayName",
                     "phone",
                     "email",
-                    "address"
+                    "addresses"
                   ],
                   "additionalProperties": false
                 }
               }
             }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/me/addresses": {
+      "post": {
+        "summary": "Guardar una dirección",
+        "tags": [
+          "customers"
+        ],
+        "description": "Hasta 5. 409 PROFILE_REQUIRED (sin registro), ADDRESS_LIMIT o ADDRESS_LABEL_TAKEN (ya hay Casa o Trabajo).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "enum": [
+                      "HOME",
+                      "WORK",
+                      "OTHER"
+                    ],
+                    "description": "Casa, Trabajo u Otra"
+                  },
+                  "name": {
+                    "description": "Solo para una «Otra», p. ej. «Casa de mamá»",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 40
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "line": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 160
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location": {
+                    "description": "Punto exacto en el mapa (ADR 0023)",
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "lat": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                          },
+                          "lng": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lng"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "label",
+                  "line"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "enum": [
+                        "HOME",
+                        "WORK",
+                        "OTHER"
+                      ],
+                      "description": "Casa, Trabajo u Otra"
+                    },
+                    "name": {
+                      "description": "Nombre de una «Otra»; null en Casa y Trabajo",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "line": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "location": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "name",
+                    "line",
+                    "notes",
+                    "location"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customer/me/addresses/{addressId}": {
+      "put": {
+        "summary": "Editar una dirección",
+        "tags": [
+          "customers"
+        ],
+        "description": "Los pedidos hechos no cambian: guardan su copia. 409 ADDRESS_LABEL_TAKEN.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "enum": [
+                      "HOME",
+                      "WORK",
+                      "OTHER"
+                    ],
+                    "description": "Casa, Trabajo u Otra"
+                  },
+                  "name": {
+                    "description": "Solo para una «Otra», p. ej. «Casa de mamá»",
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 40
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "line": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 160
+                  },
+                  "notes": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "location": {
+                    "description": "Punto exacto en el mapa (ADR 0023)",
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "lat": {
+                            "type": "number",
+                            "minimum": -90,
+                            "maximum": 90
+                          },
+                          "lng": {
+                            "type": "number",
+                            "minimum": -180,
+                            "maximum": 180
+                          }
+                        },
+                        "required": [
+                          "lat",
+                          "lng"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "label",
+                  "line"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "addressId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "label": {
+                      "type": "string",
+                      "enum": [
+                        "HOME",
+                        "WORK",
+                        "OTHER"
+                      ],
+                      "description": "Casa, Trabajo u Otra"
+                    },
+                    "name": {
+                      "description": "Nombre de una «Otra»; null en Casa y Trabajo",
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "line": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "location": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "lat": {
+                              "type": "number"
+                            },
+                            "lng": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "lat",
+                            "lng"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "label",
+                    "name",
+                    "line",
+                    "notes",
+                    "location"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error con forma estable (ADR 0005)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ],
+                  "additionalProperties": false,
+                  "description": "Error con forma estable (ADR 0005)"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Borrar una dirección",
+        "tags": [
+          "customers"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "in": "path",
+            "name": "addressId",
+            "required": true
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Default Response"
           },
           "400": {
             "description": "Error con forma estable (ADR 0005)",
@@ -31239,29 +32212,64 @@
                       "type": "object",
                       "properties": {
                         "GASTRONOMY": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "KIOSK": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "SUPERMARKET": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "ELECTRONICS": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "ENTREPRENEUR": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -31271,7 +32279,8 @@
                         "ELECTRONICS",
                         "ENTREPRENEUR"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": false,
+                      "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                     },
                     "plans": {
                       "type": "object",
@@ -31717,9 +32726,17 @@
                       "description": "El rubro no tiene categoría de comisión: se usa la de emprendedores"
                     },
                     "capMinor": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Tope por pedido del rubro; null = sin tope"
                     },
                     "pricing": {
                       "type": "object",
@@ -31767,29 +32784,64 @@
                           "type": "object",
                           "properties": {
                             "GASTRONOMY": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "KIOSK": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "SUPERMARKET": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ELECTRONICS": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ENTREPRENEUR": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
@@ -31799,7 +32851,8 @@
                             "ELECTRONICS",
                             "ENTREPRENEUR"
                           ],
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                         },
                         "plans": {
                           "type": "object",
@@ -32416,29 +33469,64 @@
                         "type": "object",
                         "properties": {
                           "GASTRONOMY": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 1000000000
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 1000000000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "KIOSK": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 1000000000
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 1000000000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "SUPERMARKET": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 1000000000
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 1000000000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "ELECTRONICS": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 1000000000
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 1000000000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           },
                           "ENTREPRENEUR": {
-                            "type": "integer",
-                            "minimum": 0,
-                            "maximum": 1000000000
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 1000000000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
                           }
                         },
                         "required": [
@@ -32448,7 +33536,8 @@
                           "ELECTRONICS",
                           "ENTREPRENEUR"
                         ],
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                       },
                       "plans": {
                         "type": "object",
@@ -32852,29 +33941,64 @@
                     "type": "object",
                     "properties": {
                       "GASTRONOMY": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 1000000000
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000000000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "KIOSK": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 1000000000
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000000000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "SUPERMARKET": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 1000000000
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000000000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "ELECTRONICS": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 1000000000
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000000000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       },
                       "ENTREPRENEUR": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 1000000000
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000000000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
                       }
                     },
                     "required": [
@@ -32883,7 +34007,8 @@
                       "SUPERMARKET",
                       "ELECTRONICS",
                       "ENTREPRENEUR"
-                    ]
+                    ],
+                    "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                   },
                   "plans": {
                     "type": "object",
@@ -33078,29 +34203,64 @@
                       "type": "object",
                       "properties": {
                         "GASTRONOMY": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "KIOSK": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "SUPERMARKET": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "ELECTRONICS": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         },
                         "ENTREPRENEUR": {
-                          "type": "integer",
-                          "minimum": 0,
-                          "maximum": 1000000000
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 1000000000
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -33110,7 +34270,8 @@
                         "ELECTRONICS",
                         "ENTREPRENEUR"
                       ],
-                      "additionalProperties": false
+                      "additionalProperties": false,
+                      "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                     },
                     "plans": {
                       "type": "object",
@@ -33556,9 +34717,17 @@
                       "description": "El rubro no tiene categoría de comisión: se usa la de emprendedores"
                     },
                     "capMinor": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Tope por pedido del rubro; null = sin tope"
                     },
                     "pricing": {
                       "type": "object",
@@ -33606,29 +34775,64 @@
                           "type": "object",
                           "properties": {
                             "GASTRONOMY": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "KIOSK": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "SUPERMARKET": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ELECTRONICS": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ENTREPRENEUR": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
@@ -33638,7 +34842,8 @@
                             "ELECTRONICS",
                             "ENTREPRENEUR"
                           ],
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                         },
                         "plans": {
                           "type": "object",
@@ -34323,9 +35528,17 @@
                       "description": "El rubro no tiene categoría de comisión: se usa la de emprendedores"
                     },
                     "capMinor": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Tope por pedido del rubro; null = sin tope"
                     },
                     "pricing": {
                       "type": "object",
@@ -34373,29 +35586,64 @@
                           "type": "object",
                           "properties": {
                             "GASTRONOMY": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "KIOSK": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "SUPERMARKET": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ELECTRONICS": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ENTREPRENEUR": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
@@ -34405,7 +35653,8 @@
                             "ELECTRONICS",
                             "ENTREPRENEUR"
                           ],
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                         },
                         "plans": {
                           "type": "object",
@@ -35082,9 +36331,17 @@
                       "description": "El rubro no tiene categoría de comisión: se usa la de emprendedores"
                     },
                     "capMinor": {
-                      "type": "integer",
-                      "minimum": -9007199254740991,
-                      "maximum": 9007199254740991
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Tope por pedido del rubro; null = sin tope"
                     },
                     "pricing": {
                       "type": "object",
@@ -35132,29 +36389,64 @@
                           "type": "object",
                           "properties": {
                             "GASTRONOMY": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "KIOSK": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "SUPERMARKET": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ELECTRONICS": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             },
                             "ENTREPRENEUR": {
-                              "type": "integer",
-                              "minimum": 0,
-                              "maximum": 1000000000
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 1000000000
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
                             }
                           },
                           "required": [
@@ -35164,7 +36456,8 @@
                             "ELECTRONICS",
                             "ENTREPRENEUR"
                           ],
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "description": "Tope de comisión por pedido según el rubro; null = sin tope"
                         },
                         "plans": {
                           "type": "object",
@@ -39840,9 +41133,17 @@
                                 "type": "string"
                               },
                               "capMinor": {
-                                "type": "integer",
-                                "minimum": -9007199254740991,
-                                "maximum": 9007199254740991
+                                "anyOf": [
+                                  {
+                                    "type": "integer",
+                                    "minimum": -9007199254740991,
+                                    "maximum": 9007199254740991
+                                  },
+                                  {
+                                    "type": "null"
+                                  }
+                                ],
+                                "description": "null = sin tope"
                               },
                               "capApplied": {
                                 "type": "boolean"
@@ -40997,9 +42298,17 @@
                               "type": "string"
                             },
                             "capMinor": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "null = sin tope"
                             },
                             "capApplied": {
                               "type": "boolean"
@@ -41791,9 +43100,17 @@
                               "type": "string"
                             },
                             "capMinor": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "null = sin tope"
                             },
                             "capApplied": {
                               "type": "boolean"
@@ -42620,9 +43937,17 @@
                               "type": "string"
                             },
                             "capMinor": {
-                              "type": "integer",
-                              "minimum": -9007199254740991,
-                              "maximum": 9007199254740991
+                              "anyOf": [
+                                {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "null = sin tope"
                             },
                             "capApplied": {
                               "type": "boolean"
