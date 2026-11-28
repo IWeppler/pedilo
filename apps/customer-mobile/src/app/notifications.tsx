@@ -1,4 +1,4 @@
-import { isOrderFinal, ORDER_STATUS_LABELS } from "@pedilo/domain";
+import { CUSTOMER_ORDER_STATUS_LABELS, isOrderFinal } from "@pedilo/domain";
 import { useRouter } from "expo-router";
 import { FlatList, Pressable, RefreshControl, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -68,7 +68,7 @@ export default function NotificationsScreen() {
                 <View style={[styles.dot, { backgroundColor: active ? t.accent : "transparent" }]} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <Text style={[styles.rowTitle, { color: t.text }]}>
-                    {item.merchantName}: {ORDER_STATUS_LABELS[item.status].toLowerCase()}
+                    {item.merchantName}: {CUSTOMER_ORDER_STATUS_LABELS[item.status].toLowerCase()}
                   </Text>
                   <Text style={{ color: t.muted, fontSize: 14 }}>
                     Pedido {item.code} · {timeFormat.format(new Date(item.createdAt))}

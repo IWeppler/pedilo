@@ -1,5 +1,15 @@
 import { ApiError, type Order, unwrap } from "@pedilo/api-client";
-import { CUSTOMER_TRACKING_STATUSES, customerCanCancel, type DeliveryStatus, formatARSWhole, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
+import {
+  CUSTOMER_ORDER_STATUS_LABELS,
+  CUSTOMER_TRACKING_STATUSES,
+  customerCanCancel,
+  customerOrderStep,
+  type DeliveryStatus,
+  formatARSWhole,
+  isOrderFinal,
+  VEHICLE_LABELS,
+  type Vehicle,
+} from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useEffect, useState } from "react";
@@ -25,13 +35,14 @@ type Status = Order["status"];
 /** Todas las sucursales están hoy en Argentina; el pedido no trae la zona horaria. */
 const ORDER_TIMEZONE = "America/Argentina/Buenos_Aires";
 
-const PICKUP_STEPS: Status[] = ["PLACED", "ACCEPTED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP"];
-const DELIVERY_STEPS: Status[] = ["PLACED", "ACCEPTED", "PREPARING", "READY", "PICKED_UP_BY_COURIER", "DELIVERED"];
+// Sin un paso «Aceptado»: el cliente ve el pedido confirmado desde que llega al comercio (ADR 0008).
+const PICKUP_STEPS: Status[] = ["PLACED", "PREPARING", "READY_FOR_PICKUP", "PICKED_UP"];
+const DELIVERY_STEPS: Status[] = ["PLACED", "PREPARING", "READY", "PICKED_UP_BY_COURIER", "DELIVERED"];
 const FAILED: Status[] = ["REJECTED", "CANCELLED", "EXPIRED", "DELIVERY_FAILED"];
 const COMPLETED: Status[] = ["PICKED_UP", "DELIVERED"];
 
 const STATUS_ICON: Partial<Record<Status, IconName>> = {
-  PLACED: "clock",
+  PLACED: "check",
   ACCEPTED: "check",
   PREPARING: "food",
   READY: "pickup",
@@ -97,7 +108,7 @@ export default function OrderScreen() {
   const steps = o.fulfillmentType === "PICKUP" ? PICKUP_STEPS : DELIVERY_STEPS;
   const failed = FAILED.includes(o.status);
   const completed = COMPLETED.includes(o.status);
-  const currentIndex = steps.indexOf(o.status);
+  const currentIndex = steps.indexOf(customerOrderStep(o.status));
   const final = isOrderFinal(o.status);
 
   const hero = failed
@@ -136,7 +147,7 @@ export default function OrderScreen() {
               {o.merchant.name}
             </Text>
             <Text style={[styles.heroStatus, { color: hero.fg }]} accessibilityLiveRegion="polite">
-              {ORDER_STATUS_LABELS[o.status]}
+              {CUSTOMER_ORDER_STATUS_LABELS[o.status]}
             </Text>
             {statusMessage(o) && <Text style={[styles.heroMessage, { color: hero.fg }]}>{statusMessage(o)}</Text>}
           </View>
@@ -191,7 +202,7 @@ export default function OrderScreen() {
         {!failed && (
           <Card t={t}>
             {steps.map((s, i) => (
-              <Step key={s} label={ORDER_STATUS_LABELS[s]} state={i < currentIndex || (i === currentIndex && completed) ? "done" : i === currentIndex ? "current" : "pending"} last={i === steps.length - 1} t={t} />
+              <Step key={s} label={CUSTOMER_ORDER_STATUS_LABELS[s]} state={i < currentIndex || (i === currentIndex && completed) ? "done" : i === currentIndex ? "current" : "pending"} last={i === steps.length - 1} t={t} />
             ))}
           </Card>
         )}
@@ -351,11 +362,10 @@ function statusMessage(o: Order): string | null {
     case "PENDING_PAYMENT":
       return `Falta pagar con tarjeta. ${o.merchant.name} recibe el pedido cuando se aprueba el pago (tenés 30 minutos).`;
     case "PLACED":
-      return o.scheduledFor
-        ? `Pedido programado para ${describeSlot(o.scheduledFor, ORDER_TIMEZONE)}. Esperando que ${o.merchant.name} lo confirme.`
-        : `Esperando que ${o.merchant.name} confirme tu pedido.`;
     case "ACCEPTED":
-      return "El comercio confirmó tu pedido.";
+      return o.scheduledFor
+        ? `Pedido programado para ${describeSlot(o.scheduledFor, ORDER_TIMEZONE)}. ${o.merchant.name} ya lo tiene.`
+        : `${o.merchant.name} ya tiene tu pedido.`;
     case "PREPARING":
       return "Están preparando tu pedido.";
     case "READY_FOR_PICKUP":

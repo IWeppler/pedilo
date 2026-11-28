@@ -102,6 +102,21 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   EXPIRED: "Vencido",
 };
 
+/**
+ * Lo que ve el cliente. La aceptación sigue siendo manual (ADR 0008), pero el cliente no ve la
+ * espera: desde que el pedido llega al comercio dice «Pedido confirmado». Si el comercio lo
+ * rechaza o no responde, pasa a rechazado o vencido como siempre.
+ */
+export const CUSTOMER_ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  ...ORDER_STATUS_LABELS,
+  PLACED: "Pedido confirmado",
+  ACCEPTED: "Pedido confirmado",
+  EXPIRED: "No se pudo tomar",
+};
+
+/** Para el seguimiento del cliente, «recibido» y «aceptado» son el mismo paso. */
+export const customerOrderStep = (status: OrderStatus): OrderStatus => (status === "ACCEPTED" ? "PLACED" : status);
+
 export const isOrderFinal = (status: OrderStatus) => orderStateMachine.isTerminal(status);
 
 /** El cliente solo puede cancelar mientras el comercio no lo aceptó (ADR 0007). */
