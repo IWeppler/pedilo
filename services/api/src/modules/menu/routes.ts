@@ -6,6 +6,7 @@ import type { Db } from "../../db/client";
 import { errorResponses } from "../../lib/errors";
 import { readUpload, uploadDescription } from "../../lib/uploads";
 import { nameSchema, nonEmptyPatch } from "../../lib/schemas";
+import { popularProductIds } from "../orders/service";
 import { publicOfferSchema } from "../promotions/routes";
 import { listPublicOffers } from "../promotions/service";
 import { publicRatingSchema } from "../ratings/routes";
@@ -191,6 +192,9 @@ export const menuRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
           200: publicMenuSchema.extend({
             offers: z.array(publicOfferSchema).describe("Ofertas vigentes (ADR 0030); los cupones no se publican"),
             rating: publicRatingSchema,
+            popularProductIds: z
+              .array(z.string().uuid())
+              .describe("«Lo más pedido»: productos en más pedidos completados de los últimos 30 días, de más a menos (mínimo 3 pedidos cada uno)"),
           }),
           404: errorResponses[404],
         },
@@ -198,8 +202,12 @@ export const menuRoutes: FastifyPluginAsyncZod<{ db: Db }> = async (app, { db })
     },
     async (request) => {
       const menu = await getPublicMerchantMenu(db, request.params.slug);
-      const [offers, ratings] = await Promise.all([listPublicOffers(db, menu.merchant.id), publicRatings(db, [menu.merchant.id])]);
-      return { ...menu, offers, rating: ratings.get(menu.merchant.id) ?? null };
+      const [offers, ratings, popular] = await Promise.all([
+        listPublicOffers(db, menu.merchant.id),
+        publicRatings(db, [menu.merchant.id]),
+        popularProductIds(db, menu.merchant.id),
+      ]);
+      return { ...menu, offers, rating: ratings.get(menu.merchant.id) ?? null, popularProductIds: popular };
     },
   );
 

@@ -1,13 +1,21 @@
-import { ApiError, fieldErrors, unwrap } from "@pedilo/api-client";
-import { addressTitle, distanceMeters, FAR_FROM_ADDRESS_METERS, formatARSWhole, type LatLng } from "@pedilo/domain";
+import { ApiError, fieldErrors, type PublicProduct, unwrap } from "@pedilo/api-client";
+import {
+  addressTitle,
+  distanceMeters,
+  FAR_FROM_ADDRESS_METERS,
+  formatARSWhole,
+  type LatLng,
+} from "@pedilo/domain";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { type ReactNode, useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { KeyboardAvoidingView, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text, TextInput } from "@/components/text";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
+import { Photo } from "@/components/photo";
+import { ProductTile } from "@/components/product-tile";
 import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
 import { api, useBranchSlots, useCustomerProfile, useMerchantCategories, useMerchantMenu, useOrderQuote } from "@/lib/api";
@@ -16,7 +24,9 @@ import { type CartLine, useCart } from "@/lib/cart";
 import { useDeliveryAddress } from "@/lib/addresses";
 import { useAuth } from "@/lib/auth";
 import { positionIfAllowed } from "@/lib/current-position";
+import { etaLabel } from "@/lib/merchant-labels";
 import { useMyOrders } from "@/lib/my-orders";
+import { useQuickAdd } from "@/lib/quick-add";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 const newIdempotencyKey = () => `${Date.now()}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
@@ -42,6 +52,18 @@ const REASON_MESSAGES: Record<string, string> = {
   DELIVERY_NOT_AVAILABLE: "El comercio no hace envíos.",
 };
 
+type PayMethod = "CASH" | "TRANSFER" | "MERCADO_PAGO";
+type Row = "zone" | "when" | "pay" | "coupon" | "note";
+
+const PAYMENT: Record<PayMethod, { icon: IconName; label: string; detail: string }> = {
+  CASH: { icon: "cash", label: "Efectivo", detail: "" },
+  TRANSFER: { icon: "bank", label: "Transferencia", detail: "Al confirmar te mostramos los datos de la cuenta" },
+  MERCADO_PAGO: { icon: "card", label: "Tarjeta con Mercado Pago", detail: "Pagás al confirmar; el comercio recibe el pedido cuando se aprueba" },
+};
+
+const paymentDetail = (m: PayMethod, mode: "PICKUP" | "DELIVERY") =>
+  m === "CASH" ? (mode === "PICKUP" ? "Pagás al retirar" : "Pagás al recibir") : PAYMENT[m].detail;
+
 export default function CartScreen() {
   const t = useTheme();
   const router = useRouter();
@@ -64,17 +86,18 @@ export default function CartScreen() {
   const [error, setError] = useState<string | null>(null);
   const [when, setWhen] = useState<"NOW" | "LATER" | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
-  const [payWith, setPayWith] = useState<"CASH" | "TRANSFER" | "MERCADO_PAGO" | null>(null);
+  const [payWith, setPayWith] = useState<PayMethod | null>(null);
   // Cupón (ADR 0030): lo que escribe y el que ya aplicó (el que se cotiza y se manda).
   const [couponInput, setCouponInput] = useState("");
   const [coupon, setCoupon] = useState<string | null>(null);
-  const [couponOpen, setCouponOpen] = useState(false);
+  // Qué fila de «Entrega y pago» está abierta. `undefined`: todavía no tocó ninguna (se abre sola la que falta).
+  const [open, setOpen] = useState<Row | null | undefined>(undefined);
 
   // Valores efectivos (defaults según lo que ofrece la sucursal).
   const canSchedule = Boolean(branch?.scheduling.enabled);
   const timing = when ?? (branch && !branch.openNow && canSchedule ? "LATER" : "NOW");
   const payments = menu.data?.merchant.payment;
-  const paymentMethod =
+  const paymentMethod: PayMethod =
     payWith ?? (payments?.cash === false ? (payments.transfer ? "TRANSFER" : payments.card ? "MERCADO_PAGO" : "CASH") : "CASH");
   const slots = useBranchSlots(cart?.merchantSlug ?? "", branch?.id, canSchedule && timing === "LATER");
   const mode = fulfillment ?? (branch?.acceptsPickup ? "PICKUP" : branch?.acceptsDelivery ? "DELIVERY" : null);
@@ -103,6 +126,30 @@ export default function CartScreen() {
   );
   // El cupón solo viaja si la cotización lo aceptó (si no, cortaría el pedido).
   const couponUsable = Boolean(coupon) && !quote.data?.couponError;
+
+  // Para sumar: disponibles y fuera del pedido; primero los de secciones que el pedido no tiene
+  // (la bebida o el postre que falta) y, entre esos, los que tienen foto.
+  const suggestions = useMemo(() => {
+    if (!menu.data || !cart) return [];
+    const inCart = new Set(cart.lines.map((l) => l.productId));
+    const seen = new Set<string>();
+    const pool = menu.data.sections.flatMap((s) => {
+      const coveredSection = s.products.some((p) => inCart.has(p.id));
+      return s.products
+        .filter((p) => p.available && !inCart.has(p.id) && !seen.has(p.id) && seen.add(p.id))
+        .map((p) => ({ p, rank: (coveredSection ? 0 : 2) + (p.imageUrl ? 1 : 0) }));
+    });
+    return pool
+      .sort((a, b) => b.rank - a.rank)
+      .slice(0, 8)
+      .map((x) => x.p);
+  }, [menu.data, cart]);
+  const quickAdd = useQuickAdd({
+    merchantSlug: cart?.merchantSlug ?? "",
+    merchantName: cart?.merchantName ?? "",
+    branchId: cart?.branchId ?? "",
+    open: Boolean(branch?.openNow),
+  });
 
   const submit = useMutation({
     mutationFn: () =>
@@ -197,7 +244,48 @@ export default function CartScreen() {
   const total = quote.data ? quote.data.totalMinor : subtotalMinor + deliveryFee;
   const missing = !profile.data || (mode === "DELIVERY" && !address) || !mode;
   const timingOk = timing === "LATER" ? Boolean(slot) : Boolean(branch?.openNow);
+  const hasDelivery = Boolean(branch?.acceptsDelivery && branch.zones.length > 0);
+  const prepMinutes = menu.data?.merchant.prepMinutes ?? null;
+  const eta =
+    prepMinutes == null
+      ? null
+      : mode === "DELIVERY"
+        ? `Llega en ${etaLabel({ prepMinutes, acceptsDelivery: true })}`
+        : `Listo en ${prepMinutes} min`;
+  const expanded = open === undefined ? (timing === "LATER" && !slot ? "when" : null) : open;
+  const toggle = (row: Row | null) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpen(row === null || row === expanded ? null : row);
+  };
+  const paymentOptions = (["CASH", "TRANSFER", "MERCADO_PAGO"] as const).filter((m) =>
+    m === "CASH" ? (payments?.cash ?? true) : m === "TRANSFER" ? payments?.transfer : payments?.card,
+  );
+  const couponApplied = Boolean(coupon) && couponUsable && quote.data?.promotion?.code === coupon;
+  const applyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCoupon(code);
+    toggle(null);
+  };
+  const openProduct = (p: PublicProduct) =>
+    router.push({ pathname: "/product/[slug]/[productId]", params: { slug: cart.merchantSlug, productId: p.id } });
   const canSubmit = !missing && !belowMinimum && timingOk && !submit.isPending;
+  // Por qué no se puede confirmar todavía, en una línea pegada al botón (null mientras carga el perfil).
+  const blocker = !branch
+    ? null
+    : !mode
+      ? "El comercio no está tomando pedidos por ahora."
+      : mode === "DELIVERY" && !address
+        ? "Agregá la dirección de entrega."
+        : belowMinimum && zone
+          ? `Te faltan ${formatARSWhole(zone.minOrderMinor - subtotalMinor)} para el mínimo de envío.`
+          : timing === "LATER" && !slot
+            ? "Elegí un horario."
+            : timing === "NOW" && !branch.openNow
+              ? canSchedule
+                ? "El comercio está cerrado ahora. Programá el pedido."
+                : "El comercio está cerrado ahora."
+              : null;
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={[styles.screen, { backgroundColor: t.background }]}>
@@ -206,8 +294,12 @@ export default function CartScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {/* Comercio */}
           <View style={styles.merchant}>
-            <View style={[styles.merchantIcon, { backgroundColor: t.background }]}>
-              <Icon name={icon} size={22} color={t.text} />
+            <View style={[styles.merchantIcon, { backgroundColor: t.surface }]}>
+              <Photo
+                url={menu.data?.merchant.logoUrl}
+                style={StyleSheet.absoluteFill}
+                fallback={<Icon name={icon} size={22} color={t.text} />}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.merchantName, { color: t.text }]} numberOfLines={1}>
@@ -222,6 +314,25 @@ export default function CartScreen() {
             </Pressable>
           </View>
 
+          {/* Envío o retiro: va antes que los productos porque cambia el costo y el mínimo */}
+          {branch && branch.acceptsPickup && hasDelivery && (
+            <Segmented
+              value={mode}
+              onChange={setFulfillment}
+              options={[
+                { value: "DELIVERY", label: "Envío", detail: minFee === 0 ? "Gratis" : `desde ${formatARSWhole(minFee ?? 0)}` },
+                { value: "PICKUP", label: "Retiro", detail: "Sin costo" },
+              ]}
+            />
+          )}
+          {/* Con horarios programables, el tiempo va en la fila «Cuándo» */}
+          {eta && !canSchedule && branch?.openNow && (
+            <View style={styles.etaRow}>
+              <Icon name="clock" size={16} color={t.muted} />
+              <Text style={[styles.meta, { color: t.text }]}>{eta}</Text>
+            </View>
+          )}
+
           {/* Productos */}
           <Card t={t}>
             {cart.lines.map((l, i) => (
@@ -232,99 +343,56 @@ export default function CartScreen() {
                 last={i === cart.lines.length - 1}
                 onDecrease={() => (l.quantity === 1 ? remove(l.key) : setQuantity(l.key, l.quantity - 1))}
                 onIncrease={() => setQuantity(l.key, Math.min(50, l.quantity + 1))}
+                onEdit={() =>
+                  router.push({
+                    pathname: "/product/[slug]/[productId]",
+                    params: { slug: cart.merchantSlug, productId: l.productId, lineKey: l.key },
+                  })
+                }
               />
             ))}
           </Card>
 
-          {/* Entrega */}
-          {branch && (
+          {/* Para sumar: productos del mismo comercio que no están en el pedido */}
+          {suggestions.length >= 2 && (
             <>
-              <SectionTitle t={t}>¿Cómo lo recibís?</SectionTitle>
-              <View style={styles.modes}>
-                {branch.acceptsPickup && (
-                  <ModeOption
-                    icon="pickup"
-                    label="Retiro"
-                    detail="Sin costo"
-                    selected={mode === "PICKUP"}
-                    onPress={() => setFulfillment("PICKUP")}
+              <SectionTitle t={t}>¿Le sumás algo?</SectionTitle>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.suggestScroll} contentContainerStyle={styles.suggestRow}>
+                {suggestions.map((p) => (
+                  <ProductTile
+                    key={p.id}
+                    product={p}
+                    offers={menu.data?.offers ?? []}
+                    icon={icon}
+                    onOpen={() => openProduct(p)}
+                    onAdd={() => {
+                      if (quickAdd(p)) return true;
+                      openProduct(p);
+                      return false;
+                    }}
                   />
-                )}
-                {branch.acceptsDelivery && branch.zones.length > 0 && (
-                  <ModeOption
-                    icon="delivery"
-                    label="Envío"
-                    detail={minFee === 0 ? "Gratis" : `desde ${formatARSWhole(minFee ?? 0)}`}
-                    selected={mode === "DELIVERY"}
-                    onPress={() => setFulfillment("DELIVERY")}
-                  />
-                )}
-              </View>
+                ))}
+              </ScrollView>
+            </>
+          )}
 
-              {mode === "PICKUP" && (
-                <Card t={t}>
-                  <View style={styles.infoRow}>
-                    <Icon name="location" size={20} color={t.accent} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.meta, { color: t.muted }]}>Retirás en</Text>
-                      <Text style={[styles.infoText, { color: t.text }]}>
-                        {branch.addressLine}
-                        {branch.addressNotes ? ` · ${branch.addressNotes}` : ""}
-                      </Text>
-                    </View>
-                  </View>
-                </Card>
-              )}
+          {/* Entrega y pago: una fila por dato, con «Cambiar» que abre las opciones en el lugar */}
+          {branch && mode && (
+            <>
+              <SectionTitle t={t}>Entrega y pago</SectionTitle>
+              <Card t={t}>
+                {mode === "PICKUP" && <DetailRow icon="pickup" title={`Retirás en ${branch.addressLine}`} detail={branch.addressNotes} />}
 
-              {mode === "DELIVERY" && (
-                <>
-                  {branch.zones.length > 1 && (
-                    <Card t={t}>
-                      {branch.zones.map((z, i) => {
-                        const selected = zone?.id === z.id;
-                        return (
-                          <Pressable
-                            key={z.id}
-                            accessibilityRole="radio"
-                            accessibilityState={{ checked: selected }}
-                            onPress={() => setZoneId(z.id)}
-                            style={[styles.zone, i < branch.zones.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}
-                          >
-                            <View style={[styles.radio, { borderColor: selected ? t.primary : t.border }]}>
-                              {selected && <View style={[styles.radioDot, { backgroundColor: t.primary }]} />}
-                            </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={[styles.infoText, { color: t.text, fontWeight: selected ? "700" : "500" }]}>{z.name}</Text>
-                              {z.description && <Text style={[styles.meta, { color: t.muted }]}>{z.description}</Text>}
-                            </View>
-                            <Text style={[styles.infoText, { color: t.text }]}>{z.feeMinor === 0 ? "Gratis" : formatARSWhole(z.feeMinor)}</Text>
-                          </Pressable>
-                        );
-                      })}
-                    </Card>
-                  )}
-                  {branch.zones.length === 1 && zone?.description && <Text style={[styles.meta, { color: t.muted }]}>{zone.description}</Text>}
-                  {address ? (
-                    <Card t={t} padded>
-                      <View style={styles.savedAddress}>
-                        <Icon name="location" size={20} color={t.text} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={[styles.infoText, { color: t.text, fontWeight: "700" }]}>
-                            {addressTitle(address)} · {address.line}
-                          </Text>
-                          <Text style={[styles.meta, { color: t.muted }]}>
-                            {[address.notes, validPin ? "Marcada en el mapa" : null].filter(Boolean).join(" · ") || "Sin indicaciones"}
-                          </Text>
-                        </View>
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel="Cambiar desde dónde pedís"
-                          onPress={() => router.push("/address")}
-                          hitSlop={8}
-                        >
-                          <Text style={[styles.infoText, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>Cambiar</Text>
-                        </Pressable>
-                      </View>
+                {mode === "DELIVERY" &&
+                  (address ? (
+                    <DetailRow
+                      icon="location"
+                      title={`${addressTitle(address)} · ${address.line}`}
+                      detail={address.notes || "Sin indicaciones"}
+                      action="Cambiar"
+                      actionLabel="Cambiar desde dónde pedís"
+                      onAction={() => router.push("/address")}
+                    >
                       {farFrom !== null && (
                         <Pressable
                           accessibilityRole="button"
@@ -337,90 +405,194 @@ export default function CartScreen() {
                           </Text>
                         </Pressable>
                       )}
-                    </Card>
+                    </DetailRow>
                   ) : (
-                    <Button label="Agregar dirección de entrega" variant="outline" onPress={() => router.push("/address")} />
+                    <DetailRow
+                      icon="location"
+                      title="¿Adónde te lo llevamos?"
+                      detail="Falta la dirección de entrega"
+                      detailTone="danger"
+                      action="Agregar"
+                      actionLabel="Agregar dirección de entrega"
+                      onAction={() => router.push("/address")}
+                    />
+                  ))}
+
+                {mode === "DELIVERY" && zone && (
+                  <DetailRow
+                    icon="delivery"
+                    title={`Envío ${zone.feeMinor === 0 ? "gratis" : formatARSWhole(zone.feeMinor)}`}
+                    detail={[branch.zones.length > 1 ? zone.name : null, zone.description].filter(Boolean).join(" · ") || null}
+                    action={branch.zones.length > 1 ? "Cambiar" : undefined}
+                    actionLabel="Cambiar zona de envío"
+                    expanded={expanded === "zone"}
+                    onAction={() => toggle("zone")}
+                  >
+                    {expanded === "zone" &&
+                      branch.zones.map((z) => (
+                        <OptionRow
+                          key={z.id}
+                          label={z.name}
+                          detail={z.description}
+                          trailing={z.feeMinor === 0 ? "Gratis" : formatARSWhole(z.feeMinor)}
+                          selected={zone.id === z.id}
+                          onPress={() => {
+                            setZoneId(z.id);
+                            toggle(null);
+                          }}
+                        />
+                      ))}
+                  </DetailRow>
+                )}
+
+                {canSchedule && (
+                  <DetailRow
+                    icon={timing === "NOW" ? "bolt" : "calendar"}
+                    title={timing === "NOW" ? "Lo antes posible" : slot ? describeSlot(slot, branch.timezone) : "Programar"}
+                    detail={timing === "NOW" ? eta : slot ? "Pedido programado" : "Elegí un horario"}
+                    detailTone={timing === "LATER" && !slot ? "danger" : undefined}
+                    action="Cambiar"
+                    actionLabel="Cambiar cuándo lo recibís"
+                    expanded={expanded === "when"}
+                    onAction={() => toggle("when")}
+                  >
+                    {expanded === "when" && (
+                      <>
+                        {branch.openNow && (
+                          <OptionRow
+                            label="Lo antes posible"
+                            detail={eta}
+                            selected={timing === "NOW"}
+                            onPress={() => {
+                              setWhen("NOW");
+                              toggle(null);
+                            }}
+                          />
+                        )}
+                        <OptionRow label="Programar" detail="Elegí día y horario" selected={timing === "LATER"} onPress={() => setWhen("LATER")} />
+                        {timing === "LATER" &&
+                          (slots.data ? (
+                            <SlotPicker
+                              data={slots.data}
+                              value={slot}
+                              onChange={(s) => {
+                                setSlot(s);
+                                toggle(null);
+                              }}
+                            />
+                          ) : slots.isError ? (
+                            <Text style={[styles.meta, { color: t.danger }]}>No pudimos cargar los horarios. Probá de nuevo.</Text>
+                          ) : (
+                            <Text style={[styles.meta, { color: t.muted }]}>Cargando horarios…</Text>
+                          ))}
+                      </>
+                    )}
+                  </DetailRow>
+                )}
+
+                <DetailRow
+                  icon={PAYMENT[paymentMethod].icon}
+                  title={PAYMENT[paymentMethod].label}
+                  detail={paymentDetail(paymentMethod, mode)}
+                  action={paymentOptions.length > 1 ? "Cambiar" : undefined}
+                  actionLabel="Cambiar cómo pagás"
+                  expanded={expanded === "pay"}
+                  onAction={() => toggle("pay")}
+                >
+                  {expanded === "pay" &&
+                    paymentOptions.map((m) => (
+                      <OptionRow
+                        key={m}
+                        label={PAYMENT[m].label}
+                        detail={paymentDetail(m, mode)}
+                        selected={paymentMethod === m}
+                        onPress={() => {
+                          setPayWith(m);
+                          toggle(null);
+                        }}
+                      />
+                    ))}
+                </DetailRow>
+
+                <DetailRow
+                  icon="ticket"
+                  title={couponApplied ? `Cupón ${coupon}` : "¿Tenés un cupón?"}
+                  detail={
+                    couponApplied
+                      ? "Aplicado"
+                      : coupon && quote.data?.couponError
+                        ? (REASON_MESSAGES[quote.data.couponError.reason] ?? quote.data.couponError.message)
+                        : coupon && quote.data?.couponOutdone
+                          ? "Este pedido ya tiene un descuento mayor: dejamos ese."
+                          : null
+                  }
+                  detailTone={couponApplied ? "success" : coupon && quote.data?.couponError ? "danger" : undefined}
+                  action={couponApplied ? "Quitar" : "Agregar"}
+                  actionLabel={couponApplied ? "Quitar cupón" : "Agregar cupón"}
+                  expanded={expanded === "coupon"}
+                  onAction={() => {
+                    if (couponApplied) {
+                      setCoupon(null);
+                      setCouponInput("");
+                    } else toggle("coupon");
+                  }}
+                >
+                  {expanded === "coupon" && (
+                    <View style={styles.couponRow}>
+                      <TextInput
+                        value={couponInput}
+                        onChangeText={setCouponInput}
+                        placeholder="Código del cupón"
+                        placeholderTextColor={t.muted}
+                        accessibilityLabel="Código del cupón"
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        autoFocus
+                        returnKeyType="done"
+                        onSubmitEditing={applyCoupon}
+                        style={[styles.input, { flex: 1, backgroundColor: t.background, color: t.text }]}
+                      />
+                      <Pressable
+                        accessibilityRole="button"
+                        disabled={!couponInput.trim()}
+                        onPress={applyCoupon}
+                        style={[styles.couponApply, { backgroundColor: t.primary, opacity: couponInput.trim() ? 1 : 0.4 }]}
+                      >
+                        <Text style={{ color: t.primaryText, fontWeight: "700" }}>Aplicar</Text>
+                      </Pressable>
+                    </View>
                   )}
-                </>
-              )}
-            </>
-          )}
+                </DetailRow>
 
-          {/* Cuándo */}
-          {branch && canSchedule && (
-            <>
-              <SectionTitle t={t}>¿Cuándo?</SectionTitle>
-              <View style={styles.modes}>
-                {branch.openNow && (
-                  <ModeOption icon="bolt" label="Lo antes posible" detail="Ahora" selected={timing === "NOW"} onPress={() => setWhen("NOW")} />
-                )}
-                <ModeOption
-                  icon="calendar"
-                  label="Programar"
-                  detail={slot && timing === "LATER" ? describeSlot(slot, branch.timezone) : "Elegí el horario"}
-                  selected={timing === "LATER"}
-                  onPress={() => setWhen("LATER")}
-                />
-              </View>
-              {timing === "LATER" && (
-                <Card t={t} padded>
-                  {slots.data ? (
-                    <SlotPicker data={slots.data} value={slot} onChange={setSlot} />
-                  ) : slots.isError ? (
-                    <Text style={[styles.meta, { color: t.danger }]}>No pudimos cargar los horarios. Probá de nuevo.</Text>
-                  ) : (
-                    <Text style={[styles.meta, { color: t.muted }]}>Cargando horarios…</Text>
+                <DetailRow
+                  icon="note"
+                  title="Nota para el comercio"
+                  detail={notes.trim() || "Opcional"}
+                  action={notes.trim() ? "Editar" : "Agregar"}
+                  actionLabel="Nota para el comercio"
+                  expanded={expanded === "note"}
+                  onAction={() => toggle("note")}
+                  last={!profile.data}
+                >
+                  {expanded === "note" && (
+                    <TextInput
+                      value={notes}
+                      onChangeText={setNotes}
+                      placeholder="Por ejemplo: traer cambio de $10.000"
+                      placeholderTextColor={t.muted}
+                      accessibilityLabel="Nota para el comercio"
+                      autoFocus
+                      multiline
+                      maxLength={200}
+                      style={[styles.input, styles.noteInput, { backgroundColor: t.background, color: t.text }]}
+                    />
                   )}
-                </Card>
-              )}
+                </DetailRow>
+
+                {profile.data && <DetailRow icon="person" title={`A nombre de ${profile.data.displayName}`} detail={profile.data.phone} last />}
+              </Card>
             </>
           )}
-
-          {/* Pago */}
-          {(payments?.transfer || payments?.card) && (
-            <>
-              <SectionTitle t={t}>¿Cómo pagás?</SectionTitle>
-              <View style={styles.modes}>
-                {payments.cash && (
-                  <ModeOption
-                    icon="cash"
-                    label="Efectivo"
-                    detail="Al recibir o retirar"
-                    selected={paymentMethod === "CASH"}
-                    onPress={() => setPayWith("CASH")}
-                  />
-                )}
-                {payments.transfer && (
-                  <ModeOption
-                    icon="bank"
-                    label="Transferencia"
-                    detail="Te pasamos el alias"
-                    selected={paymentMethod === "TRANSFER"}
-                    onPress={() => setPayWith("TRANSFER")}
-                  />
-                )}
-                {payments.card && (
-                  <ModeOption
-                    icon="card"
-                    label="Tarjeta"
-                    detail="Con Mercado Pago"
-                    selected={paymentMethod === "MERCADO_PAGO"}
-                    onPress={() => setPayWith("MERCADO_PAGO")}
-                  />
-                )}
-              </View>
-            </>
-          )}
-
-          {/* Nota (nombre y teléfono salen de la cuenta) */}
-          <Card t={t} padded>
-            <Field label="Nota para el comercio (opcional)" value={notes} onChange={setNotes} placeholder="Por ejemplo: traer cambio de $10.000" />
-            {profile.data && (
-              <Text style={[styles.meta, { color: t.muted }]}>
-                A nombre de {profile.data.displayName} · {profile.data.phone}
-              </Text>
-            )}
-          </Card>
 
           {/* Resumen */}
           <SectionTitle t={t}>Resumen</SectionTitle>
@@ -436,71 +608,22 @@ export default function CartScreen() {
             {mode === "DELIVERY" && <SummaryRow label="Envío" value={deliveryFee === 0 ? "Gratis" : formatARSWhole(deliveryFee)} />}
             <View style={[styles.divider, { backgroundColor: t.border }]} />
             <SummaryRow label="Total" value={formatARSWhole(total)} strong />
-
-            {/* Cupón */}
-            {coupon && couponUsable && quote.data?.promotion?.code === coupon ? (
-              <View style={styles.couponRow}>
-                <Text style={[styles.meta, { color: t.success, flex: 1, fontWeight: "600" }]}>Cupón {coupon} aplicado</Text>
-                <Pressable accessibilityRole="button" onPress={() => setCoupon(null)} hitSlop={8}>
-                  <Text style={[styles.meta, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>Quitar</Text>
-                </Pressable>
-              </View>
-            ) : couponOpen ? (
-              <View style={{ gap: space.sm }}>
-                <View style={styles.couponRow}>
-                  <TextInput
-                    value={couponInput}
-                    onChangeText={setCouponInput}
-                    placeholder="Código del cupón"
-                    placeholderTextColor={t.muted}
-                    accessibilityLabel="Código del cupón"
-                    autoCapitalize="characters"
-                    autoCorrect={false}
-                    returnKeyType="done"
-                    onSubmitEditing={() => couponInput.trim() && setCoupon(couponInput.trim().toUpperCase())}
-                    style={[styles.input, { flex: 1, backgroundColor: t.background, color: t.text }]}
-                  />
-                  <Pressable
-                    accessibilityRole="button"
-                    disabled={!couponInput.trim()}
-                    onPress={() => setCoupon(couponInput.trim().toUpperCase())}
-                    style={[styles.couponApply, { backgroundColor: t.primary, opacity: couponInput.trim() ? 1 : 0.4 }]}
-                  >
-                    <Text style={{ color: t.primaryText, fontWeight: "700" }}>Aplicar</Text>
-                  </Pressable>
-                </View>
-                {coupon && quote.data?.couponError && (
-                  <Text style={[styles.meta, { color: t.danger }]}>{REASON_MESSAGES[quote.data.couponError.reason] ?? quote.data.couponError.message}</Text>
-                )}
-                {coupon && quote.data?.couponOutdone && (
-                  <Text style={[styles.meta, { color: t.muted }]}>Este pedido ya tiene un descuento mayor: dejamos ese.</Text>
-                )}
-              </View>
-            ) : (
-              <Pressable accessibilityRole="button" onPress={() => setCouponOpen(true)} hitSlop={6}>
-                <Text style={[styles.meta, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>¿Tenés un cupón?</Text>
-              </Pressable>
-            )}
-            <View style={[styles.payment, { backgroundColor: t.surface }]}>
-              <Icon name={paymentMethod === "TRANSFER" ? "bank" : paymentMethod === "MERCADO_PAGO" ? "card" : "cash"} size={18} color={t.success} />
-              <Text style={[styles.meta, { color: t.text, flex: 1 }]}>
-                {paymentMethod === "TRANSFER"
-                  ? "Pagás por transferencia: al confirmar te mostramos los datos de la cuenta"
-                  : paymentMethod === "MERCADO_PAGO"
-                  ? "Pagás con tarjeta al confirmar. El comercio recibe el pedido cuando se aprueba el pago"
-                  : "Pagás en efectivo al recibir o retirar"}
-              </Text>
-            </View>
           </Card>
-
-          {belowMinimum && zone && <Notice t={t}>El pedido mínimo para {zone.name} es {formatARSWhole(zone.minOrderMinor)}.</Notice>}
-          {branch && !branch.openNow && timing === "NOW" && (
-            <Notice t={t}>El comercio está cerrado ahora{canSchedule ? ". Podés programar el pedido." : "."}</Notice>
-          )}
-          {error && <Notice t={t}>{error}</Notice>}
         </ScrollView>
 
         <View style={[styles.footer, { backgroundColor: t.card, borderColor: t.border }]}>
+          {(error || blocker) && (
+            <View style={styles.footerStatus} accessibilityLiveRegion="polite">
+              <Icon name="warning" size={16} color={error ? t.danger : t.muted} />
+              <Text style={[styles.footerStatusText, { color: error ? t.danger : t.text }]}>{error ?? blocker}</Text>
+            </View>
+          )}
+          {discount > 0 && (
+            <View style={styles.savings}>
+              <Text style={[styles.savingsText, { color: t.success }]}>Ahorrás {formatARSWhole(discount)}</Text>
+              <Text style={[styles.meta, { color: t.muted, textDecorationLine: "line-through" }]}>{formatARSWhole(total + discount)}</Text>
+            </View>
+          )}
           <Pressable
             onPress={() => {
               setError(null);
@@ -551,33 +674,26 @@ function Card({ t, padded, children }: { t: Theme; padded?: boolean; children: R
   return <View style={[styles.card, padded && styles.cardPadded, { backgroundColor: t.surface }]}>{children}</View>;
 }
 
-function Notice({ t, children }: { t: Theme; children: ReactNode }) {
-  return (
-    <View style={[styles.notice, { backgroundColor: t.dangerBg }]} accessibilityLiveRegion="polite">
-      <Icon name="warning" size={18} color={t.danger} />
-      <Text style={[styles.noticeText, { color: t.danger }]}>{children}</Text>
-    </View>
-  );
-}
-
 function LineRow({
   line: l,
   icon,
   last,
   onDecrease,
   onIncrease,
+  onEdit,
 }: {
   line: CartLine;
   icon: IconName;
   last: boolean;
   onDecrease: () => void;
   onIncrease: () => void;
+  onEdit: () => void;
 }) {
   const t = useTheme();
   return (
     <View style={[styles.line, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
       <View style={[styles.thumb, { backgroundColor: t.background }]}>
-        <Icon name={icon} size={24} color={t.muted} />
+        <Photo url={l.imageUrl} style={StyleSheet.absoluteFill} fallback={<Icon name={icon} size={24} color={t.muted} />} />
       </View>
       <View style={styles.lineBody}>
         <Text style={[styles.lineName, { color: t.text }]}>
@@ -590,6 +706,9 @@ function LineRow({
           </Text>
         )}
         {l.notes && <Text style={[styles.meta, { color: t.muted, fontStyle: "italic" }]}>«{l.notes}»</Text>}
+        <Pressable accessibilityRole="button" accessibilityLabel={`Editar ${l.productName}`} onPress={onEdit} hitSlop={8} style={styles.lineEdit}>
+          <Text style={[styles.rowAction, { color: t.text }]}>Editar</Text>
+        </Pressable>
         <View style={styles.lineFooter}>
           <Text style={[styles.linePrice, { color: t.text }]}>{formatARSWhole(l.unitPriceMinor * l.quantity)}</Text>
           <View style={[styles.qty, { backgroundColor: t.surface }]}>
@@ -619,76 +738,118 @@ function LineRow({
   );
 }
 
-function ModeOption({
+/** Selector de dos o tres opciones excluyentes (envío o retiro), con el costo debajo de cada una. */
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T | null;
+  options: { value: T; label: string; detail: string }[];
+  onChange: (v: T) => void;
+}) {
+  const t = useTheme();
+  return (
+    <View style={[styles.segmented, { backgroundColor: t.surface }]} accessibilityRole="radiogroup">
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: selected }}
+            accessibilityLabel={`${o.label}, ${o.detail}`}
+            onPress={() => onChange(o.value)}
+            style={[styles.segment, selected && { backgroundColor: t.primary }]}
+          >
+            <Text style={[styles.segmentLabel, { color: selected ? t.primaryText : t.text }]}>{o.label}</Text>
+            <Text style={[styles.segmentDetail, { color: selected ? t.primaryText : t.muted, opacity: selected ? 0.8 : 1 }]}>{o.detail}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * Un dato del pedido: ícono, valor y, si se puede cambiar, la acción a la derecha. Las opciones
+ * se abren debajo, en el mismo lugar (`children`), y la acción pasa a «Listo».
+ */
+function DetailRow({
   icon,
+  title,
+  detail,
+  detailTone,
+  action,
+  actionLabel,
+  onAction,
+  expanded,
+  last,
+  children,
+}: {
+  icon: IconName;
+  title: string;
+  detail?: string | null;
+  detailTone?: "danger" | "success";
+  action?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  expanded?: boolean;
+  last?: boolean;
+  children?: ReactNode;
+}) {
+  const t = useTheme();
+  const detailColor = detailTone === "danger" ? t.danger : detailTone === "success" ? t.success : t.muted;
+  return (
+    <View style={[styles.detailRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: t.border }]}>
+      <View style={styles.detailHead}>
+        <Icon name={icon} size={20} color={t.text} />
+        <View style={styles.detailText}>
+          <Text style={[styles.detailTitle, { color: t.text }]}>{title}</Text>
+          {detail ? <Text style={[styles.meta, { color: detailColor }]}>{detail}</Text> : null}
+        </View>
+        {action && onAction && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={actionLabel ?? action}
+            accessibilityState={expanded === undefined ? undefined : { expanded }}
+            onPress={onAction}
+            hitSlop={8}
+          >
+            <Text style={[styles.rowAction, { color: t.text }]}>{expanded ? "Listo" : action}</Text>
+          </Pressable>
+        )}
+      </View>
+      {children ? <View style={styles.detailBody}>{children}</View> : null}
+    </View>
+  );
+}
+
+function OptionRow({
   label,
   detail,
+  trailing,
   selected,
   onPress,
 }: {
-  icon: IconName;
   label: string;
-  detail: string;
+  detail?: string | null;
+  trailing?: string;
   selected: boolean;
   onPress: () => void;
 }) {
   const t = useTheme();
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="radio"
-      accessibilityState={{ checked: selected }}
-      accessibilityLabel={`${label}, ${detail}`}
-      style={({ pressed }) => [
-        styles.mode,
-                {
-          backgroundColor: t.surface,
-          borderColor: selected ? t.primary : "transparent",
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}
-    >
-      <View style={[styles.modeIcon, { backgroundColor: selected ? t.primary : t.background }]}>
-        <Icon name={icon} size={22} color={selected ? t.primaryText : t.muted} />
+    <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={onPress} style={styles.option}>
+      <View style={[styles.radio, { borderColor: selected ? t.primary : t.border }]}>
+        {selected && <View style={[styles.radioDot, { backgroundColor: t.primary }]} />}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.modeLabel, { color: t.text }]}>{label}</Text>
-        <Text style={[styles.meta, { color: t.muted }]}>{detail}</Text>
+        <Text style={[styles.infoText, { color: t.text, fontWeight: selected ? "700" : "500" }]}>{label}</Text>
+        {detail ? <Text style={[styles.meta, { color: t.muted }]}>{detail}</Text> : null}
       </View>
+      {trailing && <Text style={[styles.infoText, { color: t.text }]}>{trailing}</Text>}
     </Pressable>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  keyboardType,
-  autoComplete,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  placeholder?: string;
-  keyboardType?: "phone-pad" | "default";
-  autoComplete?: "name" | "tel" | "street-address";
-}) {
-  const t = useTheme();
-  return (
-    <View style={{ gap: 6 }}>
-      <Text style={[styles.fieldLabel, { color: t.muted }]}>{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={t.muted}
-        accessibilityLabel={label}
-        keyboardType={keyboardType ?? "default"}
-        autoComplete={autoComplete}
-        style={[styles.input, { backgroundColor: t.surface, color: t.text }]}
-      />
-    </View>
   );
 }
 
@@ -732,9 +893,8 @@ function useFarFromAddress(target: LatLng | null): number | null {
 const formatDistance = (m: number) => (m < 1000 ? `${Math.round(m / 50) * 50} m` : `${(m / 1000).toFixed(1).replace(".", ",")} km`);
 
 const styles = StyleSheet.create({
-  savedAddress: { flexDirection: "row", alignItems: "center", gap: space.md },
-  farNotice: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.sm, marginTop: space.md },
-  couponRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.sm },
+  farNotice: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.sm },
+  couponRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
   couponApply: { borderRadius: radius.md, paddingHorizontal: space.lg, height: 46, alignItems: "center", justifyContent: "center" },
   screen: { flex: 1 },
   content: { padding: space.lg, paddingTop: space.sm, gap: space.md, paddingBottom: space.xl },
@@ -743,11 +903,29 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   topTitle: { fontFamily: font.display, fontSize: 18, fontWeight: "700" },
 
+  etaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: -space.xs },
+  segmented: { flexDirection: "row", borderRadius: radius.pill, padding: 4 },
+  segment: { flex: 1, alignItems: "center", borderRadius: radius.pill, paddingVertical: 7 },
+  segmentLabel: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
+  segmentDetail: { fontSize: 12 },
+
+  suggestScroll: { marginHorizontal: -space.lg, flexGrow: 0 },
+  suggestRow: { paddingHorizontal: space.lg, gap: space.md },
+
+  detailRow: { paddingVertical: space.md, gap: space.sm },
+  detailHead: { flexDirection: "row", alignItems: "center", gap: space.md },
+  detailText: { flex: 1, gap: 2 },
+  detailTitle: { fontSize: 15, fontWeight: "600" },
+  detailBody: { paddingLeft: 20 + space.md, gap: space.xs },
+  rowAction: { fontSize: 14, fontWeight: "700", textDecorationLine: "underline" },
+  option: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.sm },
+  noteInput: { minHeight: 72, textAlignVertical: "top" },
+
   emptyIcon: { width: 88, height: 88, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
   emptyTitle: { fontFamily: font.display, fontSize: 20, fontWeight: "700" },
 
   merchant: { flexDirection: "row", alignItems: "center", gap: space.md },
-  merchantIcon: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
+  merchantIcon: { width: 44, height: 44, borderRadius: radius.sm, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   merchantName: { fontFamily: font.display, fontSize: 17, fontWeight: "700" },
   link: { fontSize: 14, fontWeight: "700" },
   meta: { fontSize: 13 },
@@ -756,8 +934,9 @@ const styles = StyleSheet.create({
   cardPadded: { paddingVertical: space.md, gap: space.md },
 
   line: { flexDirection: "row", gap: space.md, paddingVertical: space.md },
-  thumb: { width: 56, height: 56, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  thumb: { width: 56, height: 56, borderRadius: radius.md, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   lineBody: { flex: 1, gap: 2 },
+  lineEdit: { alignSelf: "flex-start", marginTop: 2 },
   lineName: { fontSize: 15, fontWeight: "700" },
   lineFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: space.xs },
   linePrice: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
@@ -766,28 +945,21 @@ const styles = StyleSheet.create({
   qtyValue: { fontSize: 15, fontWeight: "700", minWidth: 18, textAlign: "center" },
 
   section: { fontFamily: font.display, fontSize: 18, fontWeight: "700", marginTop: space.sm },
-  modes: { flexDirection: "row", gap: space.md },
-  mode: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.lg, borderWidth: 2, padding: space.md },
-  modeIcon: { width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  modeLabel: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
 
-  infoRow: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
   infoText: { fontSize: 15 },
-  zone: { flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md },
   radio: { width: 22, height: 22, borderRadius: radius.pill, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   radioDot: { width: 10, height: 10, borderRadius: radius.pill },
 
-  fieldLabel: { fontSize: 13, fontWeight: "600" },
   input: { borderRadius: radius.md, paddingHorizontal: space.md, paddingVertical: 12, fontSize: 16 },
 
   summaryRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   divider: { height: StyleSheet.hairlineWidth },
-  payment: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.md },
 
-  notice: { flexDirection: "row", alignItems: "center", gap: space.sm, borderRadius: radius.md, padding: space.md },
-  noticeText: { fontSize: 14, fontWeight: "600", flex: 1 },
-
-  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm },
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, gap: space.sm },
+  footerStatus: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  footerStatusText: { fontSize: 14, fontWeight: "600", flex: 1 },
+  savings: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", paddingHorizontal: space.xl },
+  savingsText: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
   confirm: {
     flexDirection: "row",
     justifyContent: "space-between",

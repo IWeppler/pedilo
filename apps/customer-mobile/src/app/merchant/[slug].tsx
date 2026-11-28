@@ -1,10 +1,11 @@
 import type { paths, PublicProduct } from "@pedilo/api-client";
-import { formatARSWhole, offerUnitPrice } from "@pedilo/domain";
+import { formatARSWhole } from "@pedilo/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type NativeScrollEvent,
+  TextInput as RNTextInput,
   type NativeSyntheticEvent,
   Pressable,
   ScrollView,
@@ -17,10 +18,12 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { Text, TextInput } from "@/components/text";
 import { CartBar } from "@/components/cart-bar";
 import { Photo } from "@/components/photo";
+import { ProductTile, productPrices } from "@/components/product-tile";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Centered, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
 import { etaLabel } from "@/lib/merchant-labels";
+import { useQuickAdd } from "@/lib/quick-add";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
 
 type PublicOffer = paths["/v1/public/merchants/{slug}"]["get"]["responses"][200]["content"]["application/json"]["offers"][number];
@@ -50,6 +53,7 @@ export default function MerchantScreen() {
   const [compact, setCompact] = useState(false);
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const listRef = useRef<SectionList<PublicProduct, MenuSectionData>>(null);
+  const searchRef = useRef<ComponentRef<typeof RNTextInput>>(null);
   // Mientras se salta a una sección tocando su pestaña, no se pisa la pestaña activa al scrollear.
   const jumpingTo = useRef<string | null>(null);
 
@@ -63,6 +67,36 @@ export default function MerchantScreen() {
       }))
       .filter((s) => s.data.length > 0);
   }, [menu.data, query]);
+
+  // Lo más pedido (lo calcula la API): en su orden, solo lo que sigue en el menú y disponible.
+  const popular = useMemo(() => {
+    const byId = new Map((menu.data?.sections ?? []).flatMap((s) => s.products).map((p) => [p.id, p]));
+    return (menu.data?.popularProductIds ?? []).map((id) => byId.get(id)).filter((p): p is PublicProduct => Boolean(p?.available));
+  }, [menu.data]);
+
+  // Con descuento: los productos con precio de oferta fijo (porcentaje sin mínimo), el mayor ahorro
+  // primero. Sin repetir los que ya están en «Lo más pedido».
+  const discounted = useMemo(() => {
+    const offers = menu.data?.offers ?? [];
+    if (offers.length === 0) return [];
+    const seen = new Set<string>(popular.length >= 2 ? popular.map((p) => p.id) : []);
+    return (menu.data?.sections ?? [])
+      .flatMap((s) => s.products)
+      .filter((p) => p.available && !seen.has(p.id) && seen.add(p.id))
+      .map((p) => ({ p, prices: productPrices(p, offers) }))
+      .filter((x) => x.prices.offer !== null)
+      .sort((a, b) => b.prices.base - b.prices.offer! - (a.prices.base - a.prices.offer!))
+      .slice(0, 10)
+      .map((x) => x.p);
+  }, [menu.data, popular]);
+
+  const firstBranch = menu.data?.merchant.branches[0];
+  const quickAdd = useQuickAdd({
+    merchantSlug: menu.data?.merchant.slug ?? "",
+    merchantName: menu.data?.merchant.displayName ?? "",
+    branchId: firstBranch?.id ?? "",
+    open: firstBranch?.openNow ?? false,
+  });
 
   // Estable: SectionList no admite cambiar onViewableItemsChanged después de montarse.
   const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: { section?: unknown }[] }) => {
@@ -114,6 +148,19 @@ export default function MerchantScreen() {
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace("/"));
+  const openProduct = (p: PublicProduct) => router.push({ pathname: "/product/[slug]/[productId]", params: { slug, productId: p.id } });
+  // El «+»: agrega directo si se puede; si no (pide elegir opciones, está cerrado, hay otro pedido), abre la ficha.
+  const addOrOpen = (p: PublicProduct) => {
+    if (quickAdd(p)) return true;
+    openProduct(p);
+    return false;
+  };
+
+  // Desde la barra compacta: vuelve arriba y abre el teclado en el buscador.
+  const openSearch = () => {
+    listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: true });
+    setTimeout(() => searchRef.current?.focus(), 350);
+  };
 
   return (
     <View style={[styles.screen, { backgroundColor: t.background }]}>
@@ -150,6 +197,11 @@ export default function MerchantScreen() {
 
             {/* Datos del comercio */}
             <View style={styles.info}>
+              {merchant.logoUrl && (
+                <View style={[styles.logo, { backgroundColor: t.surface, borderColor: t.background }]}>
+                  <Photo url={merchant.logoUrl} style={StyleSheet.absoluteFill} accessibilityLabel={`Logo de ${merchant.displayName}`} />
+                </View>
+              )}
               <Text style={[styles.title, { color: t.text }]}>{merchant.displayName}</Text>
               <View style={styles.badges}>
                 {branch && (
@@ -219,10 +271,51 @@ export default function MerchantScreen() {
               </View>
             )}
 
+            {/* Lo más pedido */}
+            {popular.length >= 2 && (
+              <>
+                <Text style={[styles.rowTitle, { color: t.text }]}>Lo más pedido</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiles}>
+                  {popular.map((p) => (
+                    <ProductTile
+                      key={p.id}
+                      product={p}
+                      offers={offers}
+                      icon={icon}
+                      size={148}
+                      onOpen={() => openProduct(p)}
+                      onAdd={() => addOrOpen(p)}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
+            {/* Con descuento */}
+            {discounted.length >= 2 && (
+              <>
+                <Text style={[styles.rowTitle, { color: t.text }]}>Con descuento</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tiles}>
+                  {discounted.map((p) => (
+                    <ProductTile
+                      key={p.id}
+                      product={p}
+                      offers={offers}
+                      icon={icon}
+                      size={148}
+                      onOpen={() => openProduct(p)}
+                      onAdd={() => addOrOpen(p)}
+                    />
+                  ))}
+                </ScrollView>
+              </>
+            )}
+
             {/* Búsqueda */}
             <View style={[styles.search, { backgroundColor: t.surface }]}>
               <Icon name="search" size={20} color={t.muted} />
               <TextInput
+                ref={searchRef}
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Buscar en el menú"
@@ -253,12 +346,7 @@ export default function MerchantScreen() {
           </View>
         )}
         renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            offers={offers}
-            icon={icon}
-            onPress={() => router.push({ pathname: "/product/[slug]/[productId]", params: { slug, productId: item.id } })}
-          />
+          <ProductCard product={item} offers={offers} icon={icon} onPress={() => openProduct(item)} onAdd={() => addOrOpen(item)} />
         )}
       />
 
@@ -285,6 +373,9 @@ export default function MerchantScreen() {
             <Text style={[styles.compactTitle, { color: t.text }]} numberOfLines={1}>
               {merchant.displayName}
             </Text>
+            <Pressable accessibilityRole="button" accessibilityLabel="Buscar en el menú" onPress={openSearch} hitSlop={12} style={styles.compactBack}>
+              <Icon name="search" size={22} color={t.text} />
+            </Pressable>
           </View>
           {sections.length > 1 && <SectionTabs sections={sections} activeKey={currentKey} onPress={jumpTo} />}
         </View>
@@ -347,14 +438,29 @@ function Fact({ icon, label, value, t }: { icon: IconName; label: string; value:
 }
 
 /** Tarjeta de producto. Sin fotos todavía: miniatura con el ícono del rubro. */
-function ProductCard({ product: p, offers, icon, onPress }: { product: PublicProduct; offers: PublicOffer[]; icon: IconName; onPress: () => void }) {
+function ProductCard({
+  product: p,
+  offers,
+  icon,
+  onPress,
+  onAdd,
+}: {
+  product: PublicProduct;
+  offers: PublicOffer[];
+  icon: IconName;
+  onPress: () => void;
+  onAdd: () => boolean;
+}) {
   const t = useTheme();
-  const base = p.variants.length > 0 ? p.fromPriceMinor : p.priceMinor;
-  const prefix = p.variants.length > 0 ? "desde " : "";
-  const price = `${prefix}${formatARSWhole(base)}`;
+  const [added, setAdded] = useState(false);
+  useEffect(() => {
+    if (!added) return;
+    const id = setTimeout(() => setAdded(false), 1200);
+    return () => clearTimeout(id);
+  }, [added]);
   // Precio con oferta, si no depende del resto del pedido (porcentaje sin mínimo).
-  const offerPrices = offers.map((o) => offerUnitPrice(o, p.id, base)).filter((v): v is number => v !== null);
-  const offerPrice = offerPrices.length > 0 ? Math.min(...offerPrices) : null;
+  const { base, offer: offerPrice, prefix } = productPrices(p, offers);
+  const price = `${prefix}${formatARSWhole(base)}`;
   // Alcanzado por una oferta con condiciones: solo la etiqueta.
   const conditional = offerPrice === null ? offers.find((o) => !o.productIds || o.productIds.includes(p.id)) : undefined;
   return (
@@ -401,9 +507,17 @@ function ProductCard({ product: p, offers, icon, onPress }: { product: PublicPro
           fallback={<Icon name={icon} size={34} color={t.muted} />}
         />
         {p.available && (
-          <View style={[styles.addButton, { backgroundColor: t.primary, borderColor: t.card }]}>
-            <Icon name="add" size={18} color={t.primaryText} />
-          </View>
+          <Pressable
+            onPress={() => {
+              if (onAdd()) setAdded(true);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={added ? `${p.name} agregado` : `Agregar ${p.name}`}
+            hitSlop={8}
+            style={[styles.addButton, { backgroundColor: added ? t.success : t.primary, borderColor: t.card }]}
+          >
+            <Icon name={added ? "check" : "add"} size={18} color={t.primaryText} />
+          </Pressable>
         )}
       </View>
     </Pressable>
@@ -433,6 +547,8 @@ const styles = StyleSheet.create({
   floatingBack: { position: "absolute", left: space.lg, width: 40, height: 40, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
 
   info: { paddingHorizontal: space.lg, paddingTop: space.lg, gap: space.sm },
+  // El logo se apoya sobre el borde de la portada; el borde del color del fondo lo recorta.
+  logo: { width: 72, height: 72, borderRadius: radius.md, borderWidth: 3, overflow: "hidden", marginTop: -36 - space.lg, marginBottom: space.xs },
   title: { fontFamily: font.display, fontSize: 30, lineHeight: 33, fontWeight: "800", letterSpacing: -0.6 },
   badges: { flexDirection: "row", alignItems: "center", gap: space.sm },
   address: { flexDirection: "row", gap: 6, alignItems: "flex-start" },
@@ -446,6 +562,8 @@ const styles = StyleSheet.create({
   factLabel: { fontSize: 11 },
   factValue: { fontFamily: font.display, fontSize: 15, fontWeight: "700" },
 
+  rowTitle: { fontFamily: font.display, fontSize: 21, fontWeight: "700", letterSpacing: -0.3, paddingHorizontal: space.lg, marginTop: space.xl, marginBottom: space.md },
+  tiles: { paddingHorizontal: space.lg, gap: space.md },
   search: { flexDirection: "row", alignItems: "center", gap: space.sm, marginHorizontal: space.lg, marginTop: space.lg, borderRadius: radius.md, paddingHorizontal: space.lg, height: 48 },
   searchInput: { flex: 1, fontSize: 16, height: "100%" },
 

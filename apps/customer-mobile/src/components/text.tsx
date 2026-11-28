@@ -9,7 +9,7 @@ import {
   HankenGrotesk_600SemiBold,
   HankenGrotesk_700Bold,
 } from "@expo-google-fonts/hanken-grotesk";
-import { type ComponentProps, createContext, useContext } from "react";
+import { type ComponentProps, type ComponentPropsWithRef, createContext, useContext } from "react";
 import {
   Text as RNText,
   TextInput as RNTextInput,
@@ -70,6 +70,6 @@ export function Text(props: ComponentProps<typeof RNText>) {
   );
 }
 
-export function TextInput(props: ComponentProps<typeof RNTextInput>) {
+export function TextInput(props: ComponentPropsWithRef<typeof RNTextInput>) {
   return <RNTextInput {...props} style={[props.style, resolveFont(props.style, false)]} />;
 }

@@ -41,6 +41,7 @@ const ICONS = {
   warning: { ios: "exclamationmark.triangle.fill", android: "warning" },
   note: { ios: "square.and.pencil", android: "edit_note" },
   info: { ios: "info.circle", android: "info" },
+  ticket: { ios: "ticket", android: "confirmation_number" },
   bell: { ios: "bell", android: "notifications" },
   person: { ios: "person.crop.circle", android: "account_circle" },
   star: { ios: "star.fill", android: "star" },

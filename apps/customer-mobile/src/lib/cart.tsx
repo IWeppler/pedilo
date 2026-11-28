@@ -10,6 +10,8 @@ export interface CartLine {
   key: string;
   productId: string;
   productName: string;
+  /** Foto del producto. Opcional: los carritos guardados antes de este campo no la tienen. */
+  imageUrl?: string | null;
   variantId: string | null;
   variantName: string | null;
   modifiers: { modifierId: string; name: string; quantity: number; priceDeltaMinor: number }[];
@@ -31,6 +33,8 @@ interface CartContextValue {
   subtotalMinor: number;
   /** Agrega una línea. Si el carrito es de otro comercio, lo reemplaza (la UI pide confirmación antes). */
   add: (merchant: Omit<Cart, "lines">, line: Omit<CartLine, "key">) => void;
+  /** Reemplaza una línea (al editarla desde la ficha), en el mismo lugar del pedido. */
+  replace: (key: string, line: Omit<CartLine, "key">) => void;
   setQuantity: (key: string, quantity: number) => void;
   remove: (key: string) => void;
   clear: () => void;
@@ -64,6 +68,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const replace = useCallback((key: string, line: Omit<CartLine, "key">) => {
+    setCart((c) => (c ? { ...c, lines: c.lines.map((l) => (l.key === key ? { ...line, key } : l)) } : c));
+  }, []);
+
   const setQuantity = useCallback((key: string, quantity: number) => {
     setCart((c) => (c ? { ...c, lines: c.lines.map((l) => (l.key === key ? { ...l, quantity } : l)) } : c));
   }, []);
@@ -85,11 +93,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
       itemCount: lines.reduce((n, l) => n + l.quantity, 0),
       subtotalMinor: lines.reduce((n, l) => n + l.unitPriceMinor * l.quantity, 0),
       add,
+      replace,
       setQuantity,
       remove,
       clear,
     };
-  }, [cart, add, setQuantity, remove, clear]);
+  }, [cart, add, replace, setQuantity, remove, clear]);
 
   return <CartContext value={value}>{children}</CartContext>;
 }

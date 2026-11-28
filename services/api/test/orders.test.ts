@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { notificationOutbox, pushSubscriptions } from "../src/db/schema";
+import { notificationOutbox, orders, pushSubscriptions } from "../src/db/schema";
 import { MAX_ATTEMPTS, processOutbox, type PushResult, type PushSender } from "../src/modules/notifications/service";
 import {
   createOrder,
@@ -741,5 +741,40 @@ describe("pago por transferencia y confirmación de cobro (ADR 0011)", () => {
     const res = await order();
     expect(res.statusCode).toBe(409);
     expect(res.json().error.details.reason).toBe("PAYMENT_METHOD_NOT_AVAILABLE");
+  });
+});
+
+describe("«Lo más pedido» en el menú público", () => {
+  const popular = async () => (await req("GET", "/v1/public/merchants/pizzeria-don-pepe")).json().popularProductIds as string[];
+  const onlyCoke = () => pickupBody({ items: [{ productId: cokeId, modifiers: [], quantity: 1 }] });
+  const ageAllOrders = () =>
+    ctx.db
+      .update(orders)
+      .set({ createdAt: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000) })
+      .where(eq(orders.merchantId, merchantId));
+
+  // Los pedidos de los tests anteriores quedan fuera de la ventana: se arranca de cero.
+  beforeAll(ageAllOrders);
+
+  it("cuenta solo pedidos completados y pide al menos 3", async () => {
+    const ids: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const res = await placeOrder(onlyCoke());
+      expect(res.statusCode).toBe(201);
+      ids.push(res.json().order.id);
+    }
+    // Recibidos pero sin completar: todavía no cuentan.
+    expect(await popular()).toEqual([]);
+    await ctx.db.update(orders).set({ status: "PICKED_UP" }).where(eq(orders.id, ids[0]!));
+    await ctx.db.update(orders).set({ status: "PICKED_UP" }).where(eq(orders.id, ids[1]!));
+    expect(await popular()).toEqual([]);
+
+    await ctx.db.update(orders).set({ status: "PICKED_UP" }).where(eq(orders.id, ids[2]!));
+    expect(await popular()).toEqual([cokeId]);
+  });
+
+  it("los pedidos de hace más de 30 días no cuentan", async () => {
+    await ageAllOrders();
+    expect(await popular()).toEqual([]);
   });
 });

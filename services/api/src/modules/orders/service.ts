@@ -1385,3 +1385,34 @@ export async function getRatableOrder(db: DbOrTx, orderId: string, userId: strin
   }
   return { orderId: row.id, code: row.code, merchantId: row.merchantId, completedAt };
 }
+
+/** Ventana, tope y mínimo de «Lo más pedido» (menú público). */
+export const POPULAR_PRODUCTS = { days: 30, limit: 6, minOrders: 3 } as const;
+
+/**
+ * «Lo más pedido» de un comercio: sus productos en más pedidos completados (entregados o retirados)
+ * de los últimos 30 días. Cuenta pedidos, no unidades, para que un pedido grande no mande; con
+ * menos de 3 pedidos un producto no entra (con pocos datos el ranking no dice nada). Solo ids:
+ * quien llama los cruza con el menú, que ya filtra lo inactivo.
+ */
+export async function popularProductIds(db: DbOrTx, merchantId: string, now = new Date()): Promise<string[]> {
+  const since = new Date(now.getTime() - POPULAR_PRODUCTS.days * 24 * 60 * 60 * 1000);
+  const orderCount = sql<number>`count(distinct ${orderItems.orderId})::int`;
+  const rows = await db
+    .select({ productId: orderItems.productId, orders: orderCount })
+    .from(orderItems)
+    .innerJoin(orders, eq(orders.id, orderItems.orderId))
+    .where(
+      and(
+        eq(orders.merchantId, merchantId),
+        inArray(orders.status, [OrderStatus.DELIVERED, OrderStatus.PICKED_UP]),
+        gte(orders.createdAt, since),
+        sql`${orderItems.productId} IS NOT NULL`,
+      ),
+    )
+    .groupBy(orderItems.productId)
+    .having(sql`count(distinct ${orderItems.orderId}) >= ${POPULAR_PRODUCTS.minOrders}`)
+    .orderBy(desc(orderCount), asc(orderItems.productId))
+    .limit(POPULAR_PRODUCTS.limit);
+  return rows.map((r) => r.productId!);
+}

@@ -10,7 +10,7 @@ import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
-import { useCart } from "@/lib/cart";
+import { type CartLine, useCart } from "@/lib/cart";
 import { font, radius, space, useTheme } from "@/lib/theme";
 
 /**
@@ -20,7 +20,10 @@ import { font, radius, space, useTheme } from "@/lib/theme";
 export default function ProductScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { slug, productId } = useLocalSearchParams<{ slug: string; productId: string }>();
+  // `lineKey`: se abrió desde «Editar» en el carrito; la ficha viene con lo ya elegido.
+  const { slug, productId, lineKey } = useLocalSearchParams<{ slug: string; productId: string; lineKey?: string }>();
+  const { cart } = useCart();
+  const editing = lineKey ? cart?.lines.find((l) => l.key === lineKey) : undefined;
   const menu = useMerchantMenu(slug);
   const categories = useMerchantCategories();
   const product = useMemo(
@@ -44,6 +47,7 @@ export default function ProductScreen() {
       product={product}
       merchant={{ merchantSlug: merchant.slug, merchantName: merchant.displayName, branchId: branch?.id ?? "" }}
       branchOpen={branch?.openNow ?? false}
+      editing={editing}
       icon={categoryIcon(categorySlug)}
       onClose={() => router.back()}
     />
@@ -54,25 +58,33 @@ function ProductDetail({
   product,
   merchant,
   branchOpen,
+  editing,
   icon,
   onClose,
 }: {
   product: PublicProduct;
   merchant: { merchantSlug: string; merchantName: string; branchId: string };
   branchOpen: boolean;
+  editing?: CartLine;
   icon: IconName;
   onClose: () => void;
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { cart, add } = useCart();
-  const [notes, setNotes] = useState("");
+  const { cart, add, replace } = useCart();
+  const [notes, setNotes] = useState(editing?.notes ?? "");
   const [variantId, setVariantId] = useState<string | null>(
-    // Si hay una sola variante disponible, viene elegida.
-    product.variants.filter((v) => v.available).length === 1 ? product.variants.find((v) => v.available)!.id : null,
+    editing
+      ? editing.variantId
+      : // Si hay una sola variante disponible, viene elegida.
+        product.variants.filter((v) => v.available).length === 1
+        ? product.variants.find((v) => v.available)!.id
+        : null,
   );
-  const [picks, setPicks] = useState<Record<string, number>>({});
-  const [quantity, setQuantity] = useState(1);
+  const [picks, setPicks] = useState<Record<string, number>>(() =>
+    Object.fromEntries((editing?.modifiers ?? []).map((m) => [m.modifierId, m.quantity])),
+  );
+  const [quantity, setQuantity] = useState(editing?.quantity ?? 1);
 
   const result = priceSelection(product, {
     variantId,
@@ -99,8 +111,9 @@ function ProductDetail({
 
   const hint = selectionHint(product, result);
   const total = result.ok ? result.unitPriceMinor * quantity : null;
-  const otherMerchant = cart && cart.merchantSlug !== merchant.merchantSlug ? cart.merchantName : null;
-  const canAdd = result.ok && branchOpen && merchant.branchId !== "";
+  const otherMerchant = !editing && cart && cart.merchantSlug !== merchant.merchantSlug ? cart.merchantName : null;
+  // Editar una línea que ya está en el pedido no exige que el comercio esté abierto.
+  const canAdd = result.ok && (Boolean(editing) || branchOpen) && merchant.branchId !== "";
   const basePrice = product.variants.length > 0 ? `desde ${formatARSWhole(product.fromPriceMinor)}` : formatARSWhole(product.priceMinor);
 
   const addToCart = () => {
@@ -111,16 +124,19 @@ function ProductDetail({
         .filter((m) => (picks[m.id] ?? 0) > 0)
         .map((m) => ({ modifierId: m.id, name: m.name, quantity: picks[m.id]!, priceDeltaMinor: m.priceDeltaMinor })),
     );
-    add(merchant, {
+    const line = {
       productId: product.id,
       productName: product.name,
+      imageUrl: product.imageUrl,
       variantId: variant?.id ?? null,
       variantName: variant?.name ?? null,
       modifiers,
       quantity,
       unitPriceMinor: result.unitPriceMinor,
       notes: notes.trim() || null,
-    });
+    };
+    if (editing) replace(editing.key, line);
+    else add(merchant, line);
     onClose();
   };
 
@@ -230,7 +246,7 @@ function ProductDetail({
           ]}
         >
           {hint && <Text style={[styles.footerNote, { color: t.muted }]}>{hint}</Text>}
-          {!hint && !branchOpen && <Text style={[styles.footerNote, { color: t.muted }]}>El comercio está cerrado ahora.</Text>}
+          {!hint && !branchOpen && !editing && <Text style={[styles.footerNote, { color: t.muted }]}>El comercio está cerrado ahora.</Text>}
           {otherMerchant && canAdd && (
             <Text style={[styles.footerNote, { color: t.muted }]}>
               Tenés un pedido en curso de {otherMerchant}. Si agregás esto, se reemplaza.
@@ -251,7 +267,7 @@ function ProductDetail({
               ]}
             >
               <Text style={[styles.addText, { color: t.primaryText }]} numberOfLines={1}>
-                {otherMerchant ? "Vaciar y agregar" : "Agregar"}
+                {editing ? "Guardar cambios" : otherMerchant ? "Vaciar y agregar" : "Agregar"}
               </Text>
               {total !== null && <Text style={[styles.addText, { color: t.primaryText }]}>{formatARSWhole(total)}</Text>}
             </Pressable>

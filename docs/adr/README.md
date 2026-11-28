@@ -38,6 +38,7 @@ Cada decisión técnica relevante queda registrada acá: qué se decidió, por q
 | [0032](0032-emails-al-cliente.md) | Emails al cliente con Resend | Aceptada |
 | [0033](0033-comision-plana-3.md) | Comisión plana del 3% | Aceptada |
 | [0034](0034-direcciones-del-cliente.md) | Varias direcciones del cliente y «¿Desde dónde pedís?» | Aceptada |
+| [0035](0035-carrito-y-perfil-del-comercio.md) | Carrito y perfil del comercio: «Lo más pedido», sugerencias y agregar con el «+» | Aceptada |
 
 Pendientes (SPEC §17): realtime (SSE).
 

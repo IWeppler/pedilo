@@ -6561,6 +6561,8 @@ export interface paths {
                                 average: number;
                                 count: number;
                             } | null;
+                            /** @description «Lo más pedido»: productos en más pedidos completados de los últimos 30 días, de más a menos (mínimo 3 pedidos cada uno) */
+                            popularProductIds: string[];
                         };
                     };
                 };
