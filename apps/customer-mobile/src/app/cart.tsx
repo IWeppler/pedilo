@@ -1,6 +1,6 @@
 import { ApiError, fieldErrors, unwrap } from "@pedilo/api-client";
-import { formatARS } from "@pedilo/domain";
-import { useMutation } from "@tanstack/react-query";
+import { formatARSWhole } from "@pedilo/domain";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { type ReactNode, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -8,12 +8,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Text, TextInput } from "@/components/text";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
-import { LocationPicker } from "@/components/location-picker";
+import { AddressFields, type AddressValue, validPinOf } from "@/components/address-fields";
 import { describeSlot, SlotPicker } from "@/components/slot-picker";
 import { Button, Centered, Loading } from "@/components/ui";
-import { api, useBranchSlots, useMerchantCategories, useMerchantMenu } from "@/lib/api";
+import { api, useBranchSlots, useCustomerProfile, useMerchantCategories, useMerchantMenu, useOrderQuote } from "@/lib/api";
 import { openCardPayment } from "@/lib/card-payment";
 import { type CartLine, useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth";
 import { useCity } from "@/lib/city";
 import { useMyOrders } from "@/lib/my-orders";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
@@ -30,6 +31,13 @@ const REASON_MESSAGES: Record<string, string> = {
   PRODUCT_UNAVAILABLE: "Un producto de tu pedido ya no está disponible. Sacalo y probá de nuevo.",
   ITEM_INVALID: "Un producto cambió en el menú. Sacalo y volvé a agregarlo.",
   MIN_ORDER_NOT_MET: "No llegás al pedido mínimo de la zona.",
+  PROMOTION_UNAVAILABLE: "La promoción se terminó recién. Revisá el total y confirmá de nuevo.",
+  COUPON_INVALID: "Ese cupón no existe en este comercio.",
+  COUPON_EXPIRED: "Ese cupón ya venció.",
+  COUPON_EXHAUSTED: "Ese cupón ya se agotó.",
+  COUPON_ALREADY_USED: "Ya usaste este cupón.",
+  COUPON_MIN_NOT_MET: "Tu pedido no llega al mínimo de este cupón.",
+  COUPON_NOT_APPLICABLE: "Este cupón no aplica a los productos de tu pedido.",
   PICKUP_NOT_AVAILABLE: "El comercio no acepta retiro en el local.",
   DELIVERY_NOT_AVAILABLE: "El comercio no hace envíos.",
 };
@@ -38,20 +46,25 @@ export default function CartScreen() {
   const t = useTheme();
   const router = useRouter();
   const { cart, itemCount, subtotalMinor, setQuantity, remove, clear } = useCart();
-  const { contact, setContact, save } = useMyOrders();
+  const queryClient = useQueryClient();
+  const { save } = useMyOrders();
   const menu = useMerchantMenu(cart?.merchantSlug ?? "");
   const categories = useMerchantCategories();
 
   const branch = menu.data?.merchant.branches.find((b) => b.id === cart?.branchId);
   const [fulfillment, setFulfillment] = useState<"PICKUP" | "DELIVERY" | null>(null);
   const [zoneId, setZoneId] = useState<string | null>(null);
-  const [name, setName] = useState(contact.name);
-  const [phone, setPhone] = useState(contact.phone);
-  const [addressLine, setAddressLine] = useState(contact.addressLine);
-  const [addressNotes, setAddressNotes] = useState(contact.addressNotes);
-  // Punto exacto en el mapa (ADR 0023): vale solo para la dirección con la que se marcó.
-  const [pin, setPin] = useState(contact.addressPin ?? null);
-  const [picking, setPicking] = useState(false);
+  // Solo se llega con cuenta y perfil completo (ADR 0026): nombre, teléfono y dirección salen de
+  // ahí. En el pedido no se vuelven a pedir; la dirección se puede cambiar.
+  const { status: authStatus } = useAuth();
+  const profile = useCustomerProfile(authStatus === "signedIn");
+  const saved = profile.data?.address ?? null;
+  const savedAddress: AddressValue = saved
+    ? { line: saved.line, notes: saved.notes ?? "", pin: saved.location ? { ...saved.location, forLine: saved.line } : null }
+    : { line: "", notes: "", pin: null };
+  const [addressEdit, setAddressEdit] = useState<AddressValue | null>(null);
+  const address = addressEdit ?? savedAddress;
+  const editingAddress = addressEdit !== null || !saved;
   const { city } = useCity();
   const [notes, setNotes] = useState("");
   const [idempotencyKey] = useState(newIdempotencyKey);
@@ -59,6 +72,10 @@ export default function CartScreen() {
   const [when, setWhen] = useState<"NOW" | "LATER" | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [payWith, setPayWith] = useState<"CASH" | "TRANSFER" | "MERCADO_PAGO" | null>(null);
+  // Cupón (ADR 0030): lo que escribe y el que ya aplicó (el que se cotiza y se manda).
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<string | null>(null);
+  const [couponOpen, setCouponOpen] = useState(false);
 
   // Valores efectivos (defaults según lo que ofrece la sucursal).
   const canSchedule = Boolean(branch?.scheduling.enabled);
@@ -70,8 +87,29 @@ export default function CartScreen() {
   const mode = fulfillment ?? (branch?.acceptsPickup ? "PICKUP" : branch?.acceptsDelivery ? "DELIVERY" : null);
   const zone = branch?.zones.find((z) => z.id === zoneId) ?? branch?.zones[0];
   const deliveryFee = mode === "DELIVERY" ? (zone?.feeMinor ?? 0) : 0;
-  const validPin = pin && pin.forLine === addressLine.trim() ? pin : null;
+  const validPin = validPinOf(address);
   const belowMinimum = mode === "DELIVERY" && zone ? subtotalMinor < zone.minOrderMinor : false;
+
+  // Cotización (ADR 0030): subtotal, descuento de la promo y total con las reglas de la API.
+  const quote = useOrderQuote(
+    cart && mode
+      ? {
+          merchantSlug: cart.merchantSlug,
+          branchId: cart.branchId,
+          fulfillmentType: mode,
+          ...(mode === "DELIVERY" && zone && { deliveryZoneId: zone.id }),
+          ...(coupon && { couponCode: coupon }),
+          items: cart.lines.map((l) => ({
+            productId: l.productId,
+            variantId: l.variantId,
+            modifiers: l.modifiers.map((m) => ({ modifierId: m.modifierId, quantity: m.quantity })),
+            quantity: l.quantity,
+          })),
+        }
+      : null,
+  );
+  // El cupón solo viaja si la cotización lo aceptó (si no, cortaría el pedido).
+  const couponUsable = Boolean(coupon) && !quote.data?.couponError;
 
   const submit = useMutation({
     mutationFn: () =>
@@ -85,13 +123,13 @@ export default function CartScreen() {
             ...(mode === "DELIVERY" && {
               deliveryZoneId: zone?.id,
               deliveryAddress: {
-                line: addressLine.trim(),
-                notes: addressNotes.trim() || null,
+                line: address.line.trim(),
+                notes: address.notes.trim() || null,
                 location: validPin ? { lat: validPin.lat, lng: validPin.lng } : null,
               },
             }),
-            customer: { name: name.trim(), phone: phone.trim() },
             notes: notes.trim() || null,
+            ...(couponUsable && { couponCode: coupon }),
             paymentMethod,
             ...(timing === "LATER" && slot && { scheduledFor: slot }),
             items: cart!.lines.map((l) => ({
@@ -106,16 +144,35 @@ export default function CartScreen() {
       ),
     onSuccess: ({ order, trackingToken }) => {
       save({ id: order.id, token: trackingToken, code: order.code, merchantName: order.merchant.name, createdAt: order.createdAt });
-      setContact({ name: name.trim(), phone: phone.trim(), addressLine: addressLine.trim(), addressNotes: addressNotes.trim(), addressPin: validPin });
+      // Dirección nueva: queda guardada en la cuenta para el próximo pedido.
+      if (mode === "DELIVERY" && editingAddress && profile.data) {
+        void api
+          .PUT("/v1/customer/me", {
+            body: {
+              displayName: profile.data.displayName,
+              phone: profile.data.phone,
+              address: { line: address.line.trim(), notes: address.notes.trim() || null, location: validPin },
+            },
+          })
+          .then(() => queryClient.invalidateQueries({ queryKey: ["customer", "me"] }))
+          .catch(() => undefined);
+      }
       clear();
       router.replace({ pathname: "/order/[id]", params: { id: order.id } });
       // Con tarjeta el pedido espera el pago: se abre la pantalla de pago enseguida.
       if (paymentMethod === "MERCADO_PAGO") void openCardPayment(order.id, trackingToken);
     },
     onError: (err) => {
-      if (err instanceof ApiError && err.code === "CONFLICT") {
+      // La sesión venció o falta el registro: se resuelve y el carrito queda como estaba.
+      if (err instanceof ApiError && err.status === 401) {
+        setError("Tu sesión venció. Entrá de nuevo para confirmar el pedido.");
+        router.push("/login");
+      } else if (err instanceof ApiError && (err.details as { reason?: string } | undefined)?.reason === "PROFILE_REQUIRED") {
+        router.push("/register");
+      } else if (err instanceof ApiError && err.code === "CONFLICT") {
         const reason = (err.details as { reason?: string } | undefined)?.reason;
         setError((reason && REASON_MESSAGES[reason]) ?? err.message);
+        if (reason === "PROMOTION_UNAVAILABLE" || reason?.startsWith("COUPON_")) void quote.refetch();
         if (reason === "SLOT_FULL" || reason === "SLOT_UNAVAILABLE") {
           setSlot(null);
           void slots.refetch();
@@ -155,9 +212,10 @@ export default function CartScreen() {
 
   const icon = categoryIcon(categories.data?.find((c) => c.id === menu.data?.merchant.categoryId)?.slug);
   const minFee = branch && branch.zones.length > 0 ? Math.min(...branch.zones.map((z) => z.feeMinor)) : null;
-  const total = subtotalMinor + deliveryFee;
-  const missing =
-    !name.trim() || phone.replace(/\D/g, "").length < 8 || (mode === "DELIVERY" && addressLine.trim().length < 3) || !mode;
+  // Con la cotización de la API (promo incluida); mientras llega, la cuenta local sin descuento.
+  const discount = quote.data?.discountMinor ?? 0;
+  const total = quote.data ? quote.data.totalMinor : subtotalMinor + deliveryFee;
+  const missing = !profile.data || (mode === "DELIVERY" && address.line.trim().length < 3) || !mode;
   const timingOk = timing === "LATER" ? Boolean(slot) : Boolean(branch?.openNow);
   const canSubmit = !missing && !belowMinimum && timingOk && !submit.isPending;
 
@@ -216,7 +274,7 @@ export default function CartScreen() {
                   <ModeOption
                     icon="delivery"
                     label="Envío"
-                    detail={minFee === 0 ? "Gratis" : `desde ${formatARS(minFee ?? 0)}`}
+                    detail={minFee === 0 ? "Gratis" : `desde ${formatARSWhole(minFee ?? 0)}`}
                     selected={mode === "DELIVERY"}
                     onPress={() => setFulfillment("DELIVERY")}
                   />
@@ -259,45 +317,49 @@ export default function CartScreen() {
                               <Text style={[styles.infoText, { color: t.text, fontWeight: selected ? "700" : "500" }]}>{z.name}</Text>
                               {z.description && <Text style={[styles.meta, { color: t.muted }]}>{z.description}</Text>}
                             </View>
-                            <Text style={[styles.infoText, { color: t.text }]}>{z.feeMinor === 0 ? "Gratis" : formatARS(z.feeMinor)}</Text>
+                            <Text style={[styles.infoText, { color: t.text }]}>{z.feeMinor === 0 ? "Gratis" : formatARSWhole(z.feeMinor)}</Text>
                           </Pressable>
                         );
                       })}
                     </Card>
                   )}
                   {branch.zones.length === 1 && zone?.description && <Text style={[styles.meta, { color: t.muted }]}>{zone.description}</Text>}
-                  <Card t={t} padded>
-                    <Field label="Dirección" value={addressLine} onChange={setAddressLine} placeholder="Calle y número" autoComplete="street-address" />
-                    <Field label="Indicaciones (opcional)" value={addressNotes} onChange={setAddressNotes} placeholder="Piso, timbre, referencia" />
-                    <Pressable
-                      accessibilityRole="button"
-                      disabled={addressLine.trim().length < 3}
-                      onPress={() => setPicking(true)}
-                      style={[styles.pinRow, { backgroundColor: validPin ? t.successBg : t.background, opacity: addressLine.trim().length < 3 ? 0.5 : 1 }]}
-                    >
-                      <Icon name={validPin ? "check" : "map"} size={20} color={validPin ? t.success : t.primary} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.infoText, { color: validPin ? t.success : t.text, fontWeight: "700" }]}>
-                          {validPin ? "Ubicación marcada en el mapa" : "Marcar en el mapa"}
-                        </Text>
-                        <Text style={[styles.meta, { color: t.muted }]}>
-                          {validPin ? "Tocá para corregirla" : addressLine.trim().length < 3 ? "Primero escribí la dirección" : "Así el repartidor llega justo a tu puerta"}
-                        </Text>
+                  {editingAddress ? (
+                    <Card t={t} padded>
+                      <AddressFields
+                        value={address}
+                        onChange={setAddressEdit}
+                        cityName={city?.name}
+                        fallback={branch.lat !== null && branch.lng !== null ? { lat: branch.lat, lng: branch.lng } : null}
+                        inputBackground={t.background}
+                      />
+                      {saved && (
+                        <Pressable accessibilityRole="button" onPress={() => setAddressEdit(null)} hitSlop={6}>
+                          <Text style={[styles.meta, { color: t.muted, textDecorationLine: "underline" }]}>Usar mi dirección guardada</Text>
+                        </Pressable>
+                      )}
+                    </Card>
+                  ) : (
+                    <Card t={t} padded>
+                      <View style={styles.savedAddress}>
+                        <Icon name="location" size={20} color={t.text} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.infoText, { color: t.text, fontWeight: "700" }]}>{address.line}</Text>
+                          <Text style={[styles.meta, { color: t.muted }]}>
+                            {[address.notes || null, validPin ? "Marcada en el mapa" : null].filter(Boolean).join(" · ") || "Tu dirección guardada"}
+                          </Text>
+                        </View>
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel="Cambiar la dirección"
+                          onPress={() => setAddressEdit(savedAddress)}
+                          hitSlop={8}
+                        >
+                          <Text style={[styles.infoText, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>Cambiar</Text>
+                        </Pressable>
                       </View>
-                      <Icon name="chevronRight" size={18} color={t.muted} />
-                    </Pressable>
-                  </Card>
-                  <LocationPicker
-                    visible={picking}
-                    addressQuery={[addressLine.trim(), city?.name].filter(Boolean).join(", ")}
-                    initial={validPin}
-                    fallback={branch.lat !== null && branch.lng !== null ? { lat: branch.lat, lng: branch.lng } : null}
-                    onClose={() => setPicking(false)}
-                    onConfirm={(p) => {
-                      setPin({ ...p, forLine: addressLine.trim() });
-                      setPicking(false);
-                    }}
-                  />
+                    </Card>
+                  )}
                 </>
               )}
             </>
@@ -369,21 +431,75 @@ export default function CartScreen() {
             </>
           )}
 
-          {/* Datos */}
-          <SectionTitle t={t}>Tus datos</SectionTitle>
+          {/* Nota (nombre y teléfono salen de la cuenta) */}
           <Card t={t} padded>
-            <Field label="Nombre" value={name} onChange={setName} placeholder="Para que el comercio sepa quién pidió" autoComplete="name" />
-            <Field label="Teléfono" value={phone} onChange={setPhone} placeholder="3491 123456" keyboardType="phone-pad" autoComplete="tel" />
             <Field label="Nota para el comercio (opcional)" value={notes} onChange={setNotes} placeholder="Por ejemplo: traer cambio de $10.000" />
+            {profile.data && (
+              <Text style={[styles.meta, { color: t.muted }]}>
+                A nombre de {profile.data.displayName} · {profile.data.phone}
+              </Text>
+            )}
           </Card>
 
           {/* Resumen */}
           <SectionTitle t={t}>Resumen</SectionTitle>
           <Card t={t} padded>
-            <SummaryRow label="Productos" value={formatARS(subtotalMinor)} />
-            {mode === "DELIVERY" && <SummaryRow label="Envío" value={deliveryFee === 0 ? "Gratis" : formatARS(deliveryFee)} />}
+            <SummaryRow label="Productos" value={formatARSWhole(subtotalMinor)} />
+            {discount > 0 && quote.data?.promotion && (
+              <SummaryRow
+                label={quote.data.promotion.code ? `Cupón ${quote.data.promotion.code}` : quote.data.promotion.title}
+                value={`−${formatARSWhole(discount)}`}
+                tone="success"
+              />
+            )}
+            {mode === "DELIVERY" && <SummaryRow label="Envío" value={deliveryFee === 0 ? "Gratis" : formatARSWhole(deliveryFee)} />}
             <View style={[styles.divider, { backgroundColor: t.border }]} />
-            <SummaryRow label="Total" value={formatARS(total)} strong />
+            <SummaryRow label="Total" value={formatARSWhole(total)} strong />
+
+            {/* Cupón */}
+            {coupon && couponUsable && quote.data?.promotion?.code === coupon ? (
+              <View style={styles.couponRow}>
+                <Text style={[styles.meta, { color: t.success, flex: 1, fontWeight: "600" }]}>Cupón {coupon} aplicado</Text>
+                <Pressable accessibilityRole="button" onPress={() => setCoupon(null)} hitSlop={8}>
+                  <Text style={[styles.meta, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>Quitar</Text>
+                </Pressable>
+              </View>
+            ) : couponOpen ? (
+              <View style={{ gap: space.sm }}>
+                <View style={styles.couponRow}>
+                  <TextInput
+                    value={couponInput}
+                    onChangeText={setCouponInput}
+                    placeholder="Código del cupón"
+                    placeholderTextColor={t.muted}
+                    accessibilityLabel="Código del cupón"
+                    autoCapitalize="characters"
+                    autoCorrect={false}
+                    returnKeyType="done"
+                    onSubmitEditing={() => couponInput.trim() && setCoupon(couponInput.trim().toUpperCase())}
+                    style={[styles.input, { flex: 1, backgroundColor: t.background, color: t.text }]}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={!couponInput.trim()}
+                    onPress={() => setCoupon(couponInput.trim().toUpperCase())}
+                    style={[styles.couponApply, { backgroundColor: t.primary, opacity: couponInput.trim() ? 1 : 0.4 }]}
+                  >
+                    <Text style={{ color: t.primaryText, fontWeight: "700" }}>Aplicar</Text>
+                  </Pressable>
+                </View>
+                {coupon && quote.data?.couponError && (
+                  <Text style={[styles.meta, { color: t.danger }]}>{REASON_MESSAGES[quote.data.couponError.reason] ?? quote.data.couponError.message}</Text>
+                )}
+                {coupon && quote.data?.couponOutdone && (
+                  <Text style={[styles.meta, { color: t.muted }]}>Este pedido ya tiene un descuento mayor: dejamos ese.</Text>
+                )}
+              </View>
+            ) : (
+              <Pressable accessibilityRole="button" onPress={() => setCouponOpen(true)} hitSlop={6}>
+                <Text style={[styles.meta, { color: t.text, fontWeight: "700", textDecorationLine: "underline" }]}>¿Tenés un cupón?</Text>
+              </Pressable>
+            )}
             <View style={[styles.payment, { backgroundColor: t.surface }]}>
               <Icon name={paymentMethod === "TRANSFER" ? "bank" : paymentMethod === "MERCADO_PAGO" ? "card" : "cash"} size={18} color={t.success} />
               <Text style={[styles.meta, { color: t.text, flex: 1 }]}>
@@ -396,7 +512,7 @@ export default function CartScreen() {
             </View>
           </Card>
 
-          {belowMinimum && zone && <Notice t={t}>El pedido mínimo para {zone.name} es {formatARS(zone.minOrderMinor)}.</Notice>}
+          {belowMinimum && zone && <Notice t={t}>El pedido mínimo para {zone.name} es {formatARSWhole(zone.minOrderMinor)}.</Notice>}
           {branch && !branch.openNow && timing === "NOW" && (
             <Notice t={t}>El comercio está cerrado ahora{canSchedule ? ". Podés programar el pedido." : "."}</Notice>
           )}
@@ -415,7 +531,7 @@ export default function CartScreen() {
             style={({ pressed }) => [styles.confirm, { backgroundColor: t.primary, opacity: !canSubmit ? 0.4 : pressed ? 0.85 : 1 }]}
           >
             <Text style={[styles.confirmText, { color: t.primaryText }]}>{submit.isPending ? "Enviando…" : "Confirmar pedido"}</Text>
-            <Text style={[styles.confirmText, { color: t.primaryText }]}>{formatARS(total)}</Text>
+            <Text style={[styles.confirmText, { color: t.primaryText }]}>{formatARSWhole(total)}</Text>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -494,7 +610,7 @@ function LineRow({
         )}
         {l.notes && <Text style={[styles.meta, { color: t.muted, fontStyle: "italic" }]}>«{l.notes}»</Text>}
         <View style={styles.lineFooter}>
-          <Text style={[styles.linePrice, { color: t.text }]}>{formatARS(l.unitPriceMinor * l.quantity)}</Text>
+          <Text style={[styles.linePrice, { color: t.text }]}>{formatARSWhole(l.unitPriceMinor * l.quantity)}</Text>
           <View style={[styles.qty, { backgroundColor: t.surface }]}>
             <Pressable
               accessibilityRole="button"
@@ -595,19 +711,22 @@ function Field({
   );
 }
 
-function SummaryRow({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+function SummaryRow({ label, value, strong, tone }: { label: string; value: string; strong?: boolean; tone?: "success" }) {
   const t = useTheme();
-  const style = { color: t.text, fontSize: strong ? 18 : 15, fontWeight: strong ? ("800" as const) : ("400" as const) };
+  const color = tone === "success" ? t.success : t.text;
+  const style = { color, fontSize: strong ? 18 : 15, fontWeight: strong ? ("800" as const) : tone ? ("600" as const) : ("400" as const) };
   return (
     <View style={styles.summaryRow}>
-      <Text style={[style, !strong && { color: t.muted }]}>{label}</Text>
+      <Text style={[style, !strong && !tone && { color: t.muted }]}>{label}</Text>
       <Text style={style}>{value}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  pinRow: { flexDirection: "row", alignItems: "center", gap: space.md, borderRadius: radius.md, padding: space.md },
+  savedAddress: { flexDirection: "row", alignItems: "center", gap: space.md },
+  couponRow: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: space.sm },
+  couponApply: { borderRadius: radius.md, paddingHorizontal: space.lg, height: 46, alignItems: "center", justifyContent: "center" },
   screen: { flex: 1 },
   content: { padding: space.lg, paddingTop: space.sm, gap: space.md, paddingBottom: space.xl },
 

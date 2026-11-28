@@ -1,5 +1,5 @@
 import type { PublicProduct } from "@pedilo/api-client";
-import { formatARS, priceSelection, SelectionError } from "@pedilo/domain";
+import { formatARSWhole, priceSelection, SelectionError } from "@pedilo/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useMemo, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -101,7 +101,7 @@ function ProductDetail({
   const total = result.ok ? result.unitPriceMinor * quantity : null;
   const otherMerchant = cart && cart.merchantSlug !== merchant.merchantSlug ? cart.merchantName : null;
   const canAdd = result.ok && branchOpen && merchant.branchId !== "";
-  const basePrice = product.variants.length > 0 ? `desde ${formatARS(product.fromPriceMinor)}` : formatARS(product.priceMinor);
+  const basePrice = product.variants.length > 0 ? `desde ${formatARSWhole(product.fromPriceMinor)}` : formatARSWhole(product.priceMinor);
 
   const addToCart = () => {
     if (!result.ok) return;
@@ -157,7 +157,7 @@ function ProductDetail({
                   <OptionRow
                     key={v.id}
                     label={v.name}
-                    price={formatARS(v.priceMinor)}
+                    price={formatARSWhole(v.priceMinor)}
                     selected={variantId === v.id}
                     disabled={!v.available}
                     kind="radio"
@@ -175,7 +175,7 @@ function ProductDetail({
                 <Group key={g.id} title={g.name} required={g.minSelect > 0} done={count >= g.minSelect && count > 0} rule={groupRule(g.minSelect, g.maxSelect)}>
                   {g.modifiers.map((m, i) => {
                     const q = picks[m.id] ?? 0;
-                    const price = m.priceDeltaMinor > 0 ? `+ ${formatARS(m.priceDeltaMinor)}` : "";
+                    const price = m.priceDeltaMinor > 0 ? `+ ${formatARSWhole(m.priceDeltaMinor)}` : "";
                     const last = i === g.modifiers.length - 1;
                     if (m.maxQuantity > 1 && g.maxSelect > 1) {
                       return (
@@ -253,7 +253,7 @@ function ProductDetail({
               <Text style={[styles.addText, { color: t.primaryText }]} numberOfLines={1}>
                 {otherMerchant ? "Vaciar y agregar" : "Agregar"}
               </Text>
-              {total !== null && <Text style={[styles.addText, { color: t.primaryText }]}>{formatARS(total)}</Text>}
+              {total !== null && <Text style={[styles.addText, { color: t.primaryText }]}>{formatARSWhole(total)}</Text>}
             </Pressable>
           </View>
         </View>

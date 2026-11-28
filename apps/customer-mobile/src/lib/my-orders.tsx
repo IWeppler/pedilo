@@ -27,6 +27,8 @@ interface MyOrdersContextValue {
   orders: SavedOrder[];
   contact: CustomerContact;
   save: (order: SavedOrder) => void;
+  /** Suma pedidos de la cuenta (ADR 0026) a los de este teléfono, sin duplicar. */
+  merge: (orders: SavedOrder[]) => void;
   tokenFor: (orderId: string) => string | undefined;
   setContact: (contact: CustomerContact) => void;
 }
@@ -59,14 +61,25 @@ export function MyOrdersProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const merge = useCallback((incoming: SavedOrder[]) => {
+    setOrders((prev) => {
+      const known = new Set(prev.map((o) => o.id));
+      const added = incoming.filter((o) => !known.has(o.id));
+      if (added.length === 0) return prev;
+      const next = [...prev, ...added].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, MAX_SAVED);
+      kv.set(ORDERS_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
   const setContact = useCallback((next: CustomerContact) => {
     setContactState(next);
     kv.set(CONTACT_KEY, JSON.stringify(next)).catch(() => {});
   }, []);
 
   const value = useMemo<MyOrdersContextValue>(
-    () => ({ orders, contact, save, setContact, tokenFor: (id) => orders.find((o) => o.id === id)?.token }),
-    [orders, contact, save, setContact],
+    () => ({ orders, contact, save, merge, setContact, tokenFor: (id) => orders.find((o) => o.id === id)?.token }),
+    [orders, contact, save, merge, setContact],
   );
   return <MyOrdersContext value={value}>{children}</MyOrdersContext>;
 }

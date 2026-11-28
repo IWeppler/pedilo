@@ -1,5 +1,5 @@
 import { ApiError, type Order, unwrap } from "@pedilo/api-client";
-import { CUSTOMER_TRACKING_STATUSES, customerCanCancel, type DeliveryStatus, formatARS, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
+import { CUSTOMER_TRACKING_STATUSES, customerCanCancel, type DeliveryStatus, formatARSWhole, isOrderFinal, ORDER_STATUS_LABELS, VEHICLE_LABELS, type Vehicle } from "@pedilo/domain";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { type ReactNode, useEffect, useState } from "react";
@@ -9,10 +9,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "@/components/text";
 import { Icon, type IconName } from "@/components/icon";
 import { ClaimSection } from "@/components/claim-section";
+import { RatingCard } from "@/components/rating-card";
 import { CourierMap } from "@/components/courier-map";
 import { describeSlot } from "@/components/slot-picker";
 import { Badge, Button, ErrorState, Loading } from "@/components/ui";
-import { api, useOrder } from "@/lib/api";
+import { api, useAccountOrders, useOrder } from "@/lib/api";
 import { locationAgeLabel } from "@/lib/courier-location";
 import { openCardPayment } from "@/lib/card-payment";
 import { useMyOrders } from "@/lib/my-orders";
@@ -44,8 +45,10 @@ const STATUS_ICON: Partial<Record<Status, IconName>> = {
 export default function OrderScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, rate } = useLocalSearchParams<{ id: string; rate?: string }>();
   const { tokenFor } = useMyOrders();
+  // Calificación (ADR 0031): si ya calificó o hasta cuándo puede, sale de «Mis pedidos».
+  const mine = useAccountOrders(true).data?.find((o) => o.id === id);
   const token = tokenFor(id);
   const order = useOrder(id, token);
   // Avisos de este pedido al celular (reclamos, ADR 0020). En Expo Go no hace nada.
@@ -235,13 +238,13 @@ export default function OrderScreen() {
               ) : (
                 <>
                   <Text style={[styles.meta, { color: t.muted }]}>
-                    Transferí {formatARS(o.totalMinor)} a esta cuenta. Mantené apretado un dato para copiarlo. El comercio
+                    Transferí {formatARSWhole(o.totalMinor)} a esta cuenta. Mantené apretado un dato para copiarlo. El comercio
                     confirma cuando le llega.
                   </Text>
                   <TransferRow t={t} label="Titular" value={o.transfer.holder} />
                   {o.transfer.alias && <TransferRow t={t} label="Alias" value={o.transfer.alias} />}
                   {o.transfer.cbu && <TransferRow t={t} label="CBU / CVU" value={o.transfer.cbu} />}
-                  <TransferRow t={t} label="Monto" value={formatARS(o.totalMinor)} />
+                  <TransferRow t={t} label="Monto" value={formatARSWhole(o.totalMinor)} />
                 </>
               )}
             </Card>
@@ -263,19 +266,27 @@ export default function OrderScreen() {
                 </Text>
                 {item.options.length > 0 && <Text style={[styles.meta, { color: t.muted }]}>{item.options.map((op) => op.name).join(", ")}</Text>}
               </View>
-              <Text style={[styles.itemPrice, { color: t.text }]}>{formatARS(item.totalMinor)}</Text>
+              <Text style={[styles.itemPrice, { color: t.text }]}>{formatARSWhole(item.totalMinor)}</Text>
             </View>
           ))}
           <View style={[styles.divider, { backgroundColor: t.border }]} />
+          {o.discountMinor > 0 && (
+            <View style={styles.rowBetween}>
+              <Text style={[styles.meta, { color: t.success, fontSize: 15, fontWeight: "600" }]}>
+                {o.promotion?.code ? `Cupón ${o.promotion.code}` : (o.promotion?.title ?? "Descuento")}
+              </Text>
+              <Text style={{ color: t.success, fontSize: 15, fontWeight: "600" }}>−{formatARSWhole(o.discountMinor)}</Text>
+            </View>
+          )}
           {o.deliveryFeeMinor > 0 && (
             <View style={styles.rowBetween}>
               <Text style={[styles.meta, { color: t.muted, fontSize: 15 }]}>Envío</Text>
-              <Text style={{ color: t.text, fontSize: 15 }}>{formatARS(o.deliveryFeeMinor)}</Text>
+              <Text style={{ color: t.text, fontSize: 15 }}>{formatARSWhole(o.deliveryFeeMinor)}</Text>
             </View>
           )}
           <View style={styles.rowBetween}>
             <Text style={[styles.total, { color: t.text }]}>Total</Text>
-            <Text style={[styles.total, { color: t.text }]}>{formatARS(o.totalMinor)}</Text>
+            <Text style={[styles.total, { color: t.text }]}>{formatARSWhole(o.totalMinor)}</Text>
           </View>
         </Card>
 
@@ -312,6 +323,9 @@ export default function OrderScreen() {
             </Pressable>
           ))}
         {cancelError && <Text style={{ color: t.danger, textAlign: "center" }}>{cancelError}</Text>}
+        {mine && (mine.rating !== null || mine.ratableUntil !== null) && (
+          <RatingCard orderId={o.id} merchantName={o.merchant.name} rated={mine.rating} initialStars={rate ? Number(rate) : undefined} />
+        )}
         <ClaimSection orderId={o.id} token={token} orderStatus={o.status} />
         {final && <Button label="Hacer otro pedido" onPress={() => router.replace("/")} style={{ marginTop: space.sm }} />}
       </ScrollView>

@@ -1,4 +1,4 @@
-import { formatARS } from "@pedilo/domain";
+import { formatARSWhole } from "@pedilo/domain";
 import { useRouter } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -20,14 +20,14 @@ export function CartBar({ onlyFor }: { onlyFor?: string }) {
       <Pressable
         onPress={() => router.push("/cart")}
         accessibilityRole="button"
-        accessibilityLabel={`Ver pedido de ${cart.merchantName}: ${itemCount} productos, ${formatARS(subtotalMinor)}`}
+        accessibilityLabel={`Ver pedido de ${cart.merchantName}: ${itemCount} productos, ${formatARSWhole(subtotalMinor)}`}
         style={({ pressed }) => [styles.bar, { backgroundColor: t.primary, opacity: pressed ? 0.85 : 1 }]}
       >
         <Text style={[styles.count, { color: t.accentText, backgroundColor: t.accent }]}>{itemCount}</Text>
         <Text style={[styles.label, { color: t.primaryText, flex: 1 }]} numberOfLines={1}>
           Ver pedido{onlyFor ? "" : ` · ${cart.merchantName}`}
         </Text>
-        <Text style={[styles.label, { color: t.primaryText }]}>{formatARS(subtotalMinor)}</Text>
+        <Text style={[styles.label, { color: t.primaryText }]}>{formatARSWhole(subtotalMinor)}</Text>
       </Pressable>
     </View>
   );

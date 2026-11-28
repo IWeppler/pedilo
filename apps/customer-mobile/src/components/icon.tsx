@@ -40,6 +40,10 @@ const ICONS = {
   warning: { ios: "exclamationmark.triangle.fill", android: "warning" },
   note: { ios: "square.and.pencil", android: "edit_note" },
   info: { ios: "info.circle", android: "info" },
+  bell: { ios: "bell", android: "notifications" },
+  person: { ios: "person.crop.circle", android: "account_circle" },
+  star: { ios: "star.fill", android: "star" },
+  logout: { ios: "rectangle.portrait.and.arrow.right", android: "logout" },
 } as const satisfies Record<string, ComponentProps<typeof SymbolView>["name"]>;
 
 export type IconName = keyof typeof ICONS;
@@ -67,6 +71,46 @@ export function Icon({
 }
 
 /** Ícono de cada rubro según su slug (los define el seed). Rubros nuevos caen en «comercio». */
+/** Emoji de cada tipo de comida del inicio (ADR 0027). Uno nuevo del admin usa el plato. */
+const FOOD_EMOJI: Record<string, string> = {
+  hamburguesas: "🍔",
+  pizzas: "🍕",
+  snacks: "🍿",
+  bebidas: "🥤",
+  postres: "🍰",
+  saludable: "🥗",
+  empanadas: "🥟",
+  helados: "🍦",
+  sushi: "🍣",
+  cafeteria: "☕",
+  "lomitos-y-sandwiches": "🥪",
+  milanesas: "🍽️",
+  pastas: "🍝",
+  parrilla: "🥩",
+  cervezas: "🍺",
+  panaderia: "🥐",
+};
+
+/** Emoji de cada rubro para las tarjetas grandes del inicio. Uno nuevo del admin usa la tienda. */
+const RUBRO_EMOJI: Record<string, string> = {
+  gastronomia: "🍔",
+  kioscos: "🍫",
+  supermercados: "🛒",
+  electronica: "🎧",
+  emprendedores: "🎁",
+  heladerias: "🍦",
+  bebidas: "🥤",
+  farmacias: "💊",
+};
+
+export function rubroEmoji(slug: string | undefined): string {
+  return (slug && RUBRO_EMOJI[slug]) || "🏪";
+}
+
+export function foodTypeEmoji(slug: string | undefined): string {
+  return (slug && FOOD_EMOJI[slug]) || "🍽️";
+}
+
 export function categoryIcon(slug: string | undefined): IconName {
   switch (slug) {
     case "gastronomia":

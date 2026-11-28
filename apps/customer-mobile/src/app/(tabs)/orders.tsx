@@ -9,7 +9,10 @@ import { font, radius, space, useTheme } from "@/lib/theme";
 
 const dateFormat = new Intl.DateTimeFormat("es-AR", { dateStyle: "short", timeStyle: "short" });
 
-/** Pedidos hechos desde este teléfono. El estado se ve al entrar a cada uno. */
+/**
+ * Pedidos de la cuenta, también los hechos desde otros celulares (ADR 0026).
+ * El estado se ve al entrar a cada uno.
+ */
 export default function MyOrdersScreen() {
   const t = useTheme();
   const router = useRouter();
@@ -24,7 +27,9 @@ export default function MyOrdersScreen() {
         contentContainerStyle={{ gap: space.sm, flexGrow: 1 }}
         ListEmptyComponent={
           <Centered>
-            <Text style={{ color: t.muted }}>Todavía no hiciste pedidos desde este teléfono.</Text>
+            <Text style={{ color: t.muted, textAlign: "center" }}>
+              Todavía no hiciste pedidos.
+            </Text>
           </Centered>
         }
         renderItem={({ item }) => (

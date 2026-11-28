@@ -14,4 +14,11 @@ export const kv = {
       // Sin almacenamiento disponible (modo privado): la ciudad se vuelve a elegir.
     }
   },
+  remove: async (key: string): Promise<void> => {
+    try {
+      globalThis.localStorage?.removeItem(key);
+    } catch {
+      // Sin almacenamiento disponible.
+    }
+  },
 };

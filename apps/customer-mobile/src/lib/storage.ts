@@ -7,4 +7,5 @@ import Storage from "expo-sqlite/kv-store";
 export const kv = {
   get: (key: string): Promise<string | null> => Storage.getItem(key),
   set: (key: string, value: string): Promise<void> => Storage.setItem(key, value),
+  remove: (key: string): Promise<void> => Storage.removeItem(key),
 };

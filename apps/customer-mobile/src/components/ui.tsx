@@ -19,12 +19,12 @@ export function Loading() {
   );
 }
 
-export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+export function ErrorState({ message, onRetry, retryLabel = "Reintentar" }: { message: string; onRetry?: () => void; retryLabel?: string }) {
   const t = useTheme();
   return (
     <Centered>
       <Text style={[styles.body, { color: t.text, textAlign: "center" }]}>{message}</Text>
-      {onRetry && <Button label="Reintentar" onPress={onRetry} variant="outline" />}
+      {onRetry && <Button label={retryLabel} onPress={onRetry} variant="outline" />}
     </Centered>
   );
 }

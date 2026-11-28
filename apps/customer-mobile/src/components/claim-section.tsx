@@ -5,7 +5,7 @@ import {
   CLAIM_STATUS_LABELS,
   CLAIM_WINDOW_HOURS,
   type ClaimReason,
-  formatARS,
+  formatARSWhole,
 } from "@pedilo/domain";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
@@ -191,7 +191,7 @@ function ClaimStatusCard({ orderId, token, claim: c }: { orderId: string; token:
         <View style={[styles.proposal, { borderColor: t.primary }]}>
           <Text style={{ color: t.text, fontWeight: "800" }}>
             El comercio propone: {CLAIM_RESOLUTION_LABELS[c.proposal!.type]}
-            {c.proposal!.amountMinor ? ` de ${formatARS(c.proposal!.amountMinor)}` : ""}
+            {c.proposal!.amountMinor ? ` de ${formatARSWhole(c.proposal!.amountMinor)}` : ""}
           </Text>
           {c.proposal!.note && <Text style={{ color: t.text }}>«{c.proposal!.note}»</Text>}
           <View style={styles.row}>
@@ -201,9 +201,9 @@ function ClaimStatusCard({ orderId, token, claim: c }: { orderId: string; token:
         </View>
       )}
       {c.status === "AGREED_REFUND" && (
-        <Text style={{ color: t.text }}>Acordaron una devolución de {formatARS(c.proposal?.amountMinor ?? 0)}. El comercio te avisa cuando la haga.</Text>
+        <Text style={{ color: t.text }}>Acordaron una devolución de {formatARSWhole(c.proposal?.amountMinor ?? 0)}. El comercio te avisa cuando la haga.</Text>
       )}
-      {c.refundedMinor ? <Text style={{ color: t.success, fontWeight: "700" }}>El comercio registró la devolución de {formatARS(c.refundedMinor)}.</Text> : null}
+      {c.refundedMinor ? <Text style={{ color: t.success, fontWeight: "700" }}>El comercio registró la devolución de {formatARSWhole(c.refundedMinor)}.</Text> : null}
       {c.resolutionNote && !open && <Text style={{ color: t.text }}>{c.resolutionNote}</Text>}
 
       {c.evidence.length > 0 && (

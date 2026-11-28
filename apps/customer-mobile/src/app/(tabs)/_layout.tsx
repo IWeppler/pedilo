@@ -5,7 +5,7 @@ import { useCart } from "@/lib/cart";
 import { useTheme } from "@/lib/theme";
 
 /**
- * Barra de pestañas: Inicio, Pedidos y Carrito.
+ * Barra de pestañas: Inicio, Pedidos, Carrito y Cuenta.
  * «Carrito» no es una pestaña real: abre la pantalla del carrito encima (así el pedido
  * se arma y se confirma sin la barra de abajo).
  */
@@ -47,6 +47,10 @@ export default function TabsLayout() {
             router.push("/cart");
           },
         }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{ title: "Cuenta", tabBarIcon: ({ color }) => <Icon name="person" color={color} /> }}
       />
     </Tabs>
   );

@@ -1,5 +1,5 @@
-import type { PublicProduct } from "@pedilo/api-client";
-import { formatARS } from "@pedilo/domain";
+import type { paths, PublicProduct } from "@pedilo/api-client";
+import { formatARSWhole, offerUnitPrice } from "@pedilo/domain";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useMemo, useRef, useState } from "react";
@@ -20,7 +20,10 @@ import { Photo } from "@/components/photo";
 import { categoryIcon, Icon, type IconName } from "@/components/icon";
 import { Badge, Centered, ErrorState, Loading } from "@/components/ui";
 import { useMerchantCategories, useMerchantMenu } from "@/lib/api";
+import { etaLabel } from "@/lib/merchant-labels";
 import { font, radius, space, type Theme, useTheme } from "@/lib/theme";
+
+type PublicOffer = paths["/v1/public/merchants/{slug}"]["get"]["responses"][200]["content"]["application/json"]["offers"][number];
 
 interface MenuSectionData {
   key: string;
@@ -81,7 +84,7 @@ export default function MerchantScreen() {
     );
   }
 
-  const { merchant } = menu.data;
+  const { merchant, offers, rating } = menu.data;
   const category = categories.data?.find((c) => c.id === merchant.categoryId);
   const icon = categoryIcon(category?.slug);
   // MVP: se muestra la primera sucursal activa (la mayoría de los comercios del piloto tiene una).
@@ -167,15 +170,54 @@ export default function MerchantScreen() {
                     </Text>
                   </View>
                   <View style={[styles.facts, { borderTopColor: t.border }]}>
+                    {rating && (
+                      <Fact
+                        icon="star"
+                        label={`${rating.count} calificaciones`}
+                        value={`${rating.average.toLocaleString("es-AR", { minimumFractionDigits: 1 })} de 5`}
+                        t={t}
+                      />
+                    )}
+                    {merchant.prepMinutes != null && (
+                      <Fact
+                        icon="clock"
+                        label="Tiempo"
+                        value={etaLabel({ prepMinutes: merchant.prepMinutes, acceptsDelivery: branch.acceptsDelivery && minFee !== null }) ?? ""}
+                        t={t}
+                      />
+                    )}
                     {branch.acceptsPickup && <Fact icon="pickup" label="Retiro" value="Sin costo" t={t} />}
                     {branch.acceptsDelivery && minFee !== null && (
-                      <Fact icon="delivery" label="Envío" value={minFee === 0 ? "Gratis" : `desde ${formatARS(minFee)}`} t={t} />
+                      <Fact icon="delivery" label="Envío" value={minFee === 0 ? "Gratis" : `desde ${formatARSWhole(minFee)}`} t={t} />
                     )}
-                    {minOrders.length > 0 && <Fact icon="cart" label="Mínimo" value={formatARS(Math.min(...minOrders))} t={t} />}
+                    {minOrders.length > 0 && <Fact icon="cart" label="Mínimo" value={formatARSWhole(Math.min(...minOrders))} t={t} />}
                   </View>
                 </>
               )}
             </View>
+
+            {/* Ofertas vigentes (ADR 0030) */}
+            {offers.length > 0 && (
+              <View style={styles.offers}>
+                {offers.map((o) => (
+                  <View key={o.id} style={[styles.offerBox, { backgroundColor: t.accentSoft }]}>
+                    <Text style={[styles.offerBoxLabel, { color: t.accent }]}>{o.label}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: t.text, fontWeight: "700", fontSize: 15 }}>{o.title}</Text>
+                      <Text style={[styles.meta, { color: t.muted }]}>
+                        {[
+                          o.productIds ? "En productos marcados" : "En todo el menú",
+                          o.minSubtotalMinor > 0 ? `desde ${formatARSWhole(o.minSubtotalMinor)}` : null,
+                          o.maxDiscountMinor ? `hasta ${formatARSWhole(o.maxDiscountMinor)}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* Búsqueda */}
             <View style={[styles.search, { backgroundColor: t.surface }]}>
@@ -213,6 +255,7 @@ export default function MerchantScreen() {
         renderItem={({ item }) => (
           <ProductCard
             product={item}
+            offers={offers}
             icon={icon}
             onPress={() => router.push({ pathname: "/product/[slug]/[productId]", params: { slug, productId: item.id } })}
           />
@@ -304,9 +347,16 @@ function Fact({ icon, label, value, t }: { icon: IconName; label: string; value:
 }
 
 /** Tarjeta de producto. Sin fotos todavía: miniatura con el ícono del rubro. */
-function ProductCard({ product: p, icon, onPress }: { product: PublicProduct; icon: IconName; onPress: () => void }) {
+function ProductCard({ product: p, offers, icon, onPress }: { product: PublicProduct; offers: PublicOffer[]; icon: IconName; onPress: () => void }) {
   const t = useTheme();
-  const price = p.variants.length > 0 ? `desde ${formatARS(p.fromPriceMinor)}` : formatARS(p.priceMinor);
+  const base = p.variants.length > 0 ? p.fromPriceMinor : p.priceMinor;
+  const prefix = p.variants.length > 0 ? "desde " : "";
+  const price = `${prefix}${formatARSWhole(base)}`;
+  // Precio con oferta, si no depende del resto del pedido (porcentaje sin mínimo).
+  const offerPrices = offers.map((o) => offerUnitPrice(o, p.id, base)).filter((v): v is number => v !== null);
+  const offerPrice = offerPrices.length > 0 ? Math.min(...offerPrices) : null;
+  // Alcanzado por una oferta con condiciones: solo la etiqueta.
+  const conditional = offerPrice === null ? offers.find((o) => !o.productIds || o.productIds.includes(p.id)) : undefined;
   return (
     <Pressable
       onPress={onPress}
@@ -327,7 +377,20 @@ function ProductCard({ product: p, icon, onPress }: { product: PublicProduct; ic
           </Text>
         )}
         <View style={styles.productFooter}>
-          <Text style={[styles.price, { color: t.text }]}>{price}</Text>
+          {offerPrice !== null ? (
+            <>
+              <Text style={[styles.price, { color: t.accent }]}>{`${prefix}${formatARSWhole(offerPrice)}`}</Text>
+              <Text style={[styles.meta, { color: t.muted, textDecorationLine: "line-through" }]}>{formatARSWhole(base)}</Text>
+            </>
+          ) : (
+            <Text style={[styles.price, { color: t.text }]}>{price}</Text>
+          )}
+          {conditional && (
+            <Text style={[styles.meta, { color: t.accent, fontWeight: "700" }]}>
+              {conditional.label}
+              {conditional.minSubtotalMinor > 0 ? ` desde ${formatARSWhole(conditional.minSubtotalMinor)}` : ""}
+            </Text>
+          )}
           {!p.available && <Badge label="Sin stock" tone="danger" />}
         </View>
       </View>
@@ -374,6 +437,9 @@ const styles = StyleSheet.create({
   badges: { flexDirection: "row", alignItems: "center", gap: space.sm },
   address: { flexDirection: "row", gap: 6, alignItems: "flex-start" },
   meta: { fontSize: 13 },
+  offers: { gap: space.sm, marginTop: space.md },
+  offerBox: { flexDirection: "row", alignItems: "center", gap: space.md, borderRadius: radius.md, padding: space.md },
+  offerBoxLabel: { fontFamily: font.display, fontSize: 20, fontWeight: "800", letterSpacing: -0.3 },
   facts: { flexDirection: "row", flexWrap: "wrap", gap: space.lg, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.md, marginTop: space.xs },
   fact: { flexDirection: "row", alignItems: "center", gap: space.sm },
   factIcon: { width: 32, height: 32, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
@@ -398,7 +464,7 @@ const styles = StyleSheet.create({
   product: { flexDirection: "row", gap: space.md, marginHorizontal: space.lg, paddingVertical: space.lg, borderBottomWidth: StyleSheet.hairlineWidth },
   productBody: { flex: 1, gap: 4 },
   productName: { fontSize: 16, fontWeight: "600" },
-  productFooter: { flexDirection: "row", alignItems: "center", gap: space.sm, marginTop: "auto", paddingTop: space.xs },
+  productFooter: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.sm, marginTop: "auto", paddingTop: space.xs },
   price: { fontFamily: font.display, fontSize: 16, fontWeight: "700" },
   thumb: { width: 104, height: 104, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   addButton: {
